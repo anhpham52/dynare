@@ -68,9 +68,9 @@ for i = 1:options_.number_of_observed_variables
 end
 
 % Check that a variable is not declared as observed more than once.
-if ~isequal(options_.varobs,unique(options_.varobs))
+if length(unique(options_.varobs))<length(options_.varobs)
     for i = 1:options_.number_of_observed_variables
-        if length(strmatch(options_.varobs{i},options_.varobs))>1
+        if length(strmatch(options_.varobs{i},options_.varobs,'exact'))>1
             error(['A variable cannot be declared as observed more than once (' options_.varobs{i} ')!'])
         end
     end
@@ -128,6 +128,12 @@ end
 % Set priors over the estimated parameters.
 if ~isempty(estim_params_)
     [xparam1,estim_params_,bayestopt_,lb,ub,M_] = set_prior(estim_params_,M_,options_);
+end
+
+% Check if a _prior_restrictions.m file exists
+if exist([M_.fname '_prior_restrictions.m'])
+    options_.prior_restrictions.status = 1;
+    options_.prior_restrictions.routine = str2func([M_.fname '_prior_restrictions']);
 end
 
 % Check that the provided mode_file is compatible with the current estimation settings.
@@ -452,7 +458,12 @@ k = find(isnan(bayestopt_.jscale));
 bayestopt_.jscale(k) = options_.mh_jscale;
 
 % Build the dataset
-[dataset_, dataset_info] = makedataset(options_, options_.dsge_var*options_.dsge_varlag, gsa_flag);
+[dataset_, dataset_info, newdatainterfaceflag] = makedataset(options_, options_.dsge_var*options_.dsge_varlag, gsa_flag);
+
+% Set options_.nobs if needed
+if newdatainterfaceflag
+    options_.nobs = dataset_.nobs;
+end
 
 % setting steadystate_check_flag option
 if options_.diffuse_filter

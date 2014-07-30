@@ -349,7 +349,7 @@ estimation_info.measurement_error_corr.range_index = {};
 estimation_info.structural_innovation_corr_prior_index = {};
 estimation_info.structural_innovation_corr_options_index = {};
 estimation_info.structural_innovation_corr.range_index = {};
-options_.initial_period = dates(1,1);
+options_.initial_period = NaN; %dates(1,1);
 options_.dataset.file = [];
 options_.dataset.series = [];
 options_.dataset.firstobs = dates();
@@ -393,6 +393,10 @@ options_.recursive_estimation_restart = 0;
 options_.MCMC_jumping_covariance='hessian';
 options_.use_calibration_initialization = 0;
 options_.endo_vars_for_moment_computations_in_estimation=[];
+
+% Prior restrictions
+options_.prior_restrictions.status = 0;
+options_.prior_restrictions.routine = [];
 
 options_.mode_compute = 4;
 options_.mode_file = '';

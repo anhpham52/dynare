@@ -5038,7 +5038,7 @@ distribution of IRFs. The length of the IRFs are controlled by the
 @item dsge_var = @var{DOUBLE}
 @anchor{dsge_var} Triggers the estimation of a DSGE-VAR model, where the
 weight of  the DSGE prior  of the VAR model  is calibrated to  the value
-passed (see @cite{Del  Negro and Schorfheide (2004)}). NB:  The previous method
+passed (see @cite{Del  Negro and Schorfheide (2004)}). It represents ratio of dummy over actual observations. To assure that the prior is proper, the value must be bigger than @math{(k+n)/T}, where @math{k} is the number of estimated parameters, @math{n} is the number of observables, and @math{T} is the number of observations. NB:  The previous method
 of   declaring  @code{dsge_prior_weight}   as  a   parameter  and   then
 calibrating it is now deprecated and will be removed in a future release
 of Dynare.
@@ -5951,11 +5951,51 @@ Fields are of the form:
 
 @descriptionhead
 
-This command computes forecasts on an estimated model for a given
-constrained path of some future endogenous variables. This is done,
-from the reduced form representation of the DSGE model, by finding the
-structural shocks that are needed to match the restricted paths. This
-command has to be called after estimation.
+This command computes forecasts on an estimated or calibrated model for a
+given constrained path of some future endogenous variables. This is done
+using the reduced form first order state-space representation of the DSGE
+model by finding the structural shocks that are needed to match the
+restricted paths. Consider the an augmented state space representation
+that stacks both predetermined and non-predetermined variables into a
+vector @math{y_{t}}:
+
+@math{y_t=Ty_{t-1}+R\varepsilon_t}
+
+Both
+@math{y_t} and @math{\varepsilon_t} are split up into controlled and
+uncontrolled ones to get:
+
+@math{y_t(contr\_vars)=Ty_{t-1}(contr\_vars)+R(contr\_vars,uncontr\_shocks)\varepsilon_t(uncontr\_shocks)
++R(contr\_vars,contr\_shocks)\varepsilon_t(contr\_shocks)}
+
+which can be solved algebraically for @math{\varepsilon_t(contr\_shocks)}.
+
+Using these controlled shocks, the state-space representation can be used
+for forecasting. A few things need to be noted. First, it is assumed that
+controlled exogenous variables are fully under control of the policy
+maker for all forecast periods and not just for the periods where the
+endogenous variables are controlled. For all uncontrolled periods, the
+controlled exogenous variables are assumed to be 0. This implies that
+there is no forecast uncertainty arising from these exogenous variables
+in uncontrolled periods. Second, by making use of the first order state
+space solution, even if a higher-order approximation was performed, the
+conditional forecasts will be based on a first order approximation.
+Third, although controlled exogenous variables are taken as instruments
+perfectly under the control of the policy-maker, they are nevertheless
+random and unforeseen shocks from the perspective of the households. That is,
+households are in each period surprised by the realization of a shock
+that keeps the controlled endogenous variables at their respective level.
+Fourth, keep in mind that if the structural innovations are correlated,
+because the calibrated or estimated covariance matrix has non zero off
+diagonal elements, the results of the conditional forecasts will depend on
+the ordering of the innovations (as declared after @code{varexo}). As in VAR
+models, a Cholesky decomposition is used to factorize the covariance matrix
+and identify orthogonal impulses. It is preferable to declare the correlations
+in the @code{model} block (explicitly imposing the identification restrictions),
+unless you are satisfied with the implicit identification restrictions implied
+by the Cholesky decomposition.
+
+This command has to be called after @code{estimation} or @code{stoch_simul}.
 
 Use @code{conditional_forecast_paths} block to give the list of
 constrained endogenous, and their constrained future path.
@@ -9705,12 +9745,6 @@ The Matlab/Octave @dseries class handles time series data. As any Matlab/Octave 
 @table @code
 @anchor{dseries class members}
 
-@item nobs
-A scalar integer, the number of observations.
-
-@item vobs
-A scalar integer, the number of variables.
-
 @item name
 A @code{nobs}*1 cell of strings or a @code{nobs}*p character array, the names of the variables.
 
@@ -9725,7 +9759,7 @@ A @code{nobs} by @code{vobs} array of doubles, the data.
 
 @end table
 
-@noindent @code{nobs}, @code{vobs}, @code{data}, @code{name}, @code{tex} are private members. The following constructors are available:
+@noindent @code{data}, @code{name}, @code{tex} are private members. The following constructors are available:
 
 @deftypefn  {dseries} dseries ()
 @deftypefnx {dseries} dseries (@var{INITIAL_DATE})
@@ -10757,6 +10791,24 @@ ans =
 
 @sp 1
 
+@deftypefn{dseries} {@var{B} =} nobs (@var{A})
+
+Returns the number of observations in @dseries object @var{A}.
+
+@examplehead
+@example
+>> ts0 = dseries(randn(10));
+>> ts0.nobs
+
+ans =
+
+    10
+@end example
+
+@end deftypefn
+
+@sp 1
+
 @deftypefn{dseries} {@var{h} =} plot (@var{A})
 @deftypefnx{dseries} {@var{h} =} plot (@var{A}, @var{B})
 @deftypefnx{dseries} {@var{h} =} plot (@var{A}[, ...])
@@ -11106,6 +11158,26 @@ ts2 is a dseries object:
 
 @end deftypefn
 
+@sp 1
+
+@deftypefn{dseries} {@var{B} =} vobs (@var{A})
+
+Returns the number of variables in @dseries object @var{A}.
+
+@examplehead
+@example
+>> ts0 = dseries(randn(10,2));
+>> ts0.vobs
+
+ans =
+
+    2
+@end example
+
+@end deftypefn
+
+@sp 1
+
 @deftypefn{dseries} {@var{B} =} ydiff (@var{A})
 @deftypefnx{dseries} {@var{B} =} ygrowth (@var{A})
 
@@ -11159,7 +11231,7 @@ used.
 Below, you will see a list of methods available for the Report class and
 a clarifying example.
 
-@defmethod Report report compiler, showDate, fileName, margin, marginUnit, orientation, paper, title
+@defmethod Report report compiler, showDate, fileName, margin, marginUnit, orientation, paper, showOutput, title
 Instantiates a @code{Report} object.
 @optionshead
 @table @code
@@ -11194,6 +11266,12 @@ Paper orientation: Default: @code{`portrait'}
 @item paper, `a4' | `letter'
 Paper size. Default: @code{`a4'}
 
+@anchor{showOutput}
+@item showOutput, @code{BOOLEAN}
+Print report creation progress to screen. Shows you the page number as it is
+created and as it is written. This is useful to see where a potential error
+occurs in report creation. Default: @code{true}
+
 @item title, @code{STRING}
 Report Title. Default: @code{none}
 @end table
@@ -11215,16 +11293,17 @@ A footnote to be included at the bottom of this page. Default: @code{none}
 
 @anchor{title}
 @item title, @code{STRING} | @code{CELL_ARRAY_STRINGS}
-With one entry (a @code{STRING}), the title of the page. With more
-than one entry (a @code{CELL_ARRAY_STRINGS}), the title and subtitle(s)
-of the page. Default: @code{none}
+With one entry (a @code{STRING}), the title of the page. With more than one
+entry (a @code{CELL_ARRAY_STRINGS}), the title and subtitle(s) of the
+page. Values passed must be valid @LaTeX{} code (@i{e.g.,} `%' must be
+`\%'). Default: @code{none}
 
 @anchor{titleFormat}
 @item titleFormat, @code{STRING} | @code{CELL_ARRAY_STRINGS}
 A string representing the @LaTeX{} markup to use on @ref{title}. The
 number of cell array entries must be equal to that of the @ref{title}
-option, if you do not want to use the default value for the title and
-subtitle(s). Default: @code{\large\bfseries}
+option if you do not want to use the default value for the title (and
+subtitles). Default: @code{\large\bfseries}
 
 @end table
 @end defmethod
@@ -11243,7 +11322,7 @@ command. Default: @code{`!'}
 @end defmethod
 
 @anchor{addGraph}
-@defmethod Report addGraph axisShape, data, graphDirName, graphName, graphSize, height, showGrid, showLegend, showLegendBox, legendLocation, legendOrientation, legendFontSize, miscTikzAxisOptions, miscTikzPictureOptions, seriesToUse, shade, shadeColor, shadeOpacity, tickFontSize, title, titleFontSize, titleFormat, width, xlabel, ylabel, xAxisTight, xrange, xTicks, xTickLabels, xTickLabelAnchor, xTickLabelRotation, yAxisTight, yTickLabelFixed, yTickLabelPrecision, yTickLabelScaled, yTickLabelZeroFill, yrange, showZeroline, zeroLineColor
+@defmethod Report addGraph axisShape, data, graphDirName, graphName, graphSize, height, showGrid, showLegend, showLegendBox, legendLocation, legendOrientation, legendFontSize, miscTikzAxisOptions, miscTikzPictureOptions, seriesToUse, shade, shadeColor, shadeOpacity, tickFontSize, title, titleFontSize, titleFormat, width, writeCSV, xlabel, ylabel, xAxisTight, xrange, xTicks, xTickLabels, xTickLabelAnchor, xTickLabelRotation, yAxisTight, yTickLabelFixed, yTickLabelPrecision, yTickLabelScaled, yTickLabelZeroFill, yrange, showZeroline, zeroLineColor
 Adds a @code{Graph} to a @code{Section}.
 @optionshead
 @table @code
@@ -11258,10 +11337,12 @@ to the left, right, bottom, and top of the graphed line(s). @code{`L'} means
 that there is an axis to the left and bottom of the graphed line(s). Default:
 @code{`box'}
 
+@anchor{graphDirName}
 @item graphDirName, @code{STRING}
 The name of the folder in which to store this figure. Default:
 @code{tmpRepDir}
 
+@anchor{graphName}
 @item graphName, @code{STRING}
 The name to use when saving this figure. Default: something of the
 form @code{graph_pg1_sec2_row1_col3.tex}
@@ -11347,6 +11428,12 @@ the title and subtitles. Default: @code{TikZ default}
 @item width, @code{DOUBLE}
 The width of the graph, in inches. Default: @code{6.0}
 
+@item writeCSV, @code{BOOLEAN}
+Whether or not to write a CSV file with only the plotted data. The file will be
+saved in the directory specified by @ref{graphDirName} with the same base name
+as specified by @ref{graphName} with the ending @code{.csv}. Default:
+@code{false}
+
 @item xlabel, @code{STRING}
 The x-axis label. Default: @code{none}
 
@@ -11416,13 +11503,19 @@ reports. Default: @code{`black'}
 @end table
 @end defmethod
 
-@defmethod Report addTable data, showHlines, precision, range, seriesToUse, tableDirName, tableName, title, titleFormat, vlineAfter, vlineAfterEndOfPeriod, showVlines
+@defmethod Report addTable data, highlightRows, showHlines, precision, range, seriesToUse, tableDirName, tableName, title, titleFormat, vlineAfter, vlineAfterEndOfPeriod, showVlines, writeCSV
 Adds a @code{Table} to a @code{Section}.
 @optionshead
 @table @code
 
 @item data, @code{dseries}
 @xref{data}.
+
+@item highlightRows, @code{CELL_ARRAY_STRINGS}
+A cell array containing the colors to use for row highlighting. See
+@ref{shadeColor} for how to use colors with reports. Highlighting for a
+specific row can be overridden by using the @ref{tableRowColor} option to
+@ref{addSeries}. Default: @code{empty}
 
 @item showHlines, @code{BOOLEAN}
 Whether or not to show horizontal lines separating the rows. Default: @code{false}
@@ -11436,10 +11529,12 @@ The date range of the data to be displayed. Default: @code{all}
 @item seriesToUse, @code{CELL_ARRAY_STRINGS}
 @xref{seriesToUse}.
 
+@anchor{tableDirName}
 @item tableDirName, @code{STRING}
 The name of the folder in which to store this table. Default:
 @code{tmpRepDir}
 
+@anchor{tableName}
 @item tableName, @code{STRING}
 The name to use when saving this table. Default: something of the
 form @code{table_pg1_sec2_row1_col3.tex}
@@ -11460,6 +11555,13 @@ every year, after the fourth quarter, etc.). Default: @code{false}
 
 @item showVlines, @code{BOOLEAN}
 Whether or not to show vertical lines separating the columns. Default: @code{false}
+
+@item writeCSV, @code{BOOLEAN}
+Whether or not to write a CSV file containing the data displayed in the
+table. The file will be saved in the directory specified by @ref{tableDirName}
+with the same base name as specified by @ref{tableName} with the ending
+@code{.csv}. Default: @code{false}
+
 @end table
 @end defmethod
 
@@ -11531,6 +11633,7 @@ quarterly @code{tableDataRhs} could point to the yearly averages of
 the quarterly series. This would cause quarterly data to be displayed
 followed by annual data. Default: @code{empty}
 
+@anchor{tableRowColor}
 @item tableRowColor, @code{STRING}
 The color that you want the row to be. Predefined values include
 @code{LightCyan} and @code{Gray}. Default: @code{white}.
@@ -11637,7 +11740,8 @@ for passing the value at the last minute.
 
 @item showOutput, @code{BOOLEAN}
 Print the compiler output to the screen. Useful for debugging your code as the
-@LaTeX{} compiler hangs if there is a problem. Default: @code{true}
+@LaTeX{} compiler hangs if there is a problem. Default: the value of
+@ref{showOutput}
 
 @item showReport, @code{BOOLEAN}
 Open the compiled report (works on Windows and OS X on Matlab). Default:

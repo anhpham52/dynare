@@ -1,4 +1,4 @@
-function [DynareDataset, DatasetInfo] = makedataset(DynareOptions, initialconditions, gsa_flag)
+function [DynareDataset, DatasetInfo, newdatainterface] = makedataset(DynareOptions, initialconditions, gsa_flag)
 
 % Initialize a dataset as a dseries object.
 %
@@ -37,6 +37,7 @@ if isempty(DynareOptions.datafile) && isempty(DynareOptions.dataset.file) && ise
     if gsa_flag
         DynareDataset = dseries();
         DatasetInfo = [];
+        newdatainterface=0;
         return
     else
         error('makedataset: datafile option is missing!')
@@ -114,7 +115,7 @@ else
 end
 
 %  Test if an initial period (different from its default value) is explicitely defined in the mod file with the set_time command.
-if isequal(DynareOptions.initial_period, dates(1,1))
+if ~isdates(DynareOptions.initial_period) && isnan(DynareOptions.initial_period)
     set_time_default_initial_period = 1;
 else
     set_time_default_initial_period = 0;
@@ -134,8 +135,7 @@ end
 
 if ~set_time_default_initial_period && ~dataset_default_initial_period
     % Check if dataset.init and options_.initial_period are identical.
-    if DynareOptions.initial_period>DynareDataset.init
-        %if  ~isequal(DynareOptions.initial_period, DynareDataset.init)
+    if DynareOptions.initial_period<DynareDataset.init
         error('The date as defined by the set_time command is not consistent with the initial period in the database!')
     end
 end

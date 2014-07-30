@@ -1,5 +1,5 @@
-function o = writeSeriesForTable(o, fid, dates, precision)
-%function o = writeSeriesForTable(o, fid, dates, precision)
+function o = writeSeriesForTable(o, fid, dates, precision, ncols, rowcolor)
+%function o = writeSeriesForTable(o, fid, dates, precision, ncols, rowcolor)
 % Write Table Row
 %
 % INPUTS
@@ -7,6 +7,8 @@ function o = writeSeriesForTable(o, fid, dates, precision)
 %   fid          [int]              file id
 %   dates        [dates]            dates for report_series slice
 %   precision    [float]            precision with which to print the data
+%   ncols        [int]              total number of columns in table
+%   rowcolor     [string]           string to color this row
 %
 %
 % OUTPUTS
@@ -56,18 +58,26 @@ end
 assert(ischar(o.tableNegColor), '@report_series.writeSeriesForTable: tableNegColor must be a string');
 assert(ischar(o.tablePosColor), '@report_series.writeSeriesForTable: tablePosColor must be a string');
 assert(ischar(o.tableRowColor), '@report_series.writeSeriesForTable: tableRowColor must be a string');
-assert(isint(o.tableRowIndent), '@report_series.writeSeriesForTable: tableRowIndent must be an integer');
+assert(isint(o.tableRowIndent) && o.tableRowIndent >= 0, ...
+       '@report_series.writeSeriesForTable: tableRowIndent must be an integer >= 0');
 assert(islogical(o.tableShowMarkers), '@report_series.writeSeriesForTable: tableShowMarkers must be true or false');
 assert(islogical(o.tableAlignRight), '@report_series.writeSeriesForTable: tableAlignRight must be true or false');
 assert(isfloat(o.tableMarkerLimit), '@report_series.writeSeriesForTable: tableMarkerLimit must be a float');
 
 %% Write Output
 fprintf(fid, '%% Table Row (report_series)\n');
-if ~isempty(o.tableRowColor)
+if ~isempty(o.tableRowColor) && ~strcmpi(o.tableRowColor, 'white')
+    fprintf(fid, '\\rowcolor{%s}', o.tableRowColor);
+elseif ~isempty(rowcolor)
+    fprintf(fid, '\\rowcolor{%s}', rowcolor);
+else
     fprintf(fid, '\\rowcolor{%s}', o.tableRowColor);
 end
 if ~isempty(o.tableSubSectionHeader)
-    fprintf(fid, '%s', o.tableSubSectionHeader);
+    fprintf(fid, '\\textbf{%s}', o.tableSubSectionHeader);
+    for i=1:ncols-1
+        fprintf(fid, ' &');
+    end
     fprintf(fid, '\\\\%%\n');
     return;
 end
