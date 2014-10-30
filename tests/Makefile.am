@@ -26,6 +26,9 @@ MODFILES = \
 	optimal_policy/nk_ramsey_expectation.mod \
 	optimal_policy/nk_ramsey_expectation_a.mod \
 	optimal_policy/mult_elimination_test.mod \
+	optimal_policy/Ramsey/ramsey_ex_initval.mod \
+	optimal_policy/Ramsey/ramsey_ex.mod \
+	optimal_policy/Ramsey/ramsey_ex_initval_AR2.mod \
 	discretionary_policy/dennis_1.mod \
 	ramst_initval_file.mod \
 	ramst_normcdf_and_friends.mod \
@@ -130,6 +133,7 @@ MODFILES = \
 	ms-sbvar/test_ms_variances.mod \
 	ms-sbvar/test_ms_variances_repeated_runs.mod \
 	ms-dsge/test_ms_dsge.mod \
+	kalman/lyapunov/fs2000_lyap.mod \
 	kalman_filter_smoother/gen_data.mod \
 	kalman_filter_smoother/algo1.mod \
 	kalman_filter_smoother/algo2.mod \
@@ -184,7 +188,8 @@ MODFILES = \
 	reporting/example1.mod
 
 XFAIL_MODFILES = ramst_xfail.mod \
-	estim_param_in_shock_value.mod
+	estim_param_in_shock_value.mod \
+	optimal_policy/Ramsey/ramsey_ex_wrong_ss_file.mod
 
 # Dependencies
 example1_use_dll.m.trs: example1.m.trs
@@ -346,7 +351,9 @@ EXTRA_DIST = \
 	filter_step_ahead/fs2000_filter_step_ahead_bayesian_steadystate.m \
 	filter_step_ahead/fs2000_filter_step_ahead_ML_steadystate.m \
 	loglinear/results_exp.mat \
-	smoother2histval/fsdat_simul.m
+	smoother2histval/fsdat_simul.m \
+	optimal_policy/Ramsey/find_c.m \
+	optimal_policy/Ramsey/oo_ramsey_policy_initval.mat 
 
 TARGETS =
 
