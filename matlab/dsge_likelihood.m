@@ -143,6 +143,12 @@ info        = 0;
 DLIK        = [];
 Hess       = [];
 
+if ~isfield( options_, 'non_central_approximation' )
+    options_.non_central_approximation = 0;
+end
+if ~isfield( options_, 'gaussian_approximation' )
+    options_.gaussian_approximation = 0;
+end
 if DynareOptions.estimation_dll && ( options_.non_central_approximation == 0 ) && ( options_.gaussian_approximation == 0 )
     [fval,exit_flag,SteadyState,trend_coeff,info,params,H,Q] ...
         = logposterior(xparam1,DynareDataset, DynareOptions,Model, ...
