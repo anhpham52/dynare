@@ -143,7 +143,7 @@ info        = 0;
 DLIK        = [];
 Hess       = [];
 
-if DynareOptions.estimation_dll
+if DynareOptions.estimation_dll && ( options_.non_central_approximation == 0 ) && ( options_.gaussian_approximation == 0 )
     [fval,exit_flag,SteadyState,trend_coeff,info,params,H,Q] ...
         = logposterior(xparam1,DynareDataset, DynareOptions,Model, ...
                           EstimatedParameters,BayesInfo,DynareResults);
