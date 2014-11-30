@@ -232,7 +232,7 @@ if isequal(options_.mode_compute,0) && isempty(options_.mode_file) && options_.m
                   ' = atT(i,:)'';']);
             if options_.nk > 0
                 eval(['oo_.FilteredVariables.' deblank(M_.endo_names(i1,:)) ...
-                      ' = squeeze(aK(1,i,:));']);
+                      ' = squeeze(aK(1,i,2:end-(options_.nk-1)));']);
             end
             eval(['oo_.UpdatedVariables.' deblank(M_.endo_names(i1,:)) ' = updated_variables(i,:)'';']);
         end
@@ -262,6 +262,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
         end
         [xparam1,fval,exitflag,output,lamdba,grad,hessian_fmincon] = ...
             fmincon(objective_function,xparam1,[],[],[],[],bounds.lb,bounds.ub,[],optim_options,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 2
         error('ESTIMATION: mode_compute=2 option (Lester Ingber''s Adaptive Simulated Annealing) is no longer available')
       case 3
@@ -285,6 +286,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
             func = @(x) objective_function(x, dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
             [xparam1,fval,exitflag] = fminunc(func,xparam1,optim_options);
         end
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 4
         % Set default options.
         H0 = 1e-4*eye(nx);
@@ -322,7 +324,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
         [fval,xparam1,grad,hessian_csminwel,itct,fcount,retcodehat] = ...
             csminwel1(objective_function, xparam1, H0, analytic_grad, crit, nit, numgrad, epsilon, dataset_, dataset_info, options_, M_, estim_params_, bayestopt_,bounds, oo_);
         % Disp value at the mode.
-        disp(sprintf('Objective function at mode: %f',fval))
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 5
         if isfield(options_,'hess')
             flag = options_.hess;
@@ -367,6 +369,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
         end
         parameter_names = bayestopt_.name;
         save([M_.fname '_mode.mat'],'xparam1','hh','parameter_names');
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 6
         % Set default options
         gmhmaxlikOptions = options_.gmhmaxlik;
@@ -485,7 +488,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
         skipline()
         disp(['Optimal value of the scale parameter = ' num2str(Scale)])
         skipline()
-        disp(['Final value of the log posterior (or likelihood): ' num2str(fval)])
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
         skipline()
         parameter_names = bayestopt_.name;
         save([M_.fname '_mode.mat'],'xparam1','hh','parameter_names');
@@ -501,6 +504,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
             eval(['optim_options = optimset(optim_options,' options_.optim_opt ');']);
         end
         [xparam1,fval,exitflag] = fminsearch(objective_function,xparam1,optim_options,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 8
         % Dynare implementation of the simplex algorithm.
         simplexOptions = options_.simplex;
@@ -525,7 +529,8 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
                 end
             end
         end
-        [xparam1,fval,exitflag] = simplex_optimization_routine(objective_function,xparam1,simplexOptions,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+        [xparam1,fval,exitflag] = simplex_optimization_routine(objective_function,xparam1,simplexOptions,bayestopt_.name,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 9
         % Set defaults
         H0 = 1e-4*ones(nx,1);
@@ -552,7 +557,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
         warning('off','CMAES:InitialSigma');
         [x, fval, COUNTEVAL, STOPFLAG, OUT, BESTEVER] = cmaes(func2str(objective_function),xparam1,H0,cmaesOptions,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
         xparam1=BESTEVER.x;
-        disp(sprintf('\n Objective function at mode: %f',fval))
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', BESTEVER.f);
       case 10
         simpsaOptions = options_.simpsa;
         if isfield(options_,'optim_opt')
@@ -582,6 +587,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
         simpsaOptionsList = options2cell(simpsaOptions);
         simpsaOptions = simpsaset(simpsaOptionsList{:});
         [xparam1, fval, exitflag] = simpsa(func2str(objective_function),xparam1,bounds.lb,bounds.ub,simpsaOptions,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 11
          options_.cova_compute = 0 ;
          [xparam1,stdh,lb_95,ub_95,med_param] = online_auxiliary_filter(xparam1,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_) ;
@@ -591,6 +597,7 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
         myoptions(3)=1e-6; %accuracy of function (see Solvopt p.29)
         myoptions(5)= 1.0;
         [xparam1,fval]=solvopt(xparam1,objective_function,[],myoptions,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       case 102
         %simulating annealing
         %        LB=zeros(size(xparam1))-20;
@@ -628,9 +635,11 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
 
         [xparam1, fval, nacc, nfcnev, nobds, ier, t, vm] = sa(objective_function,xparam1,maxy,rt_,epsilon,ns,nt ...
                                                               ,neps,maxevl,LB,UB,c,idisp ,t,vm,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+        fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
       otherwise
         if ischar(options_.mode_compute)
             [xparam1, fval, retcode ] = feval(options_.mode_compute,objective_function,xparam1,dataset_,dataset_info,options_,M_,estim_params_,bayestopt_,bounds,oo_);
+            fprintf('\nFinal value of minus the log posterior (or likelihood):%f \n', fval);
         else
             error(['dynare_estimation:: mode_compute = ' int2str(options_.mode_compute) ' option is unknown!'])
         end
@@ -854,8 +863,8 @@ if (any(bayestopt_.pshape  >0 ) && options_.mh_replic) || ...
             end
             prior_posterior_statistics('posterior',dataset_,dataset_info);
         end
-        xparam = get_posterior_parameters('mean');
-        M_ = set_all_parameters(xparam,estim_params_,M_);
+        xparam1 = get_posterior_parameters('mean');
+        M_ = set_all_parameters(xparam1,estim_params_,M_);
     end
 end
 
@@ -892,7 +901,7 @@ if (~((any(bayestopt_.pshape > 0) && options_.mh_replic) || (any(bayestopt_.psha
                             'atT(i,:)'';']);
         if options_.nk > 0
             eval(['oo_.FilteredVariables.' deblank(M_.endo_names(i1,:)) ...
-                  ' = squeeze(aK(1,i,:));']);
+                  ' = squeeze(aK(1,i,2:end-(options_.nk-1)));']);
         end
         eval(['oo_.UpdatedVariables.' deblank(M_.endo_names(i1,:)) ...
               ' = updated_variables(i,:)'';']);

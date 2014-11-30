@@ -58,12 +58,12 @@ addpath([dynareroot '/particle/'])
 addpath([dynareroot '/gsa/'])
 addpath([dynareroot '/ep/'])
 addpath([dynareroot '/lmmcp/'])
+addpath([dynareroot '/modules/dates/src/'])
+addpath([dynareroot '/modules/dseries/src/'])
 addpath([dynareroot '/utilities/doc/'])
-addpath([dynareroot '/utilities/tests/'])
-addpath([dynareroot '/utilities/dates/'])
+addpath([dynareroot '/utilities/tests/src/'])
 addpath([dynareroot '/utilities/dataset/'])
 addpath([dynareroot '/utilities/general/'])
-addpath([dynareroot '/utilities/dseries/'])
 addpath([dynareroot '/reports/'])
 
 % For functions that exist only under some Octave versions
@@ -89,6 +89,11 @@ end
 % ilu is missing in Octave
 if isoctave
     addpath([dynareroot '/missing/ilu'])
+end
+
+% corrcoef with two outputs is missing in Octave (ticket #796)
+if isoctave && ~user_has_octave_forge_package('nan')
+    addpath([dynareroot '/missing/corrcoef'])
 end
 
 % strjoin is missing in older versions of MATLAB and in Octave < 3.8
