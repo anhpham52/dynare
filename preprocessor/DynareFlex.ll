@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2014 Dynare Team
+ * Copyright (C) 2003-2015 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -129,6 +129,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <INITIAL>save_params_and_steady_state  {BEGIN DYNARE_STATEMENT; return token::SAVE_PARAMS_AND_STEADY_STATE;}
 <INITIAL>write_latex_dynamic_model  {BEGIN DYNARE_STATEMENT; return token::WRITE_LATEX_DYNAMIC_MODEL;}
 <INITIAL>write_latex_static_model  {BEGIN DYNARE_STATEMENT; return token::WRITE_LATEX_STATIC_MODEL;}
+<INITIAL>write_latex_original_model  {BEGIN DYNARE_STATEMENT; return token::WRITE_LATEX_ORIGINAL_MODEL;}
 
 <INITIAL>steady {BEGIN DYNARE_STATEMENT; return token::STEADY;}
 <INITIAL>check {BEGIN DYNARE_STATEMENT; return token::CHECK;}
@@ -363,11 +364,6 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>smooth {return token::SMOOTH;}
 <DYNARE_STATEMENT>stratified {return token::STRATIFIED;}
 <DYNARE_STATEMENT>filter_algorithm {return token::FILTER_ALGORITHM;}
-<DYNARE_STATEMENT>sis {return token::SIS;}
-<DYNARE_STATEMENT>apf {return token::APF;}
-<DYNARE_STATEMENT>gf {return token::GF;}
-<DYNARE_STATEMENT>gmf {return token::GMF;}
-<DYNARE_STATEMENT>cpf {return token::CPF;}
 <DYNARE_STATEMENT>proposal_approximation {return token::PROPOSAL_APPROXIMATION;}
 <DYNARE_STATEMENT>cubature {return token::CUBATURE;}
 <DYNARE_STATEMENT>unscented {return token::UNSCENTED;}
@@ -401,6 +397,10 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>dirichlet {
   yylval->string_val = new string(yytext);
   return token::DIRICHLET;
+}
+<DYNARE_STATEMENT>weibull {
+  yylval->string_val = new string(yytext);
+  return token::WEIBULL;
 }
 <DYNARE_STATEMENT>normal {
   yylval->string_val = new string(yytext);
@@ -587,6 +587,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_BLOCK>inv_gamma1_pdf {return token::INV_GAMMA1_PDF;}
 <DYNARE_BLOCK>inv_gamma2_pdf {return token::INV_GAMMA2_PDF;}
 <DYNARE_BLOCK>uniform_pdf {return token::UNIFORM_PDF;}
+<DYNARE_BLOCK>weibull_pdf {return token::WEIBULL_PDF;}
 <DYNARE_BLOCK>dsge_prior_weight {return token::DSGE_PRIOR_WEIGHT;}
 
 <DYNARE_BLOCK>; {return Dynare::parser::token_type (yytext[0]);}
@@ -835,6 +836,41 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
       /* Enter a native block */
       BEGIN NATIVE;
       yyless(0);
+    }
+}
+
+ /* For joint prior statement, match [symbol, symbol, ...]
+   If no match, begin native and push everything back on stack
+ */
+<INITIAL>\[([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*,{1}[[:space:]]*)*([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*){1}\] {
+  string yytextcpy = string(yytext);
+  yytextcpy.erase(remove(yytextcpy.begin(), yytextcpy.end(), '['), yytextcpy.end());
+  yytextcpy.erase(remove(yytextcpy.begin(), yytextcpy.end(), ']'), yytextcpy.end());
+  yytextcpy.erase(remove(yytextcpy.begin(), yytextcpy.end(), ' '), yytextcpy.end());
+  istringstream ss(yytextcpy);
+  string token;
+  yylval->vector_string_val = new vector<string *>;
+
+  bool dynare_statement = true;
+
+  while(getline(ss, token, ','))
+    if (driver.symbol_exists_and_is_not_modfile_local_or_external_function(token.c_str()))
+      yylval->vector_string_val->push_back(new string(token));
+    else
+      {
+        for (vector<string *>::iterator it=yylval->vector_string_val->begin();
+            it != yylval->vector_string_val->end(); it++)
+          delete *it;
+        delete yylval->vector_string_val;
+        BEGIN NATIVE;
+        yyless(0);
+        dynare_statement = false;
+        break;
+      }
+  if (dynare_statement)
+    {
+      BEGIN DYNARE_STATEMENT;
+      return token::SYMBOL_VEC;
     }
 }
 

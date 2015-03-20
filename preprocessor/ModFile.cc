@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2014 Dynare Team
+ * Copyright (C) 2006-2015 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -32,6 +32,7 @@
 
 ModFile::ModFile(WarningConsolidation &warnings_arg)
   : expressions_tree(symbol_table, num_constants, external_functions_table),
+    original_model(symbol_table, num_constants, external_functions_table),
     dynamic_model(symbol_table, num_constants, external_functions_table),
     trend_dynamic_model(symbol_table, num_constants, external_functions_table),
     ramsey_FOC_equations_dynamic_model(symbol_table, num_constants, external_functions_table),
@@ -289,7 +290,7 @@ ModFile::checkPass()
 
   // Check if some exogenous is not used in the model block
   set<int> unusedExo = dynamic_model.findUnusedExogenous();
-  if (unusedExo.size() > 1)
+  if (unusedExo.size() > 0)
     {
       warnings << "WARNING: some exogenous (";
       for (set<int>::const_iterator it = unusedExo.begin();
@@ -306,6 +307,9 @@ ModFile::checkPass()
 void
 ModFile::transformPass(bool nostrict)
 {
+  // Save the original model (must be done before any model transformations by preprocessor)
+  dynamic_model.cloneDynamic(original_model);
+
   if (nostrict)
     {
       set<int> unusedEndogs = dynamic_model.findUnusedEndogenous();
@@ -522,7 +526,7 @@ ModFile::computingPass(bool no_tmp_terms, FileOutputType output)
 }
 
 void
-ModFile::writeOutputFiles(const string &basename, bool clear_all, bool no_log, bool no_warn, bool console, bool nograph, bool nointeractive, const ConfigFile &config_file
+ModFile::writeOutputFiles(const string &basename, bool clear_all, bool clear_global, bool no_log, bool no_warn, bool console, bool nograph, bool nointeractive, const ConfigFile &config_file
 #if defined(_WIN32) || defined(__CYGWIN32__)
                           , bool cygwin, bool msvc
 #endif
@@ -559,6 +563,8 @@ ModFile::writeOutputFiles(const string &basename, bool clear_all, bool no_log, b
 
   if (clear_all)
     mOutputFile << "clear all" << endl;
+  else if (clear_global)
+    mOutputFile << "clear M_ options_ oo_ estim_params_ bayestopt_ dataset_;" << endl;
 
   mOutputFile << "tic;" << endl
 	      << "% Save empty dates and dseries objects in memory." << endl
@@ -790,7 +796,9 @@ ModFile::writeOutputFiles(const string &basename, bool clear_all, bool no_log, b
               << "if exist('dataset_', 'var') == 1" << endl
               << "  save('" << basename << "_results.mat', 'dataset_', '-append');" << endl << "end" << endl
               << "if exist('estimation_info', 'var') == 1" << endl
-              << "  save('" << basename << "_results.mat', 'estimation_info', '-append');" << endl << "end" << endl;
+              << "  save('" << basename << "_results.mat', 'estimation_info', '-append');" << endl << "end" << endl
+              << "if exist('oo_recursive_', 'var') == 1" << endl
+              << "  save('" << basename << "_results.mat', 'oo_recursive_', '-append');" << endl << "end" << endl;
 
   config_file.writeEndParallel(mOutputFile);
 

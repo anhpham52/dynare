@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2014 Dynare Team
+ * Copyright (C) 2003-2015 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -108,7 +108,7 @@ class ParsingDriver;
 %token MODE_CHECK MODE_CHECK_NEIGHBOURHOOD_SIZE MODE_CHECK_SYMMETRIC_PLOTS MODE_CHECK_NUMBER_OF_POINTS MODE_COMPUTE MODE_FILE MODEL MODEL_COMPARISON MODEL_INFO MSHOCKS ABS SIGN
 %token MODEL_DIAGNOSTICS MODIFIEDHARMONICMEAN MOMENTS_VARENDO DIFFUSE_FILTER SUB_DRAWS TAPER_STEPS GEWEKE_INTERVAL MCMC_JUMPING_COVARIANCE MOMENT_CALIBRATION
 %token NUMBER_OF_PARTICLES RESAMPLING SYSTEMATIC GENERIC RESAMPLING_THRESHOLD RESAMPLING_METHOD KITAGAWA STRATIFIED SMOOTH
-%token FILTER_ALGORITHM SIS APF GF GMF CPF PROPOSAL_APPROXIMATION CUBATURE UNSCENTED MONTECARLO DISTRIBUTION_APPROXIMATION
+%token FILTER_ALGORITHM PROPOSAL_APPROXIMATION CUBATURE UNSCENTED MONTECARLO DISTRIBUTION_APPROXIMATION
 %token <string_val> NAME
 %token NAN_CONSTANT NO_STATIC NOBS NOCONSTANT NODISPLAY NOCORR NODIAGNOSTIC NOFUNCTIONS NO_HOMOTOPY
 %token NOGRAPH NOMOMENTS NOPRINT NORMAL_PDF SAVE_DRAWS
@@ -126,7 +126,7 @@ class ParsingDriver;
 %token <string_val> TEX_NAME
 %token UNIFORM_PDF UNIT_ROOT_VARS USE_DLL USEAUTOCORR GSA_SAMPLE_FILE USE_UNIVARIATE_FILTERS_IF_SINGULARITY_IS_DETECTED
 %token VALUES VAR VAREXO VAREXO_DET VAROBS PREDETERMINED_VARIABLES
-%token WRITE_LATEX_DYNAMIC_MODEL WRITE_LATEX_STATIC_MODEL
+%token WRITE_LATEX_DYNAMIC_MODEL WRITE_LATEX_STATIC_MODEL WRITE_LATEX_ORIGINAL_MODEL
 %token XLS_SHEET XLS_RANGE LONG_NAME
 %left COMMA
 %left EQUAL_EQUAL EXCLAMATION_EQUAL
@@ -148,7 +148,7 @@ class ParsingDriver;
 %token RESTRICTION RESTRICTION_FNAME CROSS_RESTRICTIONS NLAGS CONTEMP_REDUCED_FORM REAL_PSEUDO_FORECAST
 %token DUMMY_OBS NSTATES INDXSCALESSTATES NO_BAYESIAN_PRIOR SPECIFICATION SIMS_ZHA
 %token <string_val> ALPHA BETA ABAND NINV CMS NCMS CNUM GAMMA INV_GAMMA INV_GAMMA1 INV_GAMMA2 NORMAL UNIFORM EPS PDF FIG DR NONE PRIOR PRIOR_VARIANCE HESSIAN IDENTITY_MATRIX DIRICHLET
-%token GSIG2_LMDM Q_DIAG FLAT_PRIOR NCSK NSTD
+%token GSIG2_LMDM Q_DIAG FLAT_PRIOR NCSK NSTD WEIBULL WEIBULL_PDF
 %token INDXPARR INDXOVR INDXAP APBAND INDXIMF IMFBAND INDXFORE FOREBAND INDXGFOREHAT INDXGIMFHAT
 %token INDXESTIMA INDXGDLS EQ_MS FILTER_COVARIANCE FILTER_DECOMPOSITION
 %token EQ_CMS TLINDX TLNUMBER BANACT RESTRICTIONS
@@ -171,6 +171,7 @@ class ParsingDriver;
 %token PARAMETER_CONVERGENCE_CRITERION NUMBER_OF_LARGE_PERTURBATIONS NUMBER_OF_SMALL_PERTURBATIONS
 %token NUMBER_OF_POSTERIOR_DRAWS_AFTER_PERTURBATION MAX_NUMBER_OF_STAGES
 %token RANDOM_FUNCTION_CONVERGENCE_CRITERION RANDOM_PARAMETER_CONVERGENCE_CRITERION
+%token <vector_string_val> SYMBOL_VEC
 
 %type <node_val> expression expression_or_empty
 %type <node_val> equation hand_side
@@ -250,6 +251,7 @@ statement : parameters
           | identification
           | write_latex_dynamic_model
           | write_latex_static_model
+          | write_latex_original_model
           | shock_decomposition
           | conditional_forecast
           | conditional_forecast_paths
@@ -1330,6 +1332,8 @@ prior_distribution : BETA
                      { $$ = eInvGamma2; }
                    | DIRICHLET
                      { $$ = eDirichlet; }
+                   | WEIBULL
+                     { $$ = eWeibull; }
                    ;
 
 prior_pdf : BETA_PDF
@@ -1346,6 +1350,8 @@ prior_pdf : BETA_PDF
             { $$ = eUniform; }
           | INV_GAMMA2_PDF
             { $$ = eInvGamma2; }
+          | WEIBULL_PDF
+            { $$ = eWeibull; }
           ;
 
 date_str : DATES { $$ = $1; }
@@ -1417,6 +1423,8 @@ prior : symbol '.' PRIOR { driver.set_prior_variance(); driver.prior_shape = eNo
         { driver.set_prior($1, new string ("")); }
       | symbol '.' symbol '.' PRIOR { driver.set_prior_variance(); driver.prior_shape = eNoShape; } '(' prior_options_list ')' ';'
         { driver.set_prior($1, $3); }
+      | SYMBOL_VEC '.' PRIOR { driver.set_prior_variance(); driver.prior_shape = eNoShape; }  '(' joint_prior_options_list ')' ';'
+        { driver.set_joint_prior($1); }
       | STD '(' symbol ')' '.' PRIOR { driver.set_prior_variance(); driver.prior_shape = eNoShape; } '(' prior_options_list ')' ';'
         { driver.set_std_prior($3, new string ("")); }
       | STD '(' symbol ')' '.' symbol '.' PRIOR { driver.set_prior_variance(); driver.prior_shape = eNoShape; } '(' prior_options_list ')' ';'
@@ -1442,6 +1450,22 @@ prior_options : o_shift
               | o_shape
               | o_domain
               ;
+
+joint_prior_options_list : joint_prior_options_list COMMA joint_prior_options
+                         | joint_prior_options
+                         ;
+
+joint_prior_options : o_shift
+                    | o_mean_vec
+                    | o_median
+                    | o_stdev
+                    | o_truncate
+                    | o_variance_mat
+                    | o_mode
+                    | o_interval
+                    | o_shape
+                    | o_domain
+                    ;
 
 prior_eq : prior_eq_opt EQUAL prior_eq_opt ';'
            {
@@ -1900,6 +1924,10 @@ write_latex_dynamic_model : WRITE_LATEX_DYNAMIC_MODEL ';'
 
 write_latex_static_model : WRITE_LATEX_STATIC_MODEL ';'
                            { driver.write_latex_static_model(); }
+                         ;
+
+write_latex_original_model : WRITE_LATEX_ORIGINAL_MODEL ';'
+                           { driver.write_latex_original_model(); }
                          ;
 
 shock_decomposition : SHOCK_DECOMPOSITION ';'
@@ -2535,6 +2563,7 @@ o_shift : SHIFT EQUAL signed_number { driver.option_num("shift", $3); };
 o_shape : SHAPE EQUAL prior_distribution { driver.prior_shape = $3; };
 o_mode : MODE EQUAL signed_number { driver.option_num("mode", $3); };
 o_mean : MEAN EQUAL signed_number { driver.option_num("mean", $3); };
+o_mean_vec : MEAN EQUAL vec_value { driver.option_num("mean", $3); };
 o_truncate : TRUNCATE EQUAL vec_value { driver.option_num("truncate", $3); };
 o_stdev : STDEV EQUAL non_negative_number { driver.option_num("stdev", $3); };
 o_jscale : JSCALE EQUAL non_negative_number { driver.option_num("jscale", $3); };
@@ -2543,6 +2572,7 @@ o_bounds : BOUNDS EQUAL vec_value_w_inf { driver.option_num("bounds", $3); };
 o_domain : DOMAINN EQUAL vec_value { driver.option_num("domain", $3); };
 o_interval : INTERVAL EQUAL vec_value { driver.option_num("interval", $3); };
 o_variance : VARIANCE EQUAL expression { driver.set_prior_variance($3); }
+o_variance_mat : VARIANCE EQUAL vec_of_vec_value { driver.option_num("variance",$3); }
 o_prefilter : PREFILTER EQUAL INT_NUMBER { driver.option_num("prefilter", $3); };
 o_presample : PRESAMPLE EQUAL INT_NUMBER { driver.option_num("presample", $3); };
 o_lik_algo : LIK_ALGO EQUAL INT_NUMBER { driver.option_num("lik_algo", $3); };
@@ -2667,11 +2697,7 @@ o_resampling_threshold : RESAMPLING_THRESHOLD EQUAL non_negative_number { driver
 o_resampling_method : RESAMPLING_METHOD EQUAL KITAGAWA {driver.option_num("particle.resampling.method.kitagawa", "1"); driver.option_num("particle.resampling.method.smooth", "0"); driver.option_num("particle.resampling.smethod.stratified", "0"); }
               | RESAMPLING_METHOD EQUAL SMOOTH {driver.option_num("particle.resampling.method.kitagawa", "0"); driver.option_num("particle.resampling.method.smooth", "1"); driver.option_num("particle.resampling.smethod.stratified", "0"); }
               | RESAMPLING_METHOD EQUAL STRATIFIED {driver.option_num("particle.resampling.method.kitagawa", "0"); driver.option_num("particle.resampling.method.smooth", "0"); driver.option_num("particle.resampling.method.stratified", "1"); };
-o_filter_algorithm : FILTER_ALGORITHM EQUAL SIS {driver.option_num("particle.filter_algorithm.sis", "1"); driver.option_num("particle.filter_algorithm.apf", "0"); driver.option_num("particle.filter_algorithm.gf", "0"); driver.option_num("particle.filter_algorithm.gmf", "0");driver.option_num("particle.filter_algorithm.cpf", "0");}
-		   | FILTER_ALGORITHM EQUAL APF {driver.option_num("particle.filter_algorithm.sis", "0"); driver.option_num("particle.filter_algorithm.apf", "1"); driver.option_num("particle.filter_algorithm.gf", "0"); driver.option_num("particle.filter_algorithm.gmf", "0"); driver.option_num("particle.filter_algorithm.cpf", "0");}
-		   | FILTER_ALGORITHM EQUAL GF {driver.option_num("particle.filter_algorithm.sis", "0"); driver.option_num("particle.filter_algorithm.apf", "0"); driver.option_num("particle.filter_algorithm.gf", "1");  driver.option_num("particle.filter_algorithm.gmf", "0"); driver.option_num("particle.filter_algorithm.cpf", "0");}
-		   | FILTER_ALGORITHM EQUAL GMF {driver.option_num("particle.filter_algorithm.sis", "0"); driver.option_num("particle.filter_algorithm.apf", "0"); driver.option_num("particle.filter_algorithm.gf", "0"); driver.option_num("particle.filter_algorithm.gmf", "1"); driver.option_num("particle.filter_algorithm.cpf", "0");}
-		   | FILTER_ALGORITHM EQUAL CPF {driver.option_num("particle.filter_algorithm.sis", "0"); driver.option_num("particle.filter_algorithm.apf", "0"); driver.option_num("particle.filter_algorithm.gf", "0"); driver.option_num("particle.filter_algorithm.gmf", "0"); driver.option_num("particle.filter_algorithm.cpf", "1");} ;
+o_filter_algorithm : FILTER_ALGORITHM EQUAL symbol { driver.option_str("particle.filter_algorithm", $3); };
 o_proposal_approximation : PROPOSAL_APPROXIMATION EQUAL CUBATURE {driver.option_num("particle.proposal_approximation.cubature", "1"); driver.option_num("particle.proposal_approximation.unscented", "0"); driver.option_num("particle.proposal_approximation.montecarlo", "0");}
 		| PROPOSAL_APPROXIMATION EQUAL UNSCENTED {driver.option_num("particle.proposal_approximation.cubature", "0"); driver.option_num("particle.proposal_approximation.unscented", "1"); driver.option_num("particle.proposal_approximation.montecarlo", "0");}
 		| PROPOSAL_APPROXIMATION EQUAL MONTECARLO {driver.option_num("particle.proposal_approximation.cubature", "0"); driver.option_num("particle.proposal_approximation.unscented", "0"); driver.option_num("particle.proposal_approximation.montecarlo", "1");} ;

@@ -15,7 +15,7 @@ function dynareroot = dynare_config(path_to_dynare,verbose)
 % SPECIAL REQUIREMENTS
 %   none
 
-% Copyright (C) 2001-2014 Dynare Team
+% Copyright (C) 2001-2015 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -50,6 +50,7 @@ addpath([dynareroot '/kalman/'])
 addpath([dynareroot '/kalman/likelihood'])
 addpath([dynareroot '/AIM/'])
 addpath([dynareroot '/partial_information/'])
+addpath([dynareroot '/perfect-foresight-models/'])
 addpath([dynareroot '/ms-sbvar/'])
 addpath([dynareroot '/ms-sbvar/identification/'])
 addpath([dynareroot '../contrib/ms-sbvar/TZcode/MatlabFiles/'])
@@ -57,14 +58,17 @@ addpath([dynareroot '/parallel/'])
 addpath([dynareroot '/particle/'])
 addpath([dynareroot '/gsa/'])
 addpath([dynareroot '/ep/'])
+addpath([dynareroot '/cli/'])
 addpath([dynareroot '/lmmcp/'])
+addpath([dynareroot '/optimization/'])
 addpath([dynareroot '/modules/dates/src/'])
 addpath([dynareroot '/modules/dseries/src/'])
+addpath([dynareroot '/modules/dseries/src/read'])
 addpath([dynareroot '/utilities/doc/'])
 addpath([dynareroot '/utilities/tests/src/'])
 addpath([dynareroot '/utilities/dataset/'])
 addpath([dynareroot '/utilities/general/'])
-addpath([dynareroot '/reports/'])
+addpath([dynareroot '/modules/reporting/src/'])
 
 % For functions that exist only under some Octave versions
 % or some MATLAB versions, and for which we provide some replacement functions
@@ -86,8 +90,8 @@ if isoctave
     addpath([dynareroot '/missing/ordeig'])
 end
 
-% ilu is missing in Octave
-if isoctave
+% ilu is missing in Octave < 4.0
+if isoctave && octave_ver_less_than('4.0')
     addpath([dynareroot '/missing/ilu'])
 end
 
@@ -115,7 +119,7 @@ if isoctave
 else
     % Add win32 specific paths for Dynare Windows package
     if strcmp(computer, 'PCWIN')
-        mexpath = [dynareroot '../mex/matlab/win32-7.5-8.4'];
+        mexpath = [dynareroot '../mex/matlab/win32-7.5-8.5'];
         if exist(mexpath, 'dir')
             addpath(mexpath)
         end
@@ -129,7 +133,7 @@ else
                 addpath(mexpath)
             end
         else
-            mexpath = [dynareroot '../mex/matlab/win64-7.8-8.4'];
+            mexpath = [dynareroot '../mex/matlab/win64-7.8-8.5'];
             if exist(mexpath, 'dir')
                 addpath(mexpath)
             end
@@ -256,7 +260,7 @@ if verbose
 end
 
 % Save empty dates and dseries objects (necessary if a mod file is not preprocessed).
-dates('initialize');
+initialize_dates_toolbox;
 dseries('initialize');
 
 cd(origin);

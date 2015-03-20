@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2014 Dynare Team
+ * Copyright (C) 2003-2015 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -342,7 +342,7 @@ DynamicModel::writeModelEquationsOrdered_M(const string &dynamic_basename) const
       else if (simulation_type == SOLVE_BACKWARD_SIMPLE || simulation_type == SOLVE_FORWARD_SIMPLE)
         output << "function [residual, y, g1, g2, g3, varargout] = " << dynamic_basename << "_" << block+1 << "(y, x, params, steady_state, it_, jacobian_eval)\n";
       else
-        output << "function [residual, y, g1, g2, g3, b, varargout] = " << dynamic_basename << "_" << block+1 << "(y, x, params, steady_state, periods, jacobian_eval, y_kmin, y_size)\n";
+        output << "function [residual, y, g1, g2, g3, b, varargout] = " << dynamic_basename << "_" << block+1 << "(y, x, params, steady_state, periods, jacobian_eval, y_kmin, y_size, Periods)\n";
       BlockType block_type;
       if (simulation_type == SOLVE_TWO_BOUNDARIES_COMPLETE || simulation_type == SOLVE_TWO_BOUNDARIES_SIMPLE)
         block_type = SIMULTAN;
@@ -364,7 +364,6 @@ DynamicModel::writeModelEquationsOrdered_M(const string &dynamic_basename) const
              << "  % //                     Simulation type "
              << BlockSim(simulation_type) << "  //" << endl
              << "  % ////////////////////////////////////////////////////////////////////////" << endl;
-      output << "  global options_ oo_;" << endl;
       //The Temporary terms
       if (simulation_type == EVALUATE_BACKWARD || simulation_type == EVALUATE_FORWARD)
         {
@@ -385,9 +384,9 @@ DynamicModel::writeModelEquationsOrdered_M(const string &dynamic_basename) const
           output << "  else\n";
           if (simulation_type == SOLVE_TWO_BOUNDARIES_COMPLETE || simulation_type == SOLVE_TWO_BOUNDARIES_SIMPLE)
             {
-              output << "    g1 = spalloc(" << block_mfs << "*options_.periods, "
-                     << block_mfs << "*(options_.periods+" << max_leadlag_block[block].first+max_leadlag_block[block].second+1 << ")"
-                     << ", " << nze << "*options_.periods);\n";
+              output << "    g1 = spalloc(" << block_mfs << "*Periods, "
+                     << block_mfs << "*(Periods+" << max_leadlag_block[block].first+max_leadlag_block[block].second+1 << ")"
+                     << ", " << nze << "*Periods);\n";
             }
           else
             {
@@ -825,7 +824,6 @@ DynamicModel::writeModelEquationsCode(string &file_name, const string &bin_basen
   //Temporary variables declaration
   FDIMT_ fdimt(temporary_terms.size());
   fdimt.write(code_file, instruction_number);
-  int other_endo_size = 0;
 
   vector<unsigned int> exo, exo_det, other_endo;
 
@@ -868,6 +866,7 @@ DynamicModel::writeModelEquationsCode(string &file_name, const string &bin_basen
   prev_lag = -999999999;
   int prev_type = -1;
   int count_col_exo = 0;
+  int count_col_det_exo = 0;
 
   for (map<pair< pair<int, int>, pair<int, int> >, expr_t>::const_iterator it = first_derivatives_reordered_exo.begin();
        it != first_derivatives_reordered_exo.end(); it++)
@@ -880,7 +879,10 @@ DynamicModel::writeModelEquationsCode(string &file_name, const string &bin_basen
           prev_var = var;
           prev_lag = lag;
           prev_type = type;
-          count_col_exo++;
+          if (type == eExogenous)
+            count_col_exo++;
+          else if (type == eExogenousDet)
+            count_col_det_exo++;
         }
     }
   
@@ -892,13 +894,15 @@ DynamicModel::writeModelEquationsCode(string &file_name, const string &bin_basen
                            equation_reordered,
                            false,
                            symbol_table.endo_nbr(),
-                           0,
-                           0,
+                           max_endo_lag,
+                           max_endo_lead,
                            u_count_int,
                            count_col_endo,
                            symbol_table.exo_det_nbr(),
+                           count_col_det_exo,
+                           symbol_table.exo_nbr(),
                            count_col_exo,
-                           other_endo_size,
+                           0,
                            0,
                            exo_det,
                            exo,
@@ -1098,9 +1102,8 @@ DynamicModel::writeModelEquationsCode_Block(string &file_name, const string &bin
       unsigned int block_size = getBlockSize(block);
       unsigned int block_mfs = getBlockMfs(block);
       unsigned int block_recursive = block_size - block_mfs;
-      unsigned int block_exo_det_size = exo_det_block[block].size();
-      unsigned int block_other_endo_size = other_endo_block[block].size();
       int block_max_lag = max_leadlag_block[block].first;
+      int block_max_lead = max_leadlag_block[block].second;
 
       if (simulation_type == SOLVE_TWO_BOUNDARIES_SIMPLE || simulation_type == SOLVE_TWO_BOUNDARIES_COMPLETE
           || simulation_type == SOLVE_BACKWARD_COMPLETE || simulation_type == SOLVE_FORWARD_COMPLETE)
@@ -1135,19 +1138,36 @@ DynamicModel::writeModelEquationsCode_Block(string &file_name, const string &bin
               count_col_endo++;
             }
         }
+      unsigned int count_col_det_exo = 0;
       vector<unsigned int> exo_det;
       for (lag_var_t::const_iterator it = exo_det_block[block].begin(); it != exo_det_block[block].end(); it++)
-        exo_det.push_back(it->first);
+        for (var_t::const_iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
+          {
+            count_col_det_exo++;
+            if (find (exo_det.begin(), exo_det.end(), *it1) == exo_det.end())
+              exo_det.push_back(*it1);
+          }
+            
+      unsigned int count_col_exo = 0;
       vector<unsigned int> exo;
       for (lag_var_t::const_iterator it = exo_block[block].begin(); it != exo_block[block].end(); it++)
-        exo.push_back(it->first);
+        for (var_t::const_iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
+          {
+            count_col_exo++;
+            if (find (exo.begin(), exo.end(), *it1) == exo.end())
+              exo.push_back(*it1);
+          }
+          
       vector<unsigned int> other_endo;
       unsigned int count_col_other_endo = 0;
       for (lag_var_t::const_iterator it = other_endo_block[block].begin(); it != other_endo_block[block].end(); it++)
-        {
-          other_endo.push_back(it->first);
-          count_col_other_endo += it->second.size();
-        }
+        for (var_t::const_iterator it1 = it->second.begin(); it1 != it->second.end(); it1++)
+          {
+            count_col_other_endo++;
+            if (find (other_endo.begin(), other_endo.end(), *it1) == other_endo.end())
+                other_endo.push_back(*it1);
+          }
+          
       FBEGINBLOCK_ fbeginblock(block_mfs,
                                simulation_type,
                                getBlockFirstEquation(block),
@@ -1157,19 +1177,21 @@ DynamicModel::writeModelEquationsCode_Block(string &file_name, const string &bin
                                blocks_linear[block],
                                symbol_table.endo_nbr(),
                                block_max_lag,
-                               block_max_lag,
+                               block_max_lead,
                                u_count_int,
                                count_col_endo,
-                               block_exo_det_size,
+                               exo_det.size(),
+                               count_col_det_exo,
+                               exo.size(),
                                getBlockExoColSize(block),
-                               block_other_endo_size,
+                               other_endo.size(),
                                count_col_other_endo,
                                exo_det,
                                exo,
                                other_endo
                                );
       fbeginblock.write(code_file, instruction_number);
-
+      
       // The equations
       for (i = 0; i < (int) block_size; i++)
         {
@@ -1412,7 +1434,7 @@ DynamicModel::writeModelEquationsCode_Block(string &file_name, const string &bin
         }
       prev_var = -1;
       prev_lag = -999999999;
-      int count_col_exo = 0;
+      count_col_exo = 0;
       for (map<pair<int, pair<int, int> >, expr_t>::const_iterator it = tmp_exo_derivative.begin(); it != tmp_exo_derivative.end(); it++)
         {
           int lag = it->first.first;
@@ -1766,8 +1788,7 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
   int Nb_SGE = 0;
   bool open_par = false;
 
-  mDynamicModelFile << "function [varargout] = " << dynamic_basename << "(varargin)\n";
-  mDynamicModelFile << "  global oo_ options_ M_ ;\n";
+  mDynamicModelFile << "function [varargout] = " << dynamic_basename << "(options_, M_, oo_, varargin)\n";
   mDynamicModelFile << "  g2=[];g3=[];\n";
   //Temporary variables declaration
   OK = true;
@@ -1782,7 +1803,7 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
       (*it)->writeOutput(tmp_output, oMatlabStaticModelSparse, temporary_terms);
     }
   if (tmp_output.str().length() > 0)
-    mDynamicModelFile << "  global " << tmp_output.str() << " M_ ;\n";
+    mDynamicModelFile << "  global " << tmp_output.str() << ";\n";
 
   mDynamicModelFile << "  T_init=zeros(1,options_.periods+M_.maximum_lag+M_.maximum_lead);\n";
   tmp_output.str("");
@@ -1859,7 +1880,7 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
           break;
         case SOLVE_TWO_BOUNDARIES_COMPLETE:
         case SOLVE_TWO_BOUNDARIES_SIMPLE:
-          mDynamicModelFile << "    [r, y, dr(" << count_call << ").g1, dr(" << count_call << ").g2, dr(" << count_call << ").g3, b, dr(" << count_call << ").g1_x, dr(" << count_call << ").g1_xd, dr(" << count_call << ").g1_o]=" << dynamic_basename << "_" <<  block + 1 << "(y, x, params, steady_state, it_-" << max_lag << ", 1, " << max_lag << ", " << block_recursive << ");\n";
+          mDynamicModelFile << "    [r, y, dr(" << count_call << ").g1, dr(" << count_call << ").g2, dr(" << count_call << ").g3, b, dr(" << count_call << ").g1_x, dr(" << count_call << ").g1_xd, dr(" << count_call << ").g1_o]=" << dynamic_basename << "_" <<  block + 1 << "(y, x, params, steady_state, it_-" << max_lag << ", 1, " << max_lag << ", " << block_recursive << "," << "options_.periods" << ");\n";
           mDynamicModelFile << "    residual(y_index_eq)=r(:,M_.maximum_lag+1);\n";
           break;
         default:
@@ -1891,9 +1912,11 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
                     << "  else" << endl
                     << "    mthd='UNKNOWN';" << endl
                     << "  end;" << endl
-                    << "  disp (['-----------------------------------------------------']) ;" << endl
-                    << "  disp (['MODEL SIMULATION: (method=' mthd ')']) ;" << endl
-                    << "  fprintf('\\n') ;" << endl
+		    << "  if options_.verbosity" << endl 
+                    << "    printline(41)" << endl
+                    << "    disp(sprintf('MODEL SIMULATION (method=%s):',mthd))" << endl
+		    << "    skipline()" << endl
+		    << "  end" << endl
                     << "  periods=options_.periods;" << endl
                     << "  maxit_=options_.simul.maxit;" << endl
                     << "  solve_tolf=options_.solve_tolf;" << endl
@@ -1930,7 +1953,7 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
           mDynamicModelFile << "  g1=[];g2=[];g3=[];\n";
           mDynamicModelFile << "  y=" << dynamic_basename << "_" << block + 1 << "(y, x, params, steady_state, 0, y_kmin, periods);\n";
           mDynamicModelFile << "  tmp = y(:,M_.block_structure.block(" << block + 1 << ").variable);\n";
-          mDynamicModelFile << "  if any(isnan(tmp) | isinf(tmp))\n";
+	  mDynamicModelFile << "  if any(isnan(tmp) | isinf(tmp))\n";
           mDynamicModelFile << "    disp(['Inf or Nan value during the evaluation of block " << block <<"']);\n";
           mDynamicModelFile << "    return;\n";
           mDynamicModelFile << "  end;\n";
@@ -2012,7 +2035,7 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
           mDynamicModelFile << "  y = solve_one_boundary('"  << dynamic_basename << "_" <<  block + 1 << "'"
                             <<", y, x, params, steady_state, y_index, " << nze
                             <<", options_.periods, " << blocks_linear[block]
-                            <<", blck_num, y_kmin, options.simul.maxit, options_.solve_tolf, options_.slowc, " << cutoff << ", options_.stack_solve_algo, 1, 1, 0);\n";
+                            <<", blck_num, y_kmin, options_.simul.maxit, options_.solve_tolf, options_.slowc, " << cutoff << ", options_.stack_solve_algo, 1, 1, 0);\n";
           mDynamicModelFile << "  tmp = y(:,M_.block_structure.block(" << block + 1 << ").variable);\n";
           mDynamicModelFile << "  if any(isnan(tmp) | isinf(tmp))\n";
           mDynamicModelFile << "    disp(['Inf or Nan value during the resolution of block " << block <<"']);\n";
@@ -2042,7 +2065,7 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
                             <<", options_.periods, " << max_leadlag_block[block].first
                             <<", " << max_leadlag_block[block].second
                             <<", " << blocks_linear[block]
-                            <<", blck_num, y_kmin, options_.simul.maxit, options_.solve_tolf, options_.slowc, " << cutoff << ", options_.stack_solve_algo, M_, oo_);\n";
+                            <<", blck_num, y_kmin, options_.simul.maxit, options_.solve_tolf, options_.slowc, " << cutoff << ", options_.stack_solve_algo, options_, M_, oo_);\n";
           mDynamicModelFile << "  tmp = y(:,M_.block_structure.block(" << block + 1 << ").variable);\n";
           mDynamicModelFile << "  if any(isnan(tmp) | isinf(tmp))\n";
           mDynamicModelFile << "    disp(['Inf or Nan value during the resolution of block " << block <<"']);\n";
@@ -2054,6 +2077,7 @@ DynamicModel::writeSparseDynamicMFile(const string &dynamic_basename, const stri
     mDynamicModelFile << "  end;\n";
   open_par = false;
   mDynamicModelFile << "  oo_.endo_simul = y';\n";
+  mDynamicModelFile << "  varargout{1} = oo_;\n";
   mDynamicModelFile << "return;\n";
   mDynamicModelFile << "end" << endl;
 
@@ -3230,12 +3254,13 @@ DynamicModel::collect_block_first_order_derivatives()
       int var = symbol_table.getTypeSpecificID(getSymbIDByDerivID(it2->first.second));
       int lag = getLagByDerivID(it2->first.second);
       int block_eq = equation_2_block[eq];
-      int block_var = variable_2_block[var];
+      int block_var=0;
       derivative_t tmp_derivative;
       lag_var_t lag_var;
       switch (getTypeByDerivID(it2->first.second))
         {
         case eEndogenous:
+          block_var = variable_2_block[var];
           if (block_eq == block_var)
             {
               if (lag < 0 && lag < -endo_max_leadlag_block[block_eq].first)
@@ -3971,6 +3996,12 @@ void
 DynamicModel::writeLatexFile(const string &basename) const
 {
   writeLatexModelFile(basename + "_dynamic.tex", oLatexDynamicModel);
+}
+
+void
+DynamicModel::writeLatexOriginalFile(const string &basename) const
+{
+  writeLatexModelFile(basename + "_original.tex", oLatexDynamicModel);
 }
 
 void

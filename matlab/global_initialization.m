@@ -11,7 +11,7 @@ function global_initialization()
 % SPECIAL REQUIREMENTS
 %    none
 
-% Copyright (C) 2003-2014 Dynare Team
+% Copyright (C) 2003-2015 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -102,6 +102,10 @@ options_.bvar_prior_mu = 2;
 options_.bvar_prior_omega = 1;
 options_.bvar_prior_flat = 0;
 options_.bvar_prior_train = 0;
+
+% Initialize the field that will contain the optimization algorigthm's options declared in the
+% estimation command (if anny).
+options_.optim_opt = [];
 
 % Optimization algorithm [6] gmhmaxlik
 gmhmaxlik.iterations = 3;
@@ -241,11 +245,7 @@ particle.resampling.method.kitagawa = 1;
 particle.resampling.method.smooth = 0;
 particle.resampling.method.stratified = 0;
 % Set default algorithm
-particle.filter_algorithm.sis = 1;
-particle.filter_algorithm.apf = 0;
-particle.filter_algorithm.gf = 0;
-particle.filter_algorithm.gmf = 0;
-particle.filter_algorithm.cpf = 0;
+particle.filter_algorithm = 'sis';
 % Approximation of the proposal distribution
 particle.proposal_approximation.cubature = 1;
 particle.proposal_approximation.unscented = 0;
@@ -362,6 +362,8 @@ estimation_info.measurement_error_corr.range_index = {};
 estimation_info.structural_innovation_corr_prior_index = {};
 estimation_info.structural_innovation_corr_options_index = {};
 estimation_info.structural_innovation_corr.range_index = {};
+estimation_info.joint_parameter_prior_index = {};
+estimation_info.joint_parameter = {'index','domain','interval','mean','median','mode','shape','shift','stdev','truncate','variance'};
 options_.initial_period = NaN; %dates(1,1);
 options_.dataset.file = [];
 options_.dataset.series = [];
@@ -426,8 +428,8 @@ options_.student_degrees_of_freedom = 3;
 options_.posterior_max_subsample_draws = 1200;
 options_.sub_draws = [];
 options_.use_mh_covariance_matrix = 0;
-options_.gradient_method = 2;
-options_.gradient_epsilon = 1e-6;
+options_.gradient_method = 2; %used by csminwel and newrat
+options_.gradient_epsilon = 1e-6; %used by csminwel and newrat
 options_.posterior_sampling_method = 'random_walk_metropolis_hastings';
 options_.proposal_distribution = 'rand_multivariate_normal';
 options_.student_degrees_of_freedom = 3;
@@ -472,6 +474,18 @@ M_.Correlation_matrix_ME = [];
 options_.homotopy_mode = 0;
 options_.homotopy_steps = 1;
 options_.homotopy_force_continue = 0;
+
+%csminwel optimization routine
+csminwel.tolerance.f=1e-7;
+csminwel.maxiter=1000;
+options_.csminwel=csminwel;
+
+%newrat optimization routine
+newrat.hess=1; %analytic hessian
+newrat.tolerance.f=1e-5;
+newrat.tolerance.f_analytic=1e-7;
+newrat.maxiter=1000;
+options_.newrat=newrat;
 
 % Simplex optimization routine (variation on Nelder Mead algorithm).
 simplex.tolerance.x = 1e-4;
@@ -627,8 +641,7 @@ options_.endogenous_prior_restrictions.irf={};
 options_.endogenous_prior_restrictions.moment={};
 
 % OSR Optimal Simple Rules
-options_.osr.tolf=1e-7;
-options_.osr.maxit=1000;
+options_.osr.opt_algo=4;
 
 % use GPU
 options_.gpu = 0;

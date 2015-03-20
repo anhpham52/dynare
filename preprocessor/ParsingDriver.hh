@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2014 Dynare Team
+ * Copyright (C) 2003-2015 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -186,6 +186,8 @@ private:
 
   //! Temporary storage for argument list of external function
   stack<vector<expr_t> >  stack_external_function_args;
+  //! Temporary storage for parameters in joint prior statement
+  vector<string> joint_parameters;
   //! Temporary storage for the symb_id associated with the "name" symbol of the current external_function statement
   int current_external_function_id;
   //! Temporary storage for option list provided to external_function()
@@ -411,6 +413,10 @@ public:
   void estimation_data();
   //! Sets the prior for a parameter
   void set_prior(string *arg1, string *arg2);
+  //! Sets the joint prior for a set of parameters
+  void set_joint_prior(vector<string *>*symbol_vec);
+  //! Adds a parameters to the list of joint parameters
+  void add_joint_parameter(string *name);
   //! Adds the variance option to its temporary holding place
   void set_prior_variance(expr_t variance=NULL);
   //! Copies the prior from_name to_name
@@ -503,6 +509,8 @@ public:
   void write_latex_dynamic_model();
   //! Adds a write_latex_static_model statement
   void write_latex_static_model();
+  //! Adds a write_latex_original_model statement
+  void write_latex_original_model();
   //! BVAR marginal density
   void bvar_density(string *maxnlags);
   //! BVAR forecast

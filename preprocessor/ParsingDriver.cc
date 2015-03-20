@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2014 Dynare Team
+ * Copyright (C) 2003-2015 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -1411,6 +1411,26 @@ ParsingDriver::set_prior(string *name, string *subsample_name)
 }
 
 void
+ParsingDriver::set_joint_prior(vector<string *>*symbol_vec)
+{
+  for (vector<string *>::const_iterator it=symbol_vec->begin(); it != symbol_vec->end(); it++)
+    add_joint_parameter(*it);
+  mod_file->addStatement(new JointPriorStatement(joint_parameters, prior_shape, options_list));
+  joint_parameters.clear();
+  options_list.clear();
+  prior_shape = eNoShape;
+  delete symbol_vec;
+}
+
+void
+ParsingDriver::add_joint_parameter(string *name)
+{
+  check_symbol_is_parameter(name);
+  joint_parameters.push_back(*name);
+  delete name;
+}
+
+void
 ParsingDriver::set_prior_variance(expr_t variance)
 {
   prior_variance = variance;
@@ -1818,6 +1838,12 @@ void
 ParsingDriver::write_latex_static_model()
 {
   mod_file->addStatement(new WriteLatexStaticModelStatement(mod_file->static_model));
+}
+
+void
+ParsingDriver::write_latex_original_model()
+{
+  mod_file->addStatement(new WriteLatexOriginalModelStatement(mod_file->original_model));
 }
 
 void

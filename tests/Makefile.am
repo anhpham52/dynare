@@ -21,7 +21,13 @@ MODFILES = \
 	optimal_policy/osr_example.mod \
 	optimal_policy/osr_example_objective_correctness.mod \
 	optimal_policy/osr_example_obj_corr_non_stat_vars.mod \
-	optimal_policy/ramsey.mod \
+	optimal_policy/OSR/osr_obj_corr_algo_1.mod \
+	optimal_policy/OSR/osr_obj_corr_algo_3.mod \
+	optimal_policy/OSR/osr_obj_corr_algo_4.mod \
+	optimal_policy/OSR/osr_obj_corr_algo_7.mod \
+	optimal_policy/OSR/osr_obj_corr_algo_8.mod \
+	optimal_policy/OSR/osr_obj_corr_algo_9.mod \
+	optimal_policy/ramsey_.mod \
 	optimal_policy/nk_ramsey.mod \
 	optimal_policy/nk_ramsey_model.mod \
 	optimal_policy/nk_ramsey_det.mod \
@@ -33,7 +39,7 @@ MODFILES = \
 	optimal_policy/Ramsey/ramsey_ex_initval_AR2.mod \
 	optimal_policy/Ramsey/ramsey_ex_aux.mod \
 	discretionary_policy/dennis_1.mod \
-	ramst_initval_file.mod \
+	initval_file/ramst_initval_file.mod \
 	ramst_normcdf_and_friends.mod \
 	ramst_vec.mod \
 	example1_varexo_det.mod \
@@ -79,6 +85,7 @@ MODFILES = \
 	arima/mod2b.mod \
 	arima/mod2c.mod \
 	data/mod1a.mod \
+	analytic_derivatives/fs2000_analytic_derivation.mod \
 	fs2000/fs2000.mod \
 	fs2000/fs2000a.mod \
 	fs2000/fs2000c.mod \
@@ -154,6 +161,7 @@ MODFILES = \
 	kalman_filter_smoother/fs2000_1.mod \
 	kalman_filter_smoother/fs2000_2.mod \
 	kalman_filter_smoother/fs2000a.mod \
+	kalman_filter_smoother/fs2000_smoother_only.mod \
 	kalman_filter_smoother/check_variable_dimensions/fs2000.mod \
 	kalman_filter_smoother/check_variable_dimensions/fs2000_ML.mod \
 	second_order/burnside_1.mod \
@@ -172,6 +180,9 @@ MODFILES = \
 	deterministic_simulations/rbc_det5.mod \
 	deterministic_simulations/rbc_det6.mod \
 	deterministic_simulations/homotopy.mod \
+	deterministic_simulations/rbc_det_exo_lag_2a.mod \
+	deterministic_simulations/rbc_det_exo_lag_2b.mod \
+	deterministic_simulations/rbc_det_exo_lag_2c.mod \
 	walsh.mod \
 	measurement_errors/fs2000_corr_me_ml_mcmc/fs2000_corr_ME.mod \
 	trend_var/fs2000_nonstationary.mod \
@@ -199,6 +210,8 @@ MODFILES = \
 XFAIL_MODFILES = ramst_xfail.mod \
 	estim_param_in_shock_value.mod \
 	optimal_policy/Ramsey/ramsey_ex_wrong_ss_file.mod
+
+MFILES = initval_file/ramst_initval_file_data.m
 
 # Dependencies
 example1_use_dll.m.trs: example1.m.trs
@@ -269,6 +282,16 @@ dsge-var/dsgevar_forward_estimated_lambda.o.trs: dsge-var/simul_hybrid.o.trs
 smoother2histval/fs2000_simul.m.trs: smoother2histval/fs2000_smooth.m.trs
 smoother2histval/fs2000_simul.o.trs: smoother2histval/fs2000_smooth.o.trs
 
+deterministic_simulations/rbc_det_exo_lag_2b.m.trs: deterministic_simulations/rbc_det_exo_lag_2a.m.trs
+deterministic_simulations/rbc_det_exo_lag_2c.m.trs: deterministic_simulations/rbc_det_exo_lag_2a.m.trs
+deterministic_simulations/rbc_det_exo_lag_2b.o.trs: deterministic_simulations/rbc_det_exo_lag_2a.o.trs
+deterministic_simulations/rbc_det_exo_lag_2c.o.trs: deterministic_simulations/rbc_det_exo_lag_2a.o.trs
+
+initval_file/ramst_initval_file.m.trs: initval_file/ramst_initval_file_data.m.tls
+initval_file/ramst_initval_file.o.trs: initval_file/ramst_initval_file_data.o.tls
+
+
+
 # Matlab TRS Files
 M_TRS_FILES = $(patsubst %.mod, %.m.trs, $(MODFILES))
 M_TRS_FILES += run_block_byte_tests_matlab.m.trs run_reporting_test_matlab.m.trs run_all_unitary_tests.m.trs
@@ -279,12 +302,21 @@ O_TRS_FILES = $(patsubst %.mod, %.o.trs, $(MODFILES))
 O_TRS_FILES += run_block_byte_tests_octave.o.trs run_reporting_test_octave.o.trs run_all_unitary_tests.o.trs
 O_XFAIL_TRS_FILES = $(patsubst %.mod, %.o.trs, $(XFAIL_MODFILES))
 
+# Matlab TLS Files
+M_TLS_FILES = $(patsubst %.m, %.m.tls, $(MFILES))
+
+# Octave TLS Files
+O_TLS_FILES = $(patsubst %.m, %.o.tls, $(MFILES))
+
+
+
 EXTRA_DIST = \
 	read_trs_files.sh \
 	run_test_matlab.m \
 	run_test_octave.m \
 	$(MODFILES) \
 	$(XFAIL_MODFILES) \
+	$(MFILES) \
 	run_block_byte_tests_matlab.m \
 	run_block_byte_tests_octave.m \
 	run_reporting_test_matlab.m \
@@ -305,8 +337,7 @@ EXTRA_DIST = \
 	fs2000_ssfile_aux.m \
 	printMakeCheckMatlabErrMsg.m \
 	printMakeCheckOctaveErrMsg.m \
-	ramst_initval_file_data.m \
-	test.m \
+	fataltest.m \
 	AIM/data_ca1.m \
 	AIM/fs2000_b1L1L_AIM_steadystate.m \
 	AIM/fs2000_b1L1L_steadystate.m \
@@ -319,6 +350,7 @@ EXTRA_DIST = \
 	expectations/expectation_ss_old_steadystate.m \
 	steady_state/walsh1_old_ss_steadystate.m \
 	data/test.xls \
+	analytic_derivatives/fsdat_simul.m \
 	fs2000/fs2000a_steadystate.m \
 	fs2000/fsdat_simul.m \
 	k_order_perturbation/run_fs2000kplusplus.m \
@@ -402,10 +434,22 @@ check-octave: $(O_XFAIL_TRS_FILES) $(O_TRS_FILES)
 	DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" \
 		$(OCTAVE) --no-init-file --silent --no-history $< > $*.o.log 2>&1
 
+%.m.tls : %.m
+	TOP_TEST_DIR="$(PWD)"  FILESTEM="$*" \
+		$(MATLAB)/bin/matlab -nosplash -nodisplay -r run_m_script
+	touch $*.m.tls
+
+%.o.tls : %.m
+	TOP_TEST_DIR="$(PWD)"  FILESTEM="$*" \
+		$(OCTAVE) --no-init-file --silent --no-history run_o_script.m 2>&1
+
+
 clean-local:
 	rm -f $(M_TRS_FILES) \
+		$(M_TLS_FILES) \
 		$(M_XFAIL_TRS_FILES) \
 		$(O_TRS_FILES) \
+		$(O_TLS_FILES) \
 		$(O_XFAIL_TRS_FILES) \
 		$(patsubst %.trs, %.log, $(M_TRS_FILES)) \
 		$(patsubst %.trs, %.log, $(M_XFAIL_TRS_FILES)) \
@@ -472,3 +516,5 @@ clean-local:
 		ms-sbvar/tmv_rr_tr
 
 	rm -f estimation/test_matrix.mat
+
+	rm -f initval_file/ramst_initval_file_data_col_vec_mat.mat initval_file/ramst_initval_file_data_row_vec_mat.mat initval_file/ramst_initval_file_excel.xls
