@@ -89,7 +89,7 @@ if options_.solve_algo == 0
     options.MaxFunEvals = 50000;
     options.MaxIter = options_.steady.maxit;
     options.TolFun = tolf;
-    options.Display = 'iter';
+    options.Display = 'off';
     if jacobian_flag
         options.Jacobian = 'on';
     else
