@@ -236,6 +236,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>dates  {dates_parens_nb=0; BEGIN DATES_STATEMENT; yylval->string_val = new string("dates");}
 <DYNARE_STATEMENT>file                  {return token::FILE;}
 <DYNARE_STATEMENT>datafile 		{return token::DATAFILE;}
+<DYNARE_STATEMENT>dirname       {return token::DIRNAME;}
 <DYNARE_STATEMENT>nobs 			{return token::NOBS;}
 <DYNARE_STATEMENT>last_obs 		{return token::LAST_OBS;}
 <DYNARE_STATEMENT>first_obs 		{return token::FIRST_OBS;}
@@ -288,6 +289,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>nodiagnostic 	{return token::NODIAGNOSTIC;}
 <DYNARE_STATEMENT>kalman_algo 	{return token::KALMAN_ALGO;}
 <DYNARE_STATEMENT>kalman_tol 	{return token::KALMAN_TOL;}
+<DYNARE_STATEMENT>diffuse_kalman_tol 	{return token::DIFFUSE_KALMAN_TOL;}
 <DYNARE_STATEMENT>forecast 	{return token::FORECAST;}
 <DYNARE_STATEMENT>smoother 	{return token::SMOOTHER;}
 <DYNARE_STATEMENT>bayesian_irf 	{return token::BAYESIAN_IRF;}

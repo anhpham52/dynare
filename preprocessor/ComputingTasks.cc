@@ -518,17 +518,14 @@ DynareSensitivityStatement::writeOutput(ostream &output, const string &basename)
   output << "dynare_sensitivity(options_gsa);" << endl;
 }
 
-RplotStatement::RplotStatement(const SymbolList &symbol_list_arg,
-                               const OptionsList &options_list_arg) :
-  symbol_list(symbol_list_arg),
-  options_list(options_list_arg)
+RplotStatement::RplotStatement(const SymbolList &symbol_list_arg) :
+  symbol_list(symbol_list_arg)
 {
 }
 
 void
 RplotStatement::writeOutput(ostream &output, const string &basename) const
 {
-  options_list.writeOutput(output);
   symbol_list.writeOutput("var_list_", output);
   output << "rplot(var_list_);" << endl;
 }
@@ -1943,8 +1940,6 @@ void
 EstimationDataStatement::writeOutput(ostream &output, const string &basename) const
 {
   options_list.writeOutput(output, "options_.dataset");
-  //if (options_list.date_options.find("first_obs") == options_list.date_options.end())
-  //  output << "options_.dataset.first_obs = options_.initial_period;" << endl;
 }
 
 SubsamplesStatement::SubsamplesStatement(const string &name1_arg,
@@ -2506,27 +2501,6 @@ CorrPriorStatement::writeOutput(ostream &output, const string &basename) const
   writePriorOutput(output, lhs_field, name1);
 }
 
-PriorEqualStatement::PriorEqualStatement(const string &to_declaration_type_arg,
-                                         const string &to_name1_arg,
-                                         const string &to_name2_arg,
-                                         const string &to_subsample_name_arg,
-                                         const string &from_declaration_type_arg,
-                                         const string &from_name1_arg,
-                                         const string &from_name2_arg,
-                                         const string &from_subsample_name_arg,
-                                         const SymbolTable &symbol_table_arg) :
-  to_declaration_type(to_declaration_type_arg),
-  to_name1(to_name1_arg),
-  to_name2(to_name2_arg),
-  to_subsample_name(to_subsample_name_arg),
-  from_declaration_type(from_declaration_type_arg),
-  from_name1(from_name1_arg),
-  from_name2(from_name2_arg),
-  from_subsample_name(from_subsample_name_arg),
-  symbol_table(symbol_table_arg)
-{
-}
-
 void
 CorrPriorStatement::writeCOutput(ostream &output, const string &basename)
 {
@@ -2557,6 +2531,27 @@ CorrPriorStatement::writeCOutput(ostream &output, const string &basename)
   else
     output << "msdsgeinfo->addMeasurementErrorCorrPrior(new ModFileMeasurementErrorCorrPrior(";
   output << endl <<"     index, index1, shape, mean, mode, stdev, variance, domain));" << endl;
+}
+
+PriorEqualStatement::PriorEqualStatement(const string &to_declaration_type_arg,
+                                         const string &to_name1_arg,
+                                         const string &to_name2_arg,
+                                         const string &to_subsample_name_arg,
+                                         const string &from_declaration_type_arg,
+                                         const string &from_name1_arg,
+                                         const string &from_name2_arg,
+                                         const string &from_subsample_name_arg,
+                                         const SymbolTable &symbol_table_arg) :
+  to_declaration_type(to_declaration_type_arg),
+  to_name1(to_name1_arg),
+  to_name2(to_name2_arg),
+  to_subsample_name(to_subsample_name_arg),
+  from_declaration_type(from_declaration_type_arg),
+  from_name1(from_name1_arg),
+  from_name2(from_name2_arg),
+  from_subsample_name(from_subsample_name_arg),
+  symbol_table(symbol_table_arg)
+{
 }
 
 void
@@ -2823,6 +2818,33 @@ CorrOptionsStatement::writeOutput(ostream &output, const string &basename) const
   writeOptionsOutput(output, lhs_field, name1);
 }
 
+void
+CorrOptionsStatement::writeCOutput(ostream &output, const string &basename)
+{
+  output << endl
+         << "index = ";
+  if (is_structural_innovation(symbol_table.getType(name)))
+    output << "exo_names";
+  else
+    output << "endo_names";
+  output << "[\""<< name << "\"];" << endl;
+
+  output << "index1 = ";
+  if (is_structural_innovation(symbol_table.getType(name1)))
+    output << "exo_names";
+  else
+    output << "endo_names";
+  output << "[\""<< name1 << "\"];" << endl;
+
+  writeCOutputHelper(output, "init");
+
+  if (is_structural_innovation(symbol_table.getType(name)))
+    output << "msdsgeinfo->addStructuralInnovationCorrOption(new ModFileStructuralInnovationCorrOption(";
+  else
+    output << "msdsgeinfo->addMeasurementErrorCorrOption(new ModFileMeasurementErrorCorrOption(";
+  output << "index, index1, init));" << endl;
+}
+
 OptionsEqualStatement::OptionsEqualStatement(const string &to_declaration_type_arg,
                                              const string &to_name1_arg,
                                              const string &to_name2_arg,
@@ -2988,33 +3010,6 @@ void
 ModelDiagnosticsStatement::writeOutput(ostream &output, const string &basename) const
 {
   output << "model_diagnostics(M_,options_,oo_);" << endl;
-}
-
-void
-CorrOptionsStatement::writeCOutput(ostream &output, const string &basename)
-{
-  output << endl
-         << "index = ";
-  if (is_structural_innovation(symbol_table.getType(name)))
-    output << "exo_names";
-  else
-    output << "endo_names";
-  output << "[\""<< name << "\"];" << endl;
-
-  output << "index1 = ";
-  if (is_structural_innovation(symbol_table.getType(name1)))
-    output << "exo_names";
-  else
-    output << "endo_names";
-  output << "[\""<< name1 << "\"];" << endl;
-
-  writeCOutputHelper(output, "init");
-
-  if (is_structural_innovation(symbol_table.getType(name)))
-    output << "msdsgeinfo->addStructuralInnovationCorrOption(new ModFileStructuralInnovationCorrOption(";
-  else
-    output << "msdsgeinfo->addMeasurementErrorCorrOption(new ModFileMeasurementErrorCorrOption(";
-  output << "index, index1, init));" << endl;
 }
 
 Smoother2histvalStatement::Smoother2histvalStatement(const OptionsList &options_list_arg) :

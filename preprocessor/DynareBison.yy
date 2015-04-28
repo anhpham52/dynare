@@ -92,7 +92,7 @@ class ParsingDriver;
 %token CONSIDER_ALL_ENDOGENOUS CONSIDER_ONLY_OBSERVED
 %token DATAFILE FILE SERIES DOUBLING DR_CYCLE_REDUCTION_TOL DR_LOGARITHMIC_REDUCTION_TOL DR_LOGARITHMIC_REDUCTION_MAXITER DR_ALGO DROP DSAMPLE DYNASAVE DYNATYPE CALIBRATION DIFFERENTIATE_FORWARD_VARS
 %token END ENDVAL EQUAL ESTIMATION ESTIMATED_PARAMS ESTIMATED_PARAMS_BOUNDS ESTIMATED_PARAMS_INIT EXTENDED_PATH ENDOGENOUS_PRIOR
-%token FILENAME FILTER_STEP_AHEAD FILTERED_VARS FIRST_OBS LAST_OBS SET_TIME
+%token FILENAME DIRNAME FILTER_STEP_AHEAD FILTERED_VARS FIRST_OBS LAST_OBS SET_TIME
 %token <string_val> FLOAT_NUMBER DATES
 %token DEFAULT FIXED_POINT OPT_ALGO
 %token FORECAST K_ORDER_SOLVER INSTRUMENTS SHIFT MEAN STDEV VARIANCE MODE INTERVAL SHAPE DOMAINN
@@ -101,7 +101,7 @@ class ParsingDriver;
 %token IDENTIFICATION INF_CONSTANT INITVAL INITVAL_FILE BOUNDS JSCALE INIT INFILE INVARS
 %token <string_val> INT_NUMBER
 %token INV_GAMMA_PDF INV_GAMMA1_PDF INV_GAMMA2_PDF IRF IRF_SHOCKS IRF_PLOT_THRESHOLD IRF_CALIBRATION
-%token KALMAN_ALGO KALMAN_TOL SUBSAMPLES OPTIONS TOLF
+%token KALMAN_ALGO KALMAN_TOL DIFFUSE_KALMAN_TOL SUBSAMPLES OPTIONS TOLF
 %token LAPLACE LIK_ALGO LIK_INIT LINEAR LOAD_IDENT_FILES LOAD_MH_FILE LOAD_PARAMS_AND_STEADY_STATE LOGLINEAR LOGDATA LYAPUNOV
 %token LYAPUNOV_FIXED_POINT_TOL LYAPUNOV_DOUBLING_TOL LYAPUNOV_SQUARE_ROOT_SOLVER_TOL LOG_DEFLATOR LOG_TREND_VAR LOG_GROWTH_FACTOR MARKOWITZ MARGINAL_DENSITY MAX MAXIT
 %token MFS MH_CONF_SIG MH_DROP MH_INIT_SCALE MH_JSCALE MH_MODE MH_NBLOCKS MH_REPLIC MH_RECOVER POSTERIOR_MAX_SUBSAMPLE_DRAWS MIN MINIMAL_SOLVING_PERIODS
@@ -1664,6 +1664,7 @@ estimation_options : o_datafile
                    | o_filtered_vars
                    | o_kalman_algo
                    | o_kalman_tol
+		   | o_diffuse_kalman_tol
                    | o_xls_sheet
                    | o_xls_range
                    | o_filter_step_ahead
@@ -1711,6 +1712,7 @@ estimation_options : o_datafile
 		   | o_filter_algorithm
 		   | o_proposal_approximation
 		   | o_distribution_approximation
+                   | o_dirname
                    ;
 
 list_optim_option : QUOTED_STRING COMMA QUOTED_STRING
@@ -2545,6 +2547,7 @@ o_qz_zero_threshold : QZ_ZERO_THRESHOLD EQUAL non_negative_number { driver.optio
 o_file : FILE EQUAL filename { driver.option_str("file", $3); };
 o_series : SERIES EQUAL symbol { driver.option_str("series", $3); };
 o_datafile : DATAFILE EQUAL filename { driver.option_str("datafile", $3); };
+o_dirname : DIRNAME EQUAL filename { driver.option_str("dirname", $3); };
 o_nobs : NOBS EQUAL vec_int
          { driver.option_vec_int("nobs", $3); }
        | NOBS EQUAL vec_int_number
@@ -2643,6 +2646,7 @@ o_filtered_vars : FILTERED_VARS { driver.option_num("filtered_vars", "1"); };
 o_relative_irf : RELATIVE_IRF { driver.option_num("relative_irf", "1"); };
 o_kalman_algo : KALMAN_ALGO EQUAL INT_NUMBER { driver.option_num("kalman_algo", $3); };
 o_kalman_tol : KALMAN_TOL EQUAL non_negative_number { driver.option_num("kalman_tol", $3); };
+o_diffuse_kalman_tol : DIFFUSE_KALMAN_TOL EQUAL non_negative_number { driver.option_num("diffuse_kalman_tol", $3); };
 o_marginal_density : MARGINAL_DENSITY EQUAL LAPLACE
                      { driver.option_str("mc_marginal_density", "laplace"); }
                    | MARGINAL_DENSITY EQUAL MODIFIEDHARMONICMEAN

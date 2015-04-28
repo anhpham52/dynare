@@ -33,6 +33,7 @@ global oo_ M_ options_ estim_params_ bayestopt_ estimation_info ex0_ ys0_
 estim_params_ = [];
 bayestopt_ = [];
 options_.datafile = '';
+options_.dirname = M_.fname;
 options_.dataset = [];
 options_.verbosity = 1;
 options_.terminal_condition = 0;
@@ -387,6 +388,7 @@ options_.nobs = NaN;
 options_.kalman_algo = 0;
 options_.fast_kalman = 0;
 options_.kalman_tol = 1e-10;
+options_.diffuse_kalman_tol = 1e-6;
 options_.use_univariate_filters_if_singularity_is_detected = 1;
 options_.riccati_tol = 1e-6;
 options_.lik_algo = 1;
@@ -481,7 +483,7 @@ csminwel.maxiter=1000;
 options_.csminwel=csminwel;
 
 %newrat optimization routine
-newrat.hess=1; %analytic hessian
+newrat.hess=1; % dynare numerical hessian
 newrat.tolerance.f=1e-5;
 newrat.tolerance.f_analytic=1e-7;
 newrat.maxiter=1000;
@@ -523,6 +525,31 @@ simpsa.MAX_TIME = 2500;
 simpsa.MAX_FUN_EVALS = 20000;
 simpsa.DISPLAY = 'iter';
 options_.simpsa = simpsa;
+
+%solveopt optimizer
+solveopt.minimizer_indicator=-1; %use minimizer
+solveopt.TolX=1e-6; %accuracy of argument
+solveopt.TolFun=1e-6; %accuracy of function 
+solveopt.MaxIter=15000;
+solveopt.verbosity=1;
+solveopt.TolXConstraint=1.e-8;
+solveopt.SpaceDilation=2.5;
+solveopt.LBGradientStep=1.e-11;
+options_.solveopt=solveopt;
+
+%simulated annealing
+options_.saopt.neps=10;
+options_.saopt.maximizer_indicator=0;
+options_.saopt.rt=0.10;
+options_.saopt.MaxIter=100000;
+options_.saopt.MaxIter=100000;
+options_.saopt.verbosity=1;
+options_.saopt.TolFun=1.0e-8;
+options_.saopt.initial_temperature=15;
+options_.saopt.ns=10;
+options_.saopt.nt=10;
+options_.saopt.step_length_c=0.1;
+options_.saopt.initial_step_length=1;
 
 % prior analysis
 options_.prior_mc = 20000;
