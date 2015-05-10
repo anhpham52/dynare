@@ -6,6 +6,7 @@ MODFILES = \
 	estimation/fs2000_MCMC_jumping_covariance.mod \
 	estimation/fs2000_initialize_from_calib.mod	\
 	estimation/fs2000_calibrated_covariance.mod \
+	estimation/MH_recover/fs2000_recover.mod \
 	gsa/ls2003.mod \
 	gsa/ls2003a.mod \
 	ramst.mod \
@@ -90,15 +91,11 @@ MODFILES = \
 	fs2000/fs2000.mod \
 	fs2000/fs2000a.mod \
 	fs2000/fs2000c.mod \
-	fs2000/fs2000d.mod \
-	fs2000/fs2000e.mod \
-	fs2000/fs2000_cmaes.mod \
 	fs2000/fs2000_calib.mod \
 	fs2000/fs2000_calib_dseries.mod \
 	fs2000/fs2000_analytic_derivation.mod \
 	fs2000/fs2000_missing_data.mod \
 	fs2000/fs2000_sd.mod \
-	fs2000/fs2000_mode_compute_8.mod \
 	fs2000/fs2000_dseries_a.mod \
 	fs2000/fs2000_dseries_b.mod \
 	homotopy/homotopy1_test.mod \
@@ -185,6 +182,7 @@ MODFILES = \
 	deterministic_simulations/rbc_det_exo_lag_2a.mod \
 	deterministic_simulations/rbc_det_exo_lag_2b.mod \
 	deterministic_simulations/rbc_det_exo_lag_2c.mod \
+	deterministic_simulations/sim_several_leads_lags.mod \
 	walsh.mod \
 	measurement_errors/fs2000_corr_me_ml_mcmc/fs2000_corr_ME.mod \
 	trend_var/fs2000_nonstationary.mod \
@@ -210,15 +208,18 @@ MODFILES = \
 	optimizers/fs2000_2.mod \
 	optimizers/fs2000_3.mod \
 	optimizers/fs2000_4.mod \
+	optimizers/fs2000_4_with_optim.mod \
 	optimizers/fs2000_5.mod \
 	optimizers/fs2000_6.mod \
 	optimizers/fs2000_7.mod \
 	optimizers/fs2000_8.mod \
+	optimizers/fs2000_8_with_optim.mod \
 	optimizers/fs2000_9.mod \
 	optimizers/fs2000_10.mod \
 	optimizers/fs2000_101.mod \
 	optimizers/fs2000_102.mod \
 	optimizers/fs2000_w.mod \
+	differentiate_forward_vars/RBC_differentiate_forward.mod \ 
 	reporting/example1.mod
 
 XFAIL_MODFILES = ramst_xfail.mod \
@@ -435,30 +436,56 @@ check-octave: $(O_XFAIL_TRS_FILES) $(O_TRS_FILES)
 	@echo 'Octave Tests Done'
 
 %.m.trs %.m.log: %.mod
-	DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
-		$(MATLAB)/bin/matlab -nosplash -nodisplay -logfile $*.m.log -r run_test_matlab
+	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$*... `tput sgr0`"
+	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
+	$(MATLAB)/bin/matlab -nosplash -nodisplay -r run_test_matlab > $*.m.log  2> /dev/null
+	@if grep -q ":test-result: PASS" $*.m.trs; then \
+	echo "`tput bold``tput setaf 2`MATLAB: $(PWD)/$* PASSED!`tput sgr0`" ; \
+	else \
+	echo "`tput bold``tput setaf 1`MATLAB: $(PWD)/$* FAILED!`tput sgr0`" ; \
+	fi
+
+%.m.drs %.m.log: %.m.trs
+	@cat $*.m.log
 
 %.m.trs %.m.log : %.m
-	DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" \
-		$(MATLAB)/bin/matlab -nosplash -nodisplay -logfile $*.m.log -r $*
+	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$*... `tput sgr0`"
+	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" \
+		$(MATLAB)/bin/matlab -nosplash -nodisplay -r $* > $*.m.log 2> /dev/null 
+	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$* Done!`tput sgr0`"
 
 %.o.trs %.o.log: %.mod
-	DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
+	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$*... `tput sgr0`"
+	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
 		$(OCTAVE) --no-init-file --silent --no-history run_test_octave.m > $*.o.log 2>&1
+	@if grep -q ":test-result: PASS" $*.o.trs; then \
+	echo "`tput bold``tput setaf 2`OCTAVE: $(PWD)/$* PASSED!`tput sgr0`" ; \
+	else \
+	echo "`tput bold``tput setaf 1`OCTAVE: $(PWD)/$* FAILED!`tput sgr0`" ; \
+	fi
+
+%.o.drs %.o.log: %.mod %.o.trs
+	@cat $*.o.log
 
 %.o.trs %.o.log : %.m
-	DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" \
+	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$*... `tput sgr0`"
+	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" \
 		$(OCTAVE) --no-init-file --silent --no-history $< > $*.o.log 2>&1
+	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$* Done!`tput sgr0`"
 
 %.m.tls : %.m
-	TOP_TEST_DIR="$(PWD)"  FILESTEM="$*" \
-		$(MATLAB)/bin/matlab -nosplash -nodisplay -r run_m_script
-	touch $*.m.tls
+	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$*... `tput sgr0`"
+	@TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
+		$(MATLAB)/bin/matlab -nosplash -nodisplay -r run_m_script 2> /dev/null
+	@touch $*.m.tls
+	@echo "`tput bold`MATLAB`tput setaf 3`: $(PWD)/$* Done!`tput sgr0`"
 
 %.o.tls : %.m
-	TOP_TEST_DIR="$(PWD)"  FILESTEM="$*" \
+	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$*... `tput sgr0`"
+	@TOP_TEST_DIR="$(PWD)"  FILESTEM="$*" \
 		$(OCTAVE) --no-init-file --silent --no-history run_o_script.m 2>&1
-
+	@touch $*.o.tls
+	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$* Done!`tput sgr0`"
 
 clean-local:
 	rm -f $(M_TRS_FILES) \

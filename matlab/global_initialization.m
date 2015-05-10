@@ -56,6 +56,7 @@ options_.qz_zero_threshold = 1e-6;
 options_.lyapunov_complex_threshold = 1e-15;
 options_.solve_tolf = eps^(1/3);
 options_.solve_tolx = eps^(2/3);
+options_.dr_display_tol=1e-6;
 
 options_.dp.maxit = 3000;
 options_.steady.maxit = 50;
@@ -66,6 +67,8 @@ options_.mode_check.neighbourhood_size = .5;
 options_.mode_check.symmetric_plots = 1;
 options_.mode_check.number_of_points = 20;
 options_.mode_check.nolik = 0;
+
+options_.huge_number = 1e7;
 
 % Default number of threads for parallelized mex files.
 options_.threads.kronecker.A_times_B_kronecker_C = 1;
@@ -541,7 +544,6 @@ options_.solveopt=solveopt;
 options_.saopt.neps=10;
 options_.saopt.maximizer_indicator=0;
 options_.saopt.rt=0.10;
-options_.saopt.MaxIter=100000;
 options_.saopt.MaxIter=100000;
 options_.saopt.verbosity=1;
 options_.saopt.TolFun=1.0e-8;
