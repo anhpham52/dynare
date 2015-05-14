@@ -4289,21 +4289,39 @@ DynamicModel::isChecksumMatching(const string &basename) const
       result.process_bytes(private_buffer,strlen(private_buffer));
     }
 
-  fstream checksum_file;
+  bool basename_dir_exists = false;
+#ifdef _WIN32
+  int r = mkdir(basename.c_str());
+#else
+  int r = mkdir(basename.c_str(), 0777);
+#endif
+  if (r < 0)
+    if (errno != EEXIST)
+      {
+	perror("ERROR");
+	exit(EXIT_FAILURE);
+      }
+    else
+      basename_dir_exists = true;
 
+  // check whether basename directory exist. If not, create it.
+  // If it does, read old checksum if it exist
+  fstream checksum_file;
   string filename = basename + "/checksum";
-  
-  //  checksum_file.open(filename.c_str(), ios::in | ios::out | ios::binary);
-  checksum_file.open(filename.c_str(), ios::in | ios::binary);
   unsigned int old_checksum = 0;
-  if (checksum_file.is_open())
+  // read old checksum if it exists
+  if (basename_dir_exists)
     {
-      checksum_file >> old_checksum;
-      std::cout << "old_checksum " << old_checksum << endl;
-    }
-  if ((!checksum_file.is_open()) || (old_checksum != result.checksum())) 
+      checksum_file.open(filename.c_str(), ios::in | ios::binary);
+      if (checksum_file.is_open())
 	{
+	  checksum_file >> old_checksum;
 	  checksum_file.close();
+	}
+    }
+  // write new checksum file if none or different from old checksum
+  if (old_checksum != result.checksum())
+	{
 	  checksum_file.open(filename.c_str(), ios::out | ios::binary);
 	  if (!checksum_file.is_open())
 	    {
