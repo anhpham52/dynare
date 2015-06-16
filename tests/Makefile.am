@@ -1,8 +1,4 @@
 MODFILES = \
-	estimation/fs2000_mc4.mod \
-	estimation/fs2000_mc4_mf.mod \
-	estimation/fs2000_mc6.mod \
-	estimation/fs2000_mc6_mf.mod \
 	estimation/fs2000_MCMC_jumping_covariance.mod \
 	estimation/fs2000_initialize_from_calib.mod	\
 	estimation/fs2000_calibrated_covariance.mod \
@@ -10,6 +6,7 @@ MODFILES = \
 	estimation/t_proposal/fs2000_student.mod \
 	gsa/ls2003.mod \
 	gsa/ls2003a.mod \
+	gsa/cod_ML_morris/cod_ML_morris.mod \
 	ramst.mod \
 	ramst_a.mod \
 	ramst_static_tag.mod \
@@ -41,6 +38,7 @@ MODFILES = \
 	optimal_policy/Ramsey/ramsey_ex.mod \
 	optimal_policy/Ramsey/ramsey_ex_initval_AR2.mod \
 	optimal_policy/Ramsey/ramsey_ex_aux.mod \
+	optimal_policy/RamseyConstraints/test1.mod \
 	discretionary_policy/dennis_1.mod \
 	initval_file/ramst_initval_file.mod \
 	ramst_normcdf_and_friends.mod \
@@ -127,6 +125,9 @@ MODFILES = \
 	seeds.mod \
 	identification/kim/kim2.mod \
 	identification/as2007/as2007.mod \
+	identification/ident_unit_root/ident_unit_root.mod \
+	identification/rbc_ident/rbc_ident_std_as_structural_par.mod \
+	identification/rbc_ident/rbc_ident_varexo_only.mod \
 	simul/example1.mod \
 	simul/Solow_no_varexo.mod \
 	simul/simul_ZLB_purely_forward.mod \
@@ -224,8 +225,8 @@ MODFILES = \
 	reporting/example1.mod
 
 XFAIL_MODFILES = ramst_xfail.mod \
-	estim_param_in_shock_value.mod \
-	optimal_policy/Ramsey/ramsey_ex_wrong_ss_file.mod
+	estim_param_in_shock_value_xfail.mod \
+	optimal_policy/Ramsey/ramsey_ex_wrong_ss_file_xfail.mod
 
 MFILES = initval_file/ramst_initval_file_data.m
 
@@ -272,10 +273,11 @@ AIM/fs2000x10_L9_L_AIM.o.trs: AIM/fs2000x10_L9_L.o.trs
 AIM/ls2003_2L0L_AIM.o.trs: AIM/ls2003_2L0L.o.trs
 AIM/ls2003_2L2L_AIM.o.trs: AIM/ls2003_2L2L.o.trs
 
-estimation/fs2000_mc4_mf.m.trs: estimation/fs2000_mc4.m.trs
-estimation/fs2000_mc6_mf.m.trs: estimation/fs2000_mc6.m.trs
-estimation/fs2000_mc4_mf.o.trs: estimation/fs2000_mc4.o.trs
-estimation/fs2000_mc6_mf.o.trs: estimation/fs2000_mc6.o.trs
+estimation/fs2000_mf.m.trs: estimation/fs2000.m.trs
+estimation/fs2000_mf.o.trs: estimation/fs2000.o.trs
+
+optimizers/fs2000_102.m.trs: estimation/fs2000.m.trs
+optimizers/fs2000_102.o.trs: estimation/fs2000.o.trs
 
 arima/mod1a.m.trs: arima/mod1.m.trs
 arima/mod1b.m.trs: arima/mod1.m.trs
@@ -306,6 +308,8 @@ deterministic_simulations/rbc_det_exo_lag_2c.o.trs: deterministic_simulations/rb
 initval_file/ramst_initval_file.m.trs: initval_file/ramst_initval_file_data.m.tls
 initval_file/ramst_initval_file.o.trs: initval_file/ramst_initval_file_data.o.tls
 
+identification/rbc_ident/rbc_ident_varexo_only.m.trs: identification/rbc_ident/rbc_ident_std_as_structural_par.m.trs
+identification/rbc_ident/rbc_ident_varexo_only.o.trs: identification/rbc_ident/rbc_ident_std_as_structural_par.o.trs
 
 
 # Matlab TRS Files
@@ -437,7 +441,7 @@ check-octave: $(O_XFAIL_TRS_FILES) $(O_TRS_FILES)
 	@echo 'Octave Tests Done'
 
 %.m.trs %.m.log: %.mod
-	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$*... `tput sgr0`"
+	@echo "`tput bold``tput setaf 8`MATLAB: $(PWD)/$*... `tput sgr0`"
 	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
 	$(MATLAB)/bin/matlab -nosplash -nodisplay -r run_test_matlab > $*.m.log  2> /dev/null
 	@if grep -q ":test-result: PASS" $*.m.trs; then \
@@ -450,13 +454,13 @@ check-octave: $(O_XFAIL_TRS_FILES) $(O_TRS_FILES)
 	@cat $*.m.log
 
 %.m.trs %.m.log : %.m
-	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$*... `tput sgr0`"
+	@echo "`tput bold``tput setaf 8`MATLAB: $(PWD)/$*... `tput sgr0`"
 	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" \
 		$(MATLAB)/bin/matlab -nosplash -nodisplay -r $* > $*.m.log 2> /dev/null 
-	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$* Done!`tput sgr0`"
+	@echo "`tput bold``tput setaf 8`MATLAB: $(PWD)/$* Done!`tput sgr0`"
 
 %.o.trs %.o.log: %.mod
-	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$*... `tput sgr0`"
+	@echo "`tput bold``tput setaf 8`OCTAVE: $(PWD)/$*... `tput sgr0`"
 	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
 		$(OCTAVE) --no-init-file --silent --no-history run_test_octave.m > $*.o.log 2>&1
 	@if grep -q ":test-result: PASS" $*.o.trs; then \
@@ -469,24 +473,24 @@ check-octave: $(O_XFAIL_TRS_FILES) $(O_TRS_FILES)
 	@cat $*.o.log
 
 %.o.trs %.o.log : %.m
-	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$*... `tput sgr0`"
+	@echo "`tput bold``tput setaf 8`OCTAVE: $(PWD)/$*... `tput sgr0`"
 	@DYNARE_VERSION="$(PACKAGE_VERSION)" TOP_TEST_DIR="$(PWD)" \
 		$(OCTAVE) --no-init-file --silent --no-history $< > $*.o.log 2>&1
-	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$* Done!`tput sgr0`"
+	@echo "`tput bold``tput setaf 8`OCTAVE: $(PWD)/$* Done!`tput sgr0`"
 
 %.m.tls : %.m
-	@echo "`tput bold``tput setaf 3`MATLAB: $(PWD)/$*... `tput sgr0`"
+	@echo "`tput bold``tput setaf 8`MATLAB: $(PWD)/$*... `tput sgr0`"
 	@TOP_TEST_DIR="$(PWD)" FILESTEM="$*" \
 		$(MATLAB)/bin/matlab -nosplash -nodisplay -r run_m_script 2> /dev/null
 	@touch $*.m.tls
-	@echo "`tput bold`MATLAB`tput setaf 3`: $(PWD)/$* Done!`tput sgr0`"
+	@echo "`tput bold`MATLAB`tput setaf 8`: $(PWD)/$* Done!`tput sgr0`"
 
 %.o.tls : %.m
-	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$*... `tput sgr0`"
+	@echo "`tput bold``tput setaf 8`OCTAVE: $(PWD)/$*... `tput sgr0`"
 	@TOP_TEST_DIR="$(PWD)"  FILESTEM="$*" \
 		$(OCTAVE) --no-init-file --silent --no-history run_o_script.m 2>&1
 	@touch $*.o.tls
-	@echo "`tput bold``tput setaf 3`OCTAVE: $(PWD)/$* Done!`tput sgr0`"
+	@echo "`tput bold``tput setaf 8`OCTAVE: $(PWD)/$* Done!`tput sgr0`"
 
 clean-local:
 	rm -f $(M_TRS_FILES) \

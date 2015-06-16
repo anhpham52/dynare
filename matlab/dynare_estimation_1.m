@@ -32,6 +32,7 @@ function dynare_estimation_1(var_list_,dname)
 global M_ options_ oo_ estim_params_ bayestopt_ dataset_ dataset_info
 
 % Set particle filter flag.
+
 if ~isfield( options_, 'non_central_approximation' )
     options_.non_central_approximation = 0;
 end
@@ -43,7 +44,7 @@ if options_.order > 1 && ( options_.non_central_approximation == 0 ) && ( option
         skipline()
         disp('Estimation using a non linear filter!')
         skipline()
-        if ~options_.nointeractive && ismember(options_.mode_compute,[1,3,4]) % Known gradient-based optimizers
+        if ~options_.nointeractive && ismember(options_.mode_compute,[1,3,4]) && ~strcmpi(options_.particle.filter_algorithm,'gf')% Known gradient-based optimizers
             disp('You are using a gradient-based mode-finder. Particle filtering introduces discontinuities in the') 
             disp('objective function w.r.t the parameters. Thus, should use a non-gradient based optimizer.')
             fprintf('\nPlease choose a mode-finder:\n')

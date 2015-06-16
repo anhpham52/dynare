@@ -859,6 +859,12 @@ and the equations haven't changed. We use a 32 bit checksum, stored in
 @code{<model filename>/checksum}. There is a very small probability that
 the preprocessor misses a change in the model. In case of doubt, re-run
 without the @code{fast} option.
+
+@item minimal_workspace
+Instructs Dynare not to write parameter assignments to parameter names
+in the @file{.m} file produced by the preprocessor. This is
+potentially useful when running @code{dynare} on a large @file{.mod}
+file that runs into workspace size limitations imposed by MATLAB.
 @end table
 
 @outputhead
@@ -3474,7 +3480,8 @@ options).
 By default, the perfect foresight solver uses a homotopy technique if it cannot
 solve the problem. Concretely, it divides the problem into smaller steps by
 diminishing the size of shocks and increasing them progressively until the
-problem converges. This option tells Dynare to disable that behavior.
+problem converges. This option tells Dynare to disable that behavior. Note that
+the homotopy is not implemented for purely forward or backward models.
 
 @item markowitz = @var{DOUBLE}
 Value of the Markowitz criterion, used to select the pivot. Only used
@@ -3860,6 +3867,11 @@ not only selected ones. Thus, you have to make sure that your variables have str
 steady states. @code{stoch_simul} will display the moments, decision rules,
 and impulse responses for the log-linearized variables. The decision rules saved
 in @code{oo_.dr} and the simulated variables will also be the ones for the log-linear variables.
+
+@item dr_display_tol = @var{DOUBLE}
+Tolerance for the suppression of small terms in the display of decision rules. Rows where all terms are 
+smaller than @code{dr_display_tol} are not displayed. 
+Default value: @code{1e-6}.
 
 @end table
 
@@ -4917,6 +4929,9 @@ Uses the CMA-ES (Covariance Matrix Adaptation Evolution Strategy) algorithm of
 Uses the simpsa algorithm, based on the combination of the non-linear simplex and simulated annealing algorithms and proposed by
 @cite{Cardoso, Salcedo and Feyo de Azevedo (1996)}.
 
+@item 11
+This is not strictly speaking an optimization algorithm. The (estimated) parameters are treated as state variables and estimated jointly with the original state variables of the model using a nonlinear filter. The algorithm implemented in Dynare is described in @cite{Liu and West (2001)}.
+
 @item 101
 Uses the SolveOpt algorithm for local nonlinear optimization problems proposed by
 @cite{Kuntsevich and Kappel (1997)}.
@@ -4982,6 +4997,10 @@ Number of points around the posterior mode where the posterior kernel is evaluat
 @anchor{prior_trunc} Probability of extreme values of the prior
 density that is ignored when computing bounds for the
 parameters. Default: @code{1e-32}
+
+@item huge_number  = @var{DOUBLE}
+@anchor{huge_number} Value for replacing infinite values in the definition of (prior) bounds 
+when finite values are required for computational reasons. Default: @code{1e7}
 
 @item load_mh_file
 @anchor{load_mh_file} Tells Dynare to add to previous
@@ -5339,6 +5358,7 @@ decomposition of the above k-step ahead filtered values. Stores results in @code
 
 
 @item diffuse_filter
+@anchor{diffuse_filter}
 Uses the diffuse Kalman filter (as described in
 @cite{Durbin and Koopman (2012)} and @cite{Koopman and Durbin
 (2003)}) to estimate models with non-stationary observed variables.
@@ -6646,6 +6666,10 @@ Specifies the optimizer for minimizing the objective function. The same solvers 
 @item optim = (@var{NAME}, @var{VALUE}, ...)
 A list of @var{NAME} and @var{VALUE} pairs. Can be used to set options for the optimization routines. The set of available options depends on the selected optimization routine (i.e. on the value of option @ref{opt_algo}). @xref{optim}.
 
+@item huge_number = @var{DOUBLE}
+Value for replacing the infinite bounds on parameters by finite numbers. Used by some optimizers for numerical reasons (@pxref{huge_number}).
+Users need to make sure that the optimal parameters are not larger than this value. Default: @code{1e7}
+
 @end table
 
 The value of the objective is stored in the variable
@@ -6798,6 +6822,24 @@ instrument.
 
 @end deffn
 
+@deffn Block ramsey_constraints
+@anchor{ramsey_constraints}
+
+@descriptionhead
+
+This block lets you define constraints on the variables in the Ramsey
+problem. The constraints take the form of a variable, an inequality
+operator (@code{>} or @code{<}) and a constant.
+
+@examplehead
+
+@example
+ramsey_constraints;
+i > 0;
+end;
+@end example
+@end deffn
+ 
 @deffn Command ramsey_policy [@var{VARIABLE_NAME}@dots{}];
 @deffnx Command ramsey_policy (@var{OPTIONS}@dots{}) [@var{VARIABLE_NAME}@dots{}];
 @anchor{ramsey_policy}
@@ -7197,8 +7239,8 @@ for identification analysis. Default: @code{0}
 @item ar = @var{INTEGER}
 Maximum number of lags for moments in identification analysis. Default: @code{1}
 
-@item lik_init = @var{INTEGER}
-@xref{lik_init}.
+@item diffuse_filter = @var{INTEGER}
+@xref{diffuse_filter}.
 
 @end table
 
@@ -7761,9 +7803,11 @@ It completely offsets any use of the sensitivity analysis toolbox.
 
 Given a list of variables, observed variables and a data file, Dynare
 can be used to solve a Markov-switching SBVAR model according to
-@cite{Sims, Waggoner and Zha (2008)}. Having done this, you can create
-forecasts and compute the marginal data density, regime probabilities,
-IRFs, and variance decomposition of the model.
+@cite{Sims, Waggoner and Zha (2008)}.@footnote{If you want to align
+the paper with the description herein, please note that @math{A} is
+@math{A^0} and @math{F} is @math{A^+}.} Having done this, you can
+create forecasts and compute the marginal data density, regime
+probabilities, IRFs, and variance decomposition of the model.
 
 The commands have been modularized, allowing for multiple calls to the
 same command within a @code{<mod_file>.mod} file. The default is to use
@@ -12632,6 +12676,9 @@ University of Graz, Graz, Austria
 Laffargue, Jean-Pierre (1990): ``Résolution d'un modèle
 macroéconomique avec anticipations rationnelles'', @i{Annales
 d'Économie et Statistique}, 17, 97--119
+
+@item
+Liu, Jane and Mike West (2001): ``Combined parameter and state estimation in simulation-based filtering'', in @i{Sequential Monte Carlo Methods in Practice}, Eds. Doucet, Freitas and Gordon, Springer Verlag
 
 @item
 Lubik, Thomas and Frank Schorfheide (2007): ``Do Central Banks Respond

@@ -406,6 +406,7 @@ ModFile::transformPass(bool nostrict)
   */
   if (!(mod_file_struct.ramsey_model_present || mod_file_struct.discretionary_policy_present)
       && !(mod_file_struct.bvar_present && dynamic_model.equation_number() == 0)
+      && !(mod_file_struct.occbin_option)
       && (dynamic_model.equation_number() != symbol_table.endo_nbr()))
     {
       cerr << "ERROR: There are " << dynamic_model.equation_number() << " equations but " << symbol_table.endo_nbr() << " endogenous variables!" << endl;
@@ -526,8 +527,9 @@ ModFile::computingPass(bool no_tmp_terms, FileOutputType output)
 }
 
 void
-ModFile::writeOutputFiles(const string &basename, bool clear_all, bool clear_global, bool no_log, bool no_warn, bool console, bool nograph,
-			  bool nointeractive, const ConfigFile &config_file, bool check_model_changes
+ModFile::writeOutputFiles(const string &basename, bool clear_all, bool clear_global, bool no_log, bool no_warn,
+                          bool console, bool nograph, bool nointeractive, const ConfigFile &config_file,
+                          bool check_model_changes, bool minimal_workspace
 #if defined(_WIN32) || defined(__CYGWIN32__)
                           , bool cygwin, bool msvc
 #endif
@@ -586,6 +588,9 @@ ModFile::writeOutputFiles(const string &basename, bool clear_all, bool clear_glo
               << "diary off;" << endl;
   if (!no_log)
     mOutputFile << "diary('" << basename << ".log');" << endl;
+
+  if (minimal_workspace)
+    mOutputFile << "options_.minimal_workspace = 1;" << endl;
 
   if (console)
     mOutputFile << "options_.console_mode = 1;" << endl
@@ -740,7 +745,7 @@ ModFile::writeOutputFiles(const string &basename, bool clear_all, bool clear_glo
   for (vector<Statement *>::const_iterator it = statements.begin();
        it != statements.end(); it++)
     {
-      (*it)->writeOutput(mOutputFile, basename);
+      (*it)->writeOutput(mOutputFile, basename, minimal_workspace);
 
       /* Special treatment for initval block: insert initial values for the
          auxiliary variables and initialize exo det */

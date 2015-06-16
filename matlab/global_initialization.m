@@ -57,7 +57,7 @@ options_.lyapunov_complex_threshold = 1e-15;
 options_.solve_tolf = eps^(1/3);
 options_.solve_tolx = eps^(2/3);
 options_.dr_display_tol=1e-6;
-
+options_.minimal_workspace = 0;
 options_.dp.maxit = 3000;
 options_.steady.maxit = 50;
 options_.simul.maxit = 50;
@@ -255,8 +255,8 @@ particle.proposal_approximation.cubature = 1;
 particle.proposal_approximation.unscented = 0;
 particle.proposal_approximation.montecarlo = 0;
 % Approximation of the particle distribution
-particle.distribution_approximation.cubature = 0;
-particle.distribution_approximation.unscented = 1;
+particle.distribution_approximation.cubature = 1;
+particle.distribution_approximation.unscented = 0;
 particle.distribution_approximation.montecarlo = 0;
 % Number of partitions for the smoothed resampling method
 particle.resampling.number_of_partitions = 200;
@@ -271,6 +271,9 @@ particle.liu_west_delta = 0.99 ;
 particle.liu_west_chol_sigma_bar = .01 ;
 % Copy ep structure in options_ global structure
 options_.particle = particle;
+options_.rwgmh.init_scale = 1e-4 ;
+options_.rwgmh.scale_chain = 1 ;
+options_.rwgmh.scale_shock = 1e-5 ;
 
 % TeX output
 options_.TeX = 0;

@@ -44,6 +44,16 @@ if DynareDataset.vobs>length(find(diag(Model.Sigma_e)))+EstimatedParameters.nvn
     error(['initial_estimation_checks:: Estimation can''t take place because too many shocks have been calibrated with a zero variance!'])
 end
 
+if ~(strcmpi(DynareOptions.proposal_distribution, 'rand_multivariate_student') || ...
+     strcmpi(DynareOptions.proposal_distribution, 'rand_multivariate_normal'))
+    error(['initial_estimation_checks:: the proposal_distribution option to estimation takes either ' ...
+        'rand_multivariate_student or rand_multivariate_normal as options']);
+end
+
+if DynareOptions.student_degrees_of_freedom <= 0
+    error('initial_estimation_checks:: the student_degrees_of_freedom takes a positive integer argument');
+end
+
 old_steady_params=Model.params; %save initial parameters for check if steady state changes param values
 
 % % check if steady state solves static model (except if diffuse_filter == 1)
@@ -101,7 +111,8 @@ end
 % Evaluate the likelihood.
 ana_deriv = DynareOptions.analytic_derivation;
 DynareOptions.analytic_derivation=0;
-if ~isequal(DynareOptions.mode_compute,11)
+if ~isequal(DynareOptions.mode_compute,11) || ...
+        (isequal(DynareOptions.mode_compute,11) && isequal(DynareOptions.order,1))
   [fval,junk1,junk2,a,b,c,d] = feval(objective_function,xparam1,DynareDataset,DatasetInfo,DynareOptions,Model,EstimatedParameters,BayesInfo,BoundsInfo,DynareResults);
 else 
     b=0;

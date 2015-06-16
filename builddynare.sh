@@ -26,5 +26,5 @@ git checkout master
 git merge upstream/master
 git push
 autoreconf -si
-./configure CFLAGS="-O3" CXXFLAGS="-O3" --host=x86_64-w64-mingw32 --enable-openmp --with-boost=/usr/local/lib/mingw64/boost --with-blas=/usr/local/lib/mingw64/blas/libopenblas.a --with-lapack=/usr/local/lib/mingw64/lapack/liblapack.a --with-gsl=/usr/local/lib/mingw64/gsl --with-matio=/usr/local/lib/mingw64/matio --with-slicot=/usr/local/lib/mingw64/slicot --with-matlab=/cygdrive/c/Progra~1/MATLAB/R2015a MATLAB_VERSION=R2015a --disable-octave
+./configure CFLAGS="-O3 -DCUDA=1" CXXFLAGS="-O3 -DCUDA=1" --host=x86_64-w64-mingw32 --enable-openmp --with-boost=/usr/local/lib/mingw64/boost --with-blas=/usr/local/lib/mingw64/blas/libopenblas.a --with-lapack=/usr/local/lib/mingw64/lapack/liblapack.a --with-gsl=/usr/local/lib/mingw64/gsl --with-matio=/usr/local/lib/mingw64/matio --with-slicot=/usr/local/lib/mingw64/slicot --with-matlab=/cygdrive/c/Progra~1/MATLAB/R2015a MATLAB_VERSION=R2015a --disable-octave
 make all html

@@ -87,9 +87,9 @@ class ParsingDriver;
 %token BVAR_DENSITY BVAR_FORECAST NODECOMPOSITION DR_DISPLAY_TOL HUGE_NUMBER
 %token BVAR_PRIOR_DECAY BVAR_PRIOR_FLAT BVAR_PRIOR_LAMBDA TARB_OPTIM
 %token BVAR_PRIOR_MU BVAR_PRIOR_OMEGA BVAR_PRIOR_TAU BVAR_PRIOR_TRAIN
-%token BVAR_REPLIC BYTECODE ALL_VALUES_REQUIRED
+%token BVAR_REPLIC BYTECODE ALL_VALUES_REQUIRED PROPOSAL_DISTRIBUTION
 %token CALIB_SMOOTHER CHANGE_TYPE CHECK CONDITIONAL_FORECAST CONDITIONAL_FORECAST_PATHS CONF_SIG CONSTANT CONTROLLED_VAREXO CORR COVAR CUTOFF CYCLE_REDUCTION LOGARITHMIC_REDUCTION
-%token CONSIDER_ALL_ENDOGENOUS CONSIDER_ONLY_OBSERVED
+%token CONSIDER_ALL_ENDOGENOUS CONSIDER_ONLY_OBSERVED STUDENT_DEGREES_OF_FREEDOM
 %token DATAFILE FILE SERIES DOUBLING DR_CYCLE_REDUCTION_TOL DR_LOGARITHMIC_REDUCTION_TOL DR_LOGARITHMIC_REDUCTION_MAXITER DR_ALGO DROP DSAMPLE DYNASAVE DYNATYPE CALIBRATION DIFFERENTIATE_FORWARD_VARS
 %token END ENDVAL EQUAL ESTIMATION ESTIMATED_PARAMS ESTIMATED_PARAMS_BOUNDS ESTIMATED_PARAMS_INIT EXTENDED_PATH ENDOGENOUS_PRIOR
 %token FILENAME DIRNAME FILTER_STEP_AHEAD FILTERED_VARS FIRST_OBS LAST_OBS SET_TIME
@@ -122,12 +122,12 @@ class ParsingDriver;
 %token SHOCKS SHOCK_DECOMPOSITION SIGMA_E SIMUL SIMUL_ALGO SIMUL_SEED ENDOGENOUS_TERMINAL_PERIOD
 %token SMOOTHER SMOOTHER2HISTVAL SQUARE_ROOT_SOLVER STACK_SOLVE_ALGO STEADY_STATE_MODEL SOLVE_ALGO SOLVER_PERIODS
 %token STDERR STEADY STOCH_SIMUL SURPRISE SYLVESTER SYLVESTER_FIXED_POINT_TOL REGIMES REGIME
-%token TEX RAMSEY_MODEL RAMSEY_POLICY PLANNER_DISCOUNT DISCRETIONARY_POLICY DISCRETIONARY_TOL
+%token TEX RAMSEY_MODEL RAMSEY_POLICY RAMSEY_CONSTRAINTS PLANNER_DISCOUNT DISCRETIONARY_POLICY DISCRETIONARY_TOL
 %token <string_val> TEX_NAME
 %token UNIFORM_PDF UNIT_ROOT_VARS USE_DLL USEAUTOCORR GSA_SAMPLE_FILE USE_UNIVARIATE_FILTERS_IF_SINGULARITY_IS_DETECTED
 %token VALUES VAR VAREXO VAREXO_DET VAROBS PREDETERMINED_VARIABLES
 %token WRITE_LATEX_DYNAMIC_MODEL WRITE_LATEX_STATIC_MODEL WRITE_LATEX_ORIGINAL_MODEL
-%token XLS_SHEET XLS_RANGE LONG_NAME
+%token XLS_SHEET XLS_RANGE LONG_NAME LMMCP OCCBIN
 %left COMMA
 %left EQUAL_EQUAL EXCLAMATION_EQUAL
 %left LESS GREATER LESS_EQUAL GREATER_EQUAL
@@ -239,7 +239,8 @@ statement : parameters
           | planner_objective
           | ramsey_model
           | ramsey_policy
-          | discretionary_policy
+	  | ramsey_constraints
+	  | discretionary_policy
           | bvar_density
           | bvar_forecast
           | sbvar
@@ -1011,6 +1012,8 @@ perfect_foresight_solver_options : o_stack_solve_algo
                                  | o_simul_maxit
 	                         | o_endogenous_terminal_period
                                  | o_no_homotopy
+				 | o_lmmcp
+				 | o_occbin
                                  ;
 
 simul : SIMUL ';'
@@ -1719,6 +1722,8 @@ estimation_options : o_datafile
                    | o_tarb_mode_compute
                    | o_tarb_new_block_probability
                    | o_tarb_optim
+                   | o_proposal_distribution
+                   | o_student_degrees_of_freedom
                    ;
 
 list_optim_option : QUOTED_STRING COMMA QUOTED_STRING
@@ -1900,6 +1905,24 @@ ramsey_policy : RAMSEY_POLICY ';'
               | RAMSEY_POLICY '(' ramsey_policy_options_list ')' symbol_list ';'
                 { driver.ramsey_policy(); }
               ;
+
+ramsey_constraints : RAMSEY_CONSTRAINTS ';' ramsey_constraints_list END ';'
+                     { driver.add_ramsey_constraints_statement(); }
+		   ;
+
+ramsey_constraints_list : ramsey_constraints_list ramsey_constraint 
+                 | ramsey_constraint
+		 ;
+
+ramsey_constraint : NAME  LESS expression ';'
+                    { driver.ramsey_constraint_add_less($1,$3); }
+		  | NAME  GREATER  expression ';'
+                    { driver.ramsey_constraint_add_greater($1,$3); }
+		  | NAME  LESS_EQUAL expression ';'		
+                    { driver.ramsey_constraint_add_less_equal($1,$3); }
+		  | NAME  GREATER_EQUAL  expression ';'
+                    { driver.ramsey_constraint_add_greater_equal($1,$3); }
+		  ;
 
 discretionary_policy : DISCRETIONARY_POLICY ';'
                        { driver.discretionary_policy(); }
@@ -2432,6 +2455,8 @@ extended_path_option : o_periods
                      | o_solver_periods
                      | o_extended_path_order
                      | o_hybrid
+		     | o_lmmcp
+		     | o_occbin
                      ;
 
 model_diagnostics : MODEL_DIAGNOSTICS ';'
@@ -2633,6 +2658,8 @@ o_mh_drop : MH_DROP EQUAL non_negative_number { driver.option_num("mh_drop", $3)
 o_mh_jscale : MH_JSCALE EQUAL non_negative_number { driver.option_num("mh_jscale", $3); };
 o_optim : OPTIM  EQUAL '(' optim_options ')';
 o_tarb_optim : TARB_OPTIM  EQUAL '(' tarb_optim_options ')';
+o_proposal_distribution : PROPOSAL_DISTRIBUTION EQUAL symbol { driver.option_str("proposal_distribution", $3); };
+o_student_degrees_of_freedom : STUDENT_DEGREES_OF_FREEDOM EQUAL INT_NUMBER { driver.option_num("student_degrees_of_freedom", $3); };
 o_mh_init_scale : MH_INIT_SCALE EQUAL non_negative_number { driver.option_num("mh_init_scale", $3); };
 o_mode_file : MODE_FILE EQUAL filename { driver.option_str("mode_file", $3); };
 o_mode_compute : MODE_COMPUTE EQUAL INT_NUMBER { driver.option_num("mode_compute", $3); };
@@ -2997,6 +3024,8 @@ o_invars : INVARS EQUAL '(' symbol_list ')' { driver.option_symbol_list("invars"
 o_period : PERIOD EQUAL INT_NUMBER { driver.option_num("period", $3); };
 o_outfile : OUTFILE EQUAL filename { driver.option_str("outfile", $3); };
 o_outvars : OUTVARS EQUAL '(' symbol_list ')' { driver.option_symbol_list("outvars"); };
+o_lmmcp : LMMCP {driver.option_num("lmmcp", "1"); }; 
+o_occbin : OCCBIN {driver.option_num("occbin", "1"); }; 
 
 range : symbol ':' symbol
         {

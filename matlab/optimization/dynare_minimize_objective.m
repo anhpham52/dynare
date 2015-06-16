@@ -5,7 +5,7 @@ function [opt_par_values,fval,exitflag,hessian_mat,options_,Scale]=dynare_minimi
 % INPUTS
 %   objective_function  [function handle]                   handle to the objective function
 %   start_par_value     [n_params by 1] vector of doubles   starting values for the parameters
-%   minimizer_algorithm [scalar double]                     code of the optimizer algorithm
+%   minimizer_algorithm [scalar double, or string]          code of the optimizer algorithm, or string for the name of a user defined optimization routine (not shipped with dynare).
 %   options_            [matlab structure]                  Dynare options structure
 %   bounds              [n_params by 2] vector of doubles   2 row vectors containing lower and upper bound for parameters
 %   parameter_names     [n_params by 1] cell array          strings containing the parameters names   
@@ -46,11 +46,7 @@ function [opt_par_values,fval,exitflag,hessian_mat,options_,Scale]=dynare_minimi
 %% set bounds and parameter names if not already set
 n_params=size(start_par_value,1);
 if isempty(bounds)
-    if isnumeric(minimizer_algorithm) && minimizer_algorithm==10
-        error('Algorithm 10 (simpsa) requires upper and lower bounds')
-    else
-        bounds=[-Inf(n_params,1) Inf(n_params,1)];
-    end
+    bounds=[-Inf(n_params,1) Inf(n_params,1)];
 end
 
 if isempty(parameter_names)
@@ -364,8 +360,8 @@ switch minimizer_algorithm
     [opt_par_values,fval,exitflag,output] = simulannealbnd(func,start_par_value,bounds(:,1),bounds(:,2),optim_options);
   otherwise
     if ischar(minimizer_algorithm)
-        if exist(options_.mode_compute)
-            [opt_par_values, fval, exitflag] = feval(options_.mode_compute,objective_function,start_par_value,varargin{:});
+        if exist(minimizer_algorithm)
+            [opt_par_values, fval, exitflag] = feval(minimizer_algorithm,objective_function,start_par_value,varargin{:});
         else
             error('No minimizer with the provided name detected.')
         end
