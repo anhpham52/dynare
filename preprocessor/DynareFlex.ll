@@ -286,6 +286,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>mh_nblocks 		{return token::MH_NBLOCKS;}
 <DYNARE_STATEMENT>load_mh_file 	{return token::LOAD_MH_FILE;}
 <DYNARE_STATEMENT>loglinear 		{return token::LOGLINEAR;}
+<DYNARE_STATEMENT>linear_approximation 		{return token::LINEAR_APPROXIMATION;}
 <DYNARE_STATEMENT>logdata 	{return token::LOGDATA;}
 <DYNARE_STATEMENT>nodiagnostic 	{return token::NODIAGNOSTIC;}
 <DYNARE_STATEMENT>kalman_algo 	{return token::KALMAN_ALGO;}
@@ -576,6 +577,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>tarb_mode_compute {return token::TARB_MODE_COMPUTE;}
 <DYNARE_STATEMENT>tarb_new_block_probability {return token::TARB_NEW_BLOCK_PROBABILITY;}
 <DYNARE_STATEMENT>tarb_optim {return token::TARB_OPTIM;}
+<DYNARE_STATEMENT>silent_optimizer {return token::SILENT_OPTIMIZER;}
 <DYNARE_STATEMENT>lmmcp {return token::LMMCP;}
 <DYNARE_STATEMENT>occbin {return token::OCCBIN;}
 

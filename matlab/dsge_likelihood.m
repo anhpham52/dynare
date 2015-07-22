@@ -358,7 +358,7 @@ if (kalman_algo == 2) || (kalman_algo == 4)
             Q = blkdiag(Q,H);
             R = blkdiag(R,eye(pp));
             Pstar = blkdiag(Pstar,H);
-            Pinf  = blckdiag(Pinf,zeros(pp));
+            Pinf  = blkdiag(Pinf,zeros(pp));
             H = zeros(pp,1);
             mmm   = mm+pp;
         end
@@ -401,7 +401,7 @@ switch DynareOptions.lik_init
     if kalman_algo == 0
         kalman_algo = 3;
     elseif ~((kalman_algo == 3) || (kalman_algo == 4))
-            error(['diffuse filter: options_.kalman_algo can only be equal ' ...
+            error(['The model requires Diffuse filter, but you specified a different Kalman filter. You must set options_.kalman_algo ' ...
                    'to 0 (default), 3 or 4'])
     end
     [Z,T,R,QT,Pstar,Pinf] = schur_statespace_transformation(Z,T,R,Q,DynareOptions.qz_criterium);
@@ -442,7 +442,7 @@ switch DynareOptions.lik_init
                 Q = blkdiag(Q,H);
                 R = blkdiag(R,eye(pp));
                 Pstar = blkdiag(Pstar,H);
-                Pinf  = blckdiag(Pinf,zeros(pp));
+                Pinf  = blkdiag(Pinf,zeros(pp));
                 H1 = zeros(pp,1);
                 mmm   = mm+pp;
             end
@@ -732,7 +732,7 @@ if (kalman_algo==2) || (kalman_algo==4)
                 Q = blkdiag(Q,H);
                 R = blkdiag(R,eye(pp));
                 Pstar = blkdiag(Pstar,H);
-                Pinf  = blckdiag(Pinf,zeros(pp));
+                Pinf  = blkdiag(Pinf,zeros(pp));
                 H1 = zeros(pp,1);
                 mmm   = mm+pp;
             end

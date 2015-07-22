@@ -1,6 +1,8 @@
-function b = check_file_extension(file,type)
-
-% Copyright (C) 2012 Dynare Team
+function disp_verbose(input_string,Verbose)
+% function disp_verbose(input_string,Verbose)
+% Prints input_string unless Verbose=0 is requested
+% 
+% Copyright (C) 2015 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -17,14 +19,7 @@ function b = check_file_extension(file,type)
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
-% AUTHOR(S) stephane DOT adjemian AT univ DASH lemans DOT fr
 
-% Clean-up path
-file = strrep(file, '../', '');
-file = strrep(file, './', '');
-
-remain = file;
-while ~isempty(remain)
-    [ext, remain] = strtok(remain,'.');
+if Verbose
+    disp(input_string)
 end
-b = strcmp(ext,type);
