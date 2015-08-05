@@ -97,7 +97,7 @@ class ParsingDriver;
 %token DEFAULT FIXED_POINT OPT_ALGO
 %token FORECAST K_ORDER_SOLVER INSTRUMENTS SHIFT MEAN STDEV VARIANCE MODE INTERVAL SHAPE DOMAINN
 %token GAMMA_PDF GRAPH GRAPH_FORMAT CONDITIONAL_VARIANCE_DECOMPOSITION NOCHECK STD
-%token HISTVAL HISTVAL_FILE HOMOTOPY_SETUP HOMOTOPY_MODE HOMOTOPY_STEPS HOMOTOPY_FORCE_CONTINUE HP_FILTER HP_NGRID HYBRID
+%token HISTVAL HISTVAL_FILE HOMOTOPY_SETUP HOMOTOPY_MODE HOMOTOPY_STEPS HOMOTOPY_FORCE_CONTINUE HP_FILTER HP_NGRID HYBRID ONE_SIDED_HP_FILTER
 %token IDENTIFICATION INF_CONSTANT INITVAL INITVAL_FILE BOUNDS JSCALE INIT INFILE INVARS
 %token <string_val> INT_NUMBER
 %token INV_GAMMA_PDF INV_GAMMA1_PDF INV_GAMMA2_PDF IRF IRF_SHOCKS IRF_PLOT_THRESHOLD IRF_CALIBRATION
@@ -127,7 +127,7 @@ class ParsingDriver;
 %token UNIFORM_PDF UNIT_ROOT_VARS USE_DLL USEAUTOCORR GSA_SAMPLE_FILE USE_UNIVARIATE_FILTERS_IF_SINGULARITY_IS_DETECTED
 %token VALUES VAR VAREXO VAREXO_DET VAROBS PREDETERMINED_VARIABLES
 %token WRITE_LATEX_DYNAMIC_MODEL WRITE_LATEX_STATIC_MODEL WRITE_LATEX_ORIGINAL_MODEL
-%token XLS_SHEET XLS_RANGE LONG_NAME LMMCP OCCBIN
+%token XLS_SHEET XLS_RANGE LONG_NAME LMMCP OCCBIN BANDPASS_FILTER
 %left COMMA
 %left EQUAL_EQUAL EXCLAMATION_EQUAL
 %left LESS GREATER LESS_EQUAL GREATER_EQUAL
@@ -144,7 +144,7 @@ class ParsingDriver;
 %token ALPHA_RMSE ALPHA2_RMSE
 /* end of GSA analysis*/
 %token FREQ INITIAL_YEAR INITIAL_SUBPERIOD FINAL_YEAR FINAL_SUBPERIOD DATA VLIST LOG_VAR PERCENT_VAR
-%token VLISTLOG VLISTPER
+%token VLISTLOG VLISTPER SPECTRAL_DENSITY
 %token RESTRICTION RESTRICTION_FNAME CROSS_RESTRICTIONS NLAGS CONTEMP_REDUCED_FORM REAL_PSEUDO_FORECAST
 %token DUMMY_OBS NSTATES INDXSCALESSTATES NO_BAYESIAN_PRIOR SPECIFICATION SIMS_ZHA
 %token <string_val> ALPHA BETA ABAND NINV CMS NCMS CNUM GAMMA INV_GAMMA INV_GAMMA1 INV_GAMMA2 NORMAL UNIFORM EPS PDF FIG DR NONE PRIOR PRIOR_VARIANCE HESSIAN IDENTITY_MATRIX DIRICHLET
@@ -1105,6 +1105,9 @@ stoch_simul_primary_options : o_dr_algo
 stoch_simul_options : stoch_simul_primary_options
                     | o_loglinear
                     | o_nodecomposition
+                    | o_spectral_density
+                    | o_bandpass_filter
+                    | o_one_sided_hp_filter
                     ;
 
 symbol_list : symbol_list symbol
@@ -1161,7 +1164,8 @@ estimated_list : estimated_list estimated_elem
                  { driver.add_estimated_params_element(); }
                ;
 
-estimated_elem : estimated_elem1 COMMA estimated_elem2 ';';
+estimated_elem : estimated_elem1 COMMA estimated_elem2 ';'
+               | estimated_elem1 ';'
 
 estimated_elem1 : STDERR symbol
                   {
@@ -2570,12 +2574,20 @@ o_irf : IRF EQUAL INT_NUMBER { driver.option_num("irf", $3); };
 o_irf_shocks : IRF_SHOCKS EQUAL '(' symbol_list ')' { driver.option_symbol_list("irf_shocks"); };
 o_hp_filter : HP_FILTER EQUAL non_negative_number { driver.option_num("hp_filter", $3); };
 o_hp_ngrid : HP_NGRID EQUAL INT_NUMBER { driver.option_num("hp_ngrid", $3); };
+o_one_sided_hp_filter : ONE_SIDED_HP_FILTER EQUAL non_negative_number { driver.option_num("one_sided_hp_filter", $3); };
 o_periods : PERIODS EQUAL INT_NUMBER { driver.option_num("periods", $3); };
 o_solver_periods : SOLVER_PERIODS EQUAL INT_NUMBER { driver.option_num("ep.periods", $3); };
 o_extended_path_order : ORDER EQUAL INT_NUMBER { driver.option_num("ep.stochastic.order", $3); };
 o_hybrid : HYBRID { driver.option_num("ep.stochastic.hybrid_order", "2"); };
 o_steady_maxit : MAXIT EQUAL INT_NUMBER { driver.option_num("steady.maxit", $3); };
 o_simul_maxit : MAXIT EQUAL INT_NUMBER { driver.option_num("simul.maxit", $3); };
+o_bandpass_filter : BANDPASS_FILTER { driver.option_num("bandpass.indicator", "1"); }
+                  | BANDPASS_FILTER EQUAL vec_int
+                    {
+                      driver.option_num("bandpass.indicator", "1");
+                      driver.option_vec_int("bandpass.passband", $3);
+                    }
+                   ;
 o_dp_maxit : MAXIT EQUAL INT_NUMBER { driver.option_num("dp.maxit", $3); };
 o_osr_maxit : MAXIT EQUAL INT_NUMBER { driver.option_num("osr.maxit", $3); };
 o_osr_tolf : TOLF EQUAL non_negative_number { driver.option_num("osr.tolf", $3); };
@@ -2826,6 +2838,7 @@ o_parameter_set : PARAMETER_SET EQUAL PRIOR_MODE
                   { driver.option_str("parameter_set", "calibration"); }
                 ;
 o_nodecomposition : NODECOMPOSITION { driver.option_num("nodecomposition", "1"); };
+o_spectral_density : SPECTRAL_DENSITY { driver.option_num("SpectralDensity.trigger", "1"); };
 o_ms_drop : DROP EQUAL INT_NUMBER { driver.option_num("ms.drop", $3); };
 o_ms_mh_replic : MH_REPLIC EQUAL INT_NUMBER { driver.option_num("ms.mh_replic", $3); };
 o_freq : FREQ EQUAL INT_NUMBER

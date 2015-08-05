@@ -60,44 +60,29 @@ u = 0;
 end;
 
 shocks;
-var e; stderr 1;
-var u; stderr 1;
+var e; stderr 0.009;
+var u; stderr 0.009;
+var e, u = phi*0.009*0.009;
 end;
 
-stoch_simul(irf=20,order=1,nomoments,nofunctions);
-unit_irf=cell2mat(struct2cell(oo_.irfs));
+steady(solve_algo=4,maxit=1000);
+stoch_simul;
 
-shocks;
-var e; stderr 0.005;
-var u; stderr 0.005;
-end;
-
-stoch_simul(irf=20,order=1,relative_irf);
-relative_irfs=cell2mat(struct2cell(oo_.irfs));
-if max(max(abs(100*unit_irf-relative_irfs)))>1e-8;
-     error('relative_irf-option at order=1 is broken')
+if ~isoctave() && ~matlab_ver_less_than('8.4')
+   websave('example1_results_dyn_432.mat','http://www.dynare.org/Datasets/example1_results_dyn_432.mat')
+else
+   urlwrite('http://www.dynare.org/Datasets/example1_results_dyn_432.mat','example1_results_dyn_432.mat')
 end
 
+dyn_432_results=load('example1_results_dyn_432.mat');
 
-//Check relative IRF option at order 2 by comparing it with unnormalized IRF of unit size 
-shocks;
-var e; stderr 0.01;
-var u; stderr 0.01;
-end;
-set_dynare_seed('default');
-options_.relative_irf=0;
-stoch_simul(irf=20,order=2,nomoments,nofunctions);
-unit_irf_order_2=cell2mat(struct2cell(oo_.irfs));
-
-shocks;
-var e; stderr 0.0095;
-var u; stderr 0.0095;
-end;
-set_dynare_seed('default');
-stoch_simul(irf=20,order=2,relative_irf,nomoments,nofunctions);
-relative_irfs_order_2=cell2mat(struct2cell(oo_.irfs));
-if max(max(abs(unit_irf_order_2-relative_irfs_order_2)))>2e-4;
-     error('relative_irf-option at order=2 is broken')
+if max(max(abs(oo_.dr.ghx-dyn_432_results.oo_.dr.ghx)))>1e-6 || max(max(abs(oo_.dr.ghu-dyn_432_results.oo_.dr.ghu))) >1e-6
+    error('First order decision rules wrong')
 end
 
-             
+if max(max(abs(oo_.dr.ghxx-dyn_432_results.oo_.dr.ghxx)))>1e-6 || max(max(abs(oo_.dr.ghuu-dyn_432_results.oo_.dr.ghuu))) >1e-6 ...
+        || max(max(abs(oo_.dr.ghxu-dyn_432_results.oo_.dr.ghxu))) >1e-6 || max(max(abs(oo_.dr.ghs2-dyn_432_results.oo_.dr.ghs2))) >1e-6
+    error('Second order decision rules wrong')
+end
+
+delete('example1_results_dyn_432.mat')

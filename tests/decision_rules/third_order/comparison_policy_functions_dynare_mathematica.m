@@ -1,5 +1,11 @@
 %read in the FV et al. policy functions derived from Mathematica
-load policyfunctions
+if ~isoctave() && ~matlab_ver_less_than('8.4')
+   websave('FV_2011_policyfunctions.mat','http://www.dynare.org/Datasets/FV_2011_policyfunctions.mat')
+else
+   urlwrite('http://www.dynare.org/Datasets/FV_2011_policyfunctions.mat','FV_2011_policyfunctions.mat')
+end
+
+load FV_2011_policyfunctions
 
 order=options_.order;
 dr=oo_.dr;
@@ -123,3 +129,4 @@ if max(max(max(max(abs(gxxx-gxxx_dyn))))) > 1e-8
 else max(max(max(max(abs(gxxx-gxxx_dyn)))))
 end
 
+delete('FV_2011_policyfunctions.mat')

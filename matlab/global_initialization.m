@@ -34,6 +34,7 @@ estim_params_ = [];
 bayestopt_ = [];
 options_.datafile = '';
 options_.dirname = M_.fname;
+M_.dname = M_.fname;
 options_.dataset = [];
 options_.verbosity = 1;
 options_.terminal_condition = 0;
@@ -151,6 +152,7 @@ options_.impulse_responses.plot_threshold=1e-10;
 options_.relative_irf = 0;
 options_.ar = 5;
 options_.hp_filter = 0;
+options_.one_sided_hp_filter = 1600;
 options_.hp_ngrid = 512;
 options_.nodecomposition = 0;
 options_.nomoments = 0;
@@ -162,6 +164,9 @@ options_.SpectralDensity.plot  = 1;
 options_.SpectralDensity.cutoff  = 150; 
 options_.SpectralDensity.sdl = 0.01; 
 options_.nofunctions = false;
+
+options_.bandpass.indicator = 0;
+options_.bandpass.passband = [6; 32];
 
 % Extended path options
 %
@@ -195,7 +200,12 @@ ep.innovation_distribution = 'gaussian';
 % Set flag for the seed
 ep.set_dynare_seed_to_default = 1;
 % Set algorithm for the perfect foresight solver
-ep.stack_solve_algo = 4;
+ep.stack_solve_algo = 7;
+ep.solve_algo = 9;
+% Number of replications
+ep.replic_nbr = 1;
+% Parallel execution of replications
+ep.parallel_1 = false;
 % Stochastic extended path related options.
 ep.stochastic.method = '';
 ep.stochastic.algo = 0;
@@ -322,6 +332,7 @@ options_.conditional_variance_decomposition = [];
 
 % Ramsey policy
 options_.ramsey_policy = 0;
+options_.instruments = [];
 options_.timeless = 0;
 
 % estimation
@@ -484,8 +495,11 @@ oo_.exo_det_simul = [];
 
 M_.params = [];
 M_.endo_histval = [];
+M_.exo_histval = [];
+M_.exo_det_histval = [];
 M_.Correlation_matrix = [];
 M_.Correlation_matrix_ME = [];
+M_.parameter_used_with_lead_lag = false;
 
 % homotopy for steady state
 options_.homotopy_mode = 0;

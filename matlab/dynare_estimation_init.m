@@ -148,6 +148,9 @@ if ~isempty(estim_params_)
     [xparam1,estim_params_,bayestopt_,lb,ub,M_] = set_prior(estim_params_,M_,options_);
 end
 
+if ~isempty(bayestopt_) && any(bayestopt_.pshape==0) && any(bayestopt_.pshape~=0)
+    error('Estimation must be either fully ML or fully Bayesian. Maybe you forgot to specify a prior distribution.')
+end
 % Check if a _prior_restrictions.m file exists
 if exist([M_.fname '_prior_restrictions.m'])
     options_.prior_restrictions.status = 1;
@@ -298,7 +301,11 @@ else
     estim_params_.full_calibration_detected=0;
 end
 if options_.use_calibration_initialization %set calibration as starting values
-    [xparam1,estim_params_]=do_parameter_initialization(estim_params_,xparam1_calib,xparam1); %get explicitly initialized parameters that have precedence to calibrated values
+    if ~isempty(bayestopt_) && all(bayestopt_.pshape==0) && any(all(isnan([xparam1_calib xparam1]),2))
+        error('Estimation: When using the use_calibration option with ML, the parameters must be properly initialized.')
+    else
+        [xparam1,estim_params_]=do_parameter_initialization(estim_params_,xparam1_calib,xparam1); %get explicitly initialized parameters that have precedence to calibrated values
+    end
 end
 
 if ~isempty(estim_params_) && ~all(strcmp(fieldnames(estim_params_),'full_calibration_detected'))

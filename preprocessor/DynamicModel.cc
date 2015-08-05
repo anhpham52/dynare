@@ -2862,20 +2862,17 @@ DynamicModel::writeOutput(ostream &output, const string &basename, bool block_de
 
   // Write number of non-zero derivatives
   // Use -1 if the derivatives have not been computed
-  output << "M_.NNZDerivatives = zeros(3, 1);" << endl
-         << "M_.NNZDerivatives(1) = " << NNZDerivatives[0] << ";" << endl;
+  output << "M_.NNZDerivatives = [" << NNZDerivatives[0] << "; ";
   if (order > 1)
-    {
-      output << "M_.NNZDerivatives(2) = " << NNZDerivatives[1] << ";" << endl;
-      if (order > 2)
-        output << "M_.NNZDerivatives(3) = " << NNZDerivatives[2] << ";" << endl;
-      else
-        output << "M_.NNZDerivatives(3) = -1;" << endl;
-    }
+    output << NNZDerivatives[1] << "; ";
   else
-    output << "M_.NNZDerivatives(2) = -1;" << endl
-           << "M_.NNZDerivatives(3) = -1;" << endl;
+    output << "-1; ";
 
+  if (order > 2)
+    output << NNZDerivatives[2];
+  else
+    output << "-1";
+  output << "];" << endl;
 }
 
 map<pair<int, pair<int, int > >, expr_t>
@@ -3500,6 +3497,12 @@ DynamicModel::toStatic(StaticModel &static_model) const
   for (deque<BinaryOpNode *>::const_iterator it = aux_equations.begin();
        it != aux_equations.end(); it++)
     static_model.addAuxEquation((*it)->toStatic(static_model));
+}
+
+bool
+DynamicModel::ParamUsedWithLeadLag() const
+{
+  return ParamUsedWithLeadLagInternal();
 }
 
 set<int>
