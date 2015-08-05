@@ -21,6 +21,7 @@ autoreconf -si
 make
 make install
 cd /cygdrive/c/dynare/dynare/
+git pull --recurse-submodules
 git fetch upstream --recurse-submodules
 git checkout master
 git merge upstream/master
