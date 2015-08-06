@@ -6,7 +6,9 @@ apt-cyg install nano zip unzip wget make libtool bison flex git gettext autoconf
 cd /cygdrive/c/cygwin64/
 wget -N http://www.cygwin.com/setup-x86_64.exe
 chmod +x ./setup-x86_64.exe
+echo Press any key to continue once the setup has completed.
 ./setup-x86_64.exe --no-desktop --no-shortcuts --no-startmenu --quiet-mode
+read -n 1 -s
 mkdir -p /usr/local/lib/mingw64
 cd /usr/local/lib/mingw64
 wget http://www.dynare.org/build/dynare-mingw64-libs.zip
@@ -18,6 +20,7 @@ cd ~/gsl
 git pull
 autoreconf -si
 ./configure CFLAGS="-O3" CXXFLAGS="-O3" --host=x86_64-w64-mingw32 --prefix=/usr/local/lib/mingw64/gsl
+make clean
 make
 make install
 cd /cygdrive/c/dynare/dynare/
@@ -29,4 +32,5 @@ git commit -m "merge"
 git push
 autoreconf -si
 ./configure CFLAGS="-O3 -DCUDA=1" CXXFLAGS="-O3 -DCUDA=1" --host=x86_64-w64-mingw32 --enable-openmp --with-boost=/usr/local/lib/mingw64/boost --with-blas=/usr/local/lib/mingw64/blas/libopenblas.a --with-lapack=/usr/local/lib/mingw64/lapack/liblapack.a --with-gsl=/usr/local/lib/mingw64/gsl --with-matio=/usr/local/lib/mingw64/matio --with-slicot=/usr/local/lib/mingw64/slicot --with-matlab=/cygdrive/c/Progra~1/MATLAB/R2015a MATLAB_VERSION=R2015a --disable-octave
+make clean
 make all html
