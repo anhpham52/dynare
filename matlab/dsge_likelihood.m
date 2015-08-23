@@ -145,13 +145,13 @@ info        = 0;
 DLIK        = [];
 Hess       = [];
 
-if ~isfield( options_, 'non_central_approximation' )
-    options_.non_central_approximation = 0;
+if ~isfield( DynareOptions, 'non_central_approximation' )
+    DynareOptions.non_central_approximation = 0;
 end
-if ~isfield( options_, 'gaussian_approximation' )
-    options_.gaussian_approximation = 0;
+if ~isfield( DynareOptions, 'gaussian_approximation' )
+    DynareOptions.gaussian_approximation = 0;
 end
-if DynareOptions.estimation_dll && ( options_.non_central_approximation == 0 ) && ( options_.gaussian_approximation == 0 )
+if DynareOptions.estimation_dll && ( DynareOptions.non_central_approximation == 0 ) && ( DynareOptions.gaussian_approximation == 0 )
     [fval,exit_flag,SteadyState,trend_coeff,info,params,H,Q] ...
         = logposterior(xparam1,DynareDataset, DynareOptions,Model, ...
                           EstimatedParameters,BayesInfo,DynareResults);
@@ -483,7 +483,7 @@ switch DynareOptions.lik_init
     Pinf  = [];
     a = zeros(mm,1);
     Zflag = 0;
-  case options_.lik_init == 5            % Old diffuse Kalman filter only for the non stationary variables
+  case 5            % Old diffuse Kalman filter only for the non stationary variables
     [eigenvect, eigenv] = eig(T);
     eigenv = diag(eigenv);
     nstable = length(find(abs(abs(eigenv)-1) > 1e-7));
@@ -492,7 +492,7 @@ switch DynareOptions.lik_init
     indx_unstable = find(sum(abs(V),2)>1e-5);
     stable = find(sum(abs(V),2)<1e-5);
     nunit = length(eigenv) - nstable;
-    Pstar = options_.Harvey_scale_factor*eye(np);
+    Pstar = DynareOptions.Harvey_scale_factor*eye(np);
     if kalman_algo ~= 2
         kalman_algo = 1;
     end
