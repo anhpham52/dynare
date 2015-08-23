@@ -153,13 +153,8 @@ if ~isfield( DynareOptions, 'gaussian_approximation' )
 end
 
 if isstruct( DynareDataset )
-    disp( 'hello' );
     dseries( 'initialize' );
-    disp( 'Old:' );
-    disp( DynareDataset );
     DynareDataset = dseries( DynareDataset );
-    disp( 'New:' );
-    disp( DynareDataset );
 end
 
 if DynareOptions.estimation_dll && ( DynareOptions.non_central_approximation == 0 ) && ( DynareOptions.gaussian_approximation == 0 )
