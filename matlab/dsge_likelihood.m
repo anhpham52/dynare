@@ -151,6 +151,17 @@ end
 if ~isfield( DynareOptions, 'gaussian_approximation' )
     DynareOptions.gaussian_approximation = 0;
 end
+
+if isstruct( DynareDataset )
+    disp( 'hello' );
+    dseries( 'initialize' );
+    disp( 'Old:' );
+    disp( DynareDataset );
+    DynareDataset = dseries( DynareDataset );
+    disp( 'New:' );
+    disp( DynareDataset );
+end
+
 if DynareOptions.estimation_dll && ( DynareOptions.non_central_approximation == 0 ) && ( DynareOptions.gaussian_approximation == 0 )
     [fval,exit_flag,SteadyState,trend_coeff,info,params,H,Q] ...
         = logposterior(xparam1,DynareDataset, DynareOptions,Model, ...
