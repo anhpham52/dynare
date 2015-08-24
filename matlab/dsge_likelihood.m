@@ -290,6 +290,10 @@ elseif info(1) == 3 || info(1) == 4 || info(1)==6 || info(1) == 20 || info(1) ==
     return
 end
 
+if DynareOptions.gaussian_approximation
+    Q = Model.Sigma_e;
+end
+
 % check endogenous prior restrictions
 info=endogenous_prior_restrictions(T,R,Model,DynareOptions,DynareResults);
 if info(1),

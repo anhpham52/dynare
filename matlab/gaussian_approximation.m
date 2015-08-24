@@ -11,6 +11,7 @@ function [ info, M, options, oo ] = gaussian_approximation( M, options, oo )
     end
     SelectState = ( nstatic + 1 ):( nstatic + nspred );
     nEndo = M.endo_nbr;
+    nExo = M.exo_nbr;
     
     % pre-calculations for order=1 terms
     A1 = sparse( nEndo, nEndo );
@@ -23,7 +24,6 @@ function [ info, M, options, oo ] = gaussian_approximation( M, options, oo )
 
     % pre-calculations for order=2 terms
     nState = length( SelectState );
-    nExo = M.exo_nbr;
     nExo2 = nExo * nExo;
 
     % Idx1 =  1:nEndo;
@@ -160,12 +160,19 @@ function [ info, M, options, oo ] = gaussian_approximation( M, options, oo )
     oo.dr.kstate = [];
     oo.dr.restrict_var_list = [];
     oo.dr.restrict_columns = [];
-    new_endo_names = repmat( ' ', new_nEndo, size( M.endo_names, 2 ) );
-    new_endo_names( 1:nEndo, : ) = M.endo_names;
+    EndoString = [ repmat( 'GaussianApproxAuxEndoVar', new_nEndo - nEndo, 1 ) strjust( int2str( ( 1 : ( new_nEndo - nEndo ) )' ), 'left' ) ];
+    new_endo_names = repmat( ' ', new_nEndo, max( size( M.endo_names, 2 ), size( EndoString, 2 ) ) );
+    new_endo_names( 1:nEndo, 1:size( M.endo_names, 2 ) ) = M.endo_names;
+    new_endo_names( (nEndo+1):end, 1:size( EndoString, 2 ) ) = EndoString;
     M.endo_names = new_endo_names;
-    new_exo_names = repmat( ' ', new_nExo, size( M.exo_names, 2 ) );
-    new_exo_names( 1:M.exo_nbr, : ) = M.exo_names;
+    ExoString = [ repmat( 'GaussianApproxAuxExoVar', new_nExo - nExo, 1 ) strjust( int2str( ( 1 : ( new_nExo - nExo ) )' ), 'left' ) ];
+    new_exo_names = repmat( ' ', new_nExo, max( size( M.exo_names, 2 ), size( ExoString, 2 ) ) );
+    new_exo_names( 1:nExo, 1:size( M.exo_names, 2 ) ) = M.exo_names;
+    new_exo_names( (nExo+1):new_nExo, 1:size( ExoString, 2 ) ) = ExoString;
     M.exo_names = new_exo_names;
+    M.exo_names_orig_ord( (nExo+1):new_nExo ) = (nExo+1):new_nExo;
+    M.orig_exo_nbr = nExo;
+    M.exo_nbr = new_nExo;
     M.lead_lag_incidence = zeros( 3, new_nEndo );
     M.lead_lag_incidence( 1, (nEndo+1):end ) = 1:(new_nEndo-nEndo);
     M.lead_lag_incidence( 2, : ) = (new_nEndo-nEndo+1):(new_nEndo-nEndo+new_nEndo);

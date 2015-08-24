@@ -165,6 +165,8 @@ if info(1)
 end
 if isfield( options, 'non_central_approximation' ) && options.non_central_approximation
     [ info, M, options, oo ] = non_central_approximation( M, options, oo );
+    dr = oo.dr;
 elseif isfield( options, 'gaussian_approximation' ) && options.gaussian_approximation
     [ info, M, options, oo ] = gaussian_approximation( M, options, oo );
+    dr = oo.dr;
 end
