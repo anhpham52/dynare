@@ -6,6 +6,6 @@ function RV = parallel_wrapper( objective_function, XV, varargin )
         if isempty( R )
             R = 1e12;
         end
-        RV( i ) = R;
+        RV( i ) = R( 1 );
     end
 end
