@@ -342,7 +342,9 @@ switch minimizer_algorithm
     end    
     warning('off','CMAES:NonfinitenessRange');
     warning('off','CMAES:InitialSigma');
-    [x, fval, COUNTEVAL, STOPFLAG, OUT, BESTEVER] = cmaes(func2str(objective_function),start_par_value,H0,cmaesOptions,varargin{:});
+    cmaesOptions.EvalParallel = 1;
+    cmaesOptions.CMA.active = 1;
+    [x, fval, COUNTEVAL, STOPFLAG, OUT, BESTEVER] = cmaes(@(XV) parallel_wrapper(objective_function,XV,varargin{:}),start_par_value,H0,cmaesOptions);
     opt_par_values=BESTEVER.x;
     fval=BESTEVER.f;
   case 10
