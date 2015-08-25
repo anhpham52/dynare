@@ -130,6 +130,11 @@ persistent sample_size number_of_state_variables number_of_observed_variables nu
 global options_
 options_ = DynareOptions;
 
+if isstruct( DynareDataset )
+    dseries( 'initialize' );
+    DynareDataset = dseries( DynareDataset );
+end
+
 % Initialization of the returned arguments.
 fval            = [];
 ys              = [];
