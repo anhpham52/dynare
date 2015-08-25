@@ -302,7 +302,8 @@ switch minimizer_algorithm
     [opt_par_values,fval,exitflag] = simplex_optimization_routine(objective_function,start_par_value,simplexOptions,parameter_names,varargin{:});
   case 9
     % Set defaults
-    H0 = 1e-4*ones(n_params,1);
+    H0 = ( bounds(:,2) - bounds(:,1) ) * 0.2;
+    H0( ~isfinite( H0 ) ) = 0.01;
     cmaesOptions = options_.cmaes;
     % Modify defaults
     if ~isempty(options_.optim_opt)
@@ -344,6 +345,8 @@ switch minimizer_algorithm
     warning('off','CMAES:InitialSigma');
     cmaesOptions.EvalParallel = 1;
     cmaesOptions.CMA.active = 1;
+    cmaesOptions.LBounds = bounds(:,1);
+    cmaesOptions.UBounds = bounds(:,2);
     if isfield( options_, 'CMAESResume' )
         cmaesOptions.Resume = options_.CMAESResume;
     end
