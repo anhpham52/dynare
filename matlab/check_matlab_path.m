@@ -128,7 +128,7 @@ function flist = getallroutinenames(p, excludedsubfolders)
                 end
             else
                 % Filter out files without m extension.
-                if isequal(dd(f).name(end-1:end),'.m')
+                if strcmpi(dd(f).name(max(1,end-1):end),'.m')
                     flist{length(flist)+1} = [dd(f).name];
                 end
             end
