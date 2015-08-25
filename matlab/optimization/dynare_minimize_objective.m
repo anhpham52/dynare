@@ -344,6 +344,9 @@ switch minimizer_algorithm
     warning('off','CMAES:InitialSigma');
     cmaesOptions.EvalParallel = 1;
     cmaesOptions.CMA.active = 1;
+    if isfield( options_, 'CMAESResume' )
+        cmaesOptions.Resume = options_.CMAESResume;
+    end
     try
         pool = parpool;
         nw = pool.NumWorkers;
