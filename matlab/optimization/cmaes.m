@@ -660,15 +660,15 @@ else % flgresume
     
   % initialize random number generator
   if ischar(opts.Seed)
-    randn('state', eval(opts.Seed));     % random number generator state
+      rng( eval(opts.Seed) );
   else
-    randn('state', opts.Seed);
+      rng( opts.Seed );
   end
   %qqq
 %  load(opts.SaveFilename, 'startseed');
 %  randn('state', startseed);
 %  disp(['SEED RELOADED FROM ' opts.SaveFilename]);
-  startseed = randn('state');         % for retrieving in saved variables
+  startseed = rng;         % for retrieving in saved variables
 
   % Initialize further constants
   chiN=N^0.5*(1-1/(4*N)+1/(21*N^2));  % expectation of 
