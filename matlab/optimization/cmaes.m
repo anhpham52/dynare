@@ -694,7 +694,7 @@ else % flgresume
       filenames(end+1) = {'stddev'};
       filenames(end+1) = {'xmean'};
       filenames(end+1) = {'xrecentbest'};
-      str = [' (startseed=' num2str(startseed.seed) ...
+      str = [' (startseed=' num2str(startseed.Seed) ...
              ', ' num2str(clock, '%d/%02d/%d %d:%d:%2.2f') ')'];
       for namecell = filenames(:)'
         name = namecell{:};
