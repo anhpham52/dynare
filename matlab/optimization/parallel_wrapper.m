@@ -10,7 +10,7 @@ function RV = parallel_wrapper( objective_function, XV, varargin )
         end
         warning( WarningState );
         if isempty( R ) || ~isfinite( R( 1 ) )
-            R = 1e12;
+            R = NaN;
         end
         RV( i ) = R( 1 );
     end
