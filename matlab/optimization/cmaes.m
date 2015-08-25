@@ -193,7 +193,7 @@ defopts.TolHistFun   = '1e-13 % stop if back fun-changes smaller TolHistFun';
 defopts.StopOnStagnation = 'on  % stop when fitness stagnates for a long time';
 % TODO: stagnation has four parameters for the period: min = 120, const = 30N/lam, rel = 0.2, max = 2e5
 % defopts.StopOnStagnation = '[120 30*N/popsize 0.2 2e5]  % [min const rel_iter max] measuring period';
-defopts.StopOnWarnings = 'yes  % ''no''==''off''==0, ''on''==''yes''==1 ';
+defopts.StopOnWarnings = 0; % 'yes  % ''no''==''off''==0, ''on''==''yes''==1 ';
 defopts.StopOnEqualFunctionValues = '2 + N/3  % number of iterations';  
 
 % Options defaults: Other
