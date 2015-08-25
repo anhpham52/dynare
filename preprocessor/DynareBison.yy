@@ -114,7 +114,7 @@ class ParsingDriver;
 %token NOGRAPH NOMOMENTS NOPRINT NORMAL_PDF SAVE_DRAWS
 %token OBSERVATION_TRENDS OPTIM OPTIM_WEIGHTS ORDER OSR OSR_PARAMS MAX_DIM_COVA_GROUP ADVANCED OUTFILE OUTVARS OVERWRITE
 %token PARALLEL_LOCAL_FILES PARAMETERS PARAMETER_SET PARTIAL_INFORMATION PERFECT_FORESIGHT PERIODS PERIOD PLANNER_OBJECTIVE PLOT_CONDITIONAL_FORECAST PLOT_PRIORS PREFILTER PRESAMPLE
-%token PERFECT_FORESIGHT_SETUP PERFECT_FORESIGHT_SOLVER
+%token PERFECT_FORESIGHT_SETUP PERFECT_FORESIGHT_SOLVER POSTERIOR_KERNEL_DENSITY
 %token PRINT PRIOR_MC PRIOR_TRUNC PRIOR_MODE PRIOR_MEAN POSTERIOR_MODE POSTERIOR_MEAN POSTERIOR_MEDIAN PRUNING
 %token <string_val> QUOTED_STRING
 %token QZ_CRITERIUM QZ_ZERO_THRESHOLD FULL DSGE_VAR DSGE_VARLAG DSGE_PRIOR_WEIGHT TRUNCATE
@@ -157,7 +157,7 @@ class ParsingDriver;
 %token MS_ESTIMATION MS_SIMULATION MS_COMPUTE_MDD MS_COMPUTE_PROBABILITIES MS_FORECAST
 %token SVAR_IDENTIFICATION EQUATION EXCLUSION LAG UPPER_CHOLESKY LOWER_CHOLESKY MONTHLY QUARTERLY
 %token MARKOV_SWITCHING CHAIN DURATION NUMBER_OF_REGIMES NUMBER_OF_LAGS
-%token SVAR COEFF COEFFICIENTS VARIANCES CONSTANTS EQUATIONS
+%token SVAR SVAR_GLOBAL_IDENTIFICATION_CHECK COEFF COEFFICIENTS VARIANCES CONSTANTS EQUATIONS
 %token EXTERNAL_FUNCTION EXT_FUNC_NAME EXT_FUNC_NARGS FIRST_DERIV_PROVIDED SECOND_DERIV_PROVIDED
 %token SELECTED_VARIABLES_ONLY COVA_COMPUTE SIMULATION_FILE_TAG FILE_TAG
 %token NO_ERROR_BANDS ERROR_BAND_PERCENTILES SHOCKS_PER_PARAMETER NO_CREATE_INIT
@@ -258,6 +258,7 @@ statement : parameters
           | conditional_forecast_paths
           | plot_conditional_forecast
           | svar_identification
+          | svar_global_identification_check
           | markov_switching
           | svar
           | external_function
@@ -850,6 +851,10 @@ restriction_elem_expression : COEFF '(' symbol COMMA INT_NUMBER ')'
                                  { driver.add_positive_restriction_element($1,$5,$7);}
                             ;
 
+svar_global_identification_check: SVAR_GLOBAL_IDENTIFICATION_CHECK ';'
+                                  { driver.add_svar_global_identification_check(); }
+                                ;
+				
 markov_switching : MARKOV_SWITCHING '(' ms_options_list ')' ';'
                    { driver.markov_switching(); }
                  ;
@@ -1635,7 +1640,7 @@ estimation_options_list : estimation_options_list COMMA estimation_options
 
 estimation_options : o_datafile
                    | o_nobs
-                   | o_first_obs
+                   | o_est_first_obs
                    | o_prefilter
                    | o_presample
                    | o_lik_algo
@@ -1734,6 +1739,7 @@ estimation_options : o_datafile
                    | o_silent_optimizer
                    | o_proposal_distribution
                    | o_student_degrees_of_freedom
+                   | o_posterior_kernel_density
                    ;
 
 list_optim_option : QUOTED_STRING COMMA QUOTED_STRING
@@ -2620,6 +2626,11 @@ o_conditional_variance_decomposition : CONDITIONAL_VARIANCE_DECOMPOSITION EQUAL 
                                      | CONDITIONAL_VARIANCE_DECOMPOSITION EQUAL vec_int_number
                                        { driver.option_vec_int("conditional_variance_decomposition", $3); }
                                      ;
+o_est_first_obs : FIRST_OBS EQUAL vec_int
+                  { driver.option_vec_int("first_obs", $3); }
+                | FIRST_OBS EQUAL vec_int_number
+                  { driver.option_vec_int("first_obs", $3); }
+                ;
 o_first_obs : FIRST_OBS EQUAL INT_NUMBER { driver.option_num("first_obs", $3); };
 o_data_first_obs : FIRST_OBS EQUAL date_expr { driver.option_date("firstobs", $3); } ;
 o_data_last_obs : LAST_OBS EQUAL date_expr { driver.option_date("lastobs", $3); } ;
@@ -2678,6 +2689,9 @@ o_mh_jscale : MH_JSCALE EQUAL non_negative_number { driver.option_num("mh_jscale
 o_optim : OPTIM  EQUAL '(' optim_options ')';
 o_tarb_optim : TARB_OPTIM  EQUAL '(' tarb_optim_options ')';
 o_proposal_distribution : PROPOSAL_DISTRIBUTION EQUAL symbol { driver.option_str("proposal_distribution", $3); };
+o_posterior_kernel_density : POSTERIOR_KERNEL_DENSITY
+                             { driver.option_num("posterior_kernel_density.indicator", "1"); }
+                           ;
 o_student_degrees_of_freedom : STUDENT_DEGREES_OF_FREEDOM EQUAL INT_NUMBER { driver.option_num("student_degrees_of_freedom", $3); };
 o_mh_init_scale : MH_INIT_SCALE EQUAL non_negative_number { driver.option_num("mh_init_scale", $3); };
 o_mode_file : MODE_FILE EQUAL filename { driver.option_str("mode_file", $3); };
