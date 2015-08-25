@@ -344,6 +344,13 @@ switch minimizer_algorithm
     warning('off','CMAES:InitialSigma');
     cmaesOptions.EvalParallel = 1;
     cmaesOptions.CMA.active = 1;
+    try
+        pool = parpool;
+        nw = pool.NumWorkers;
+    catch
+        nw = 1;
+    end
+    cmaesOptions.PopSize = [ 'max( ' int2str( nw ) ', (4 + floor(3*log(N))) )' ];
     [x, fval, COUNTEVAL, STOPFLAG, OUT, BESTEVER] = cmaes(@(XV) parallel_wrapper(objective_function,XV,varargin{:}),start_par_value,H0,cmaesOptions);
     opt_par_values=BESTEVER.x;
     fval=BESTEVER.f;
