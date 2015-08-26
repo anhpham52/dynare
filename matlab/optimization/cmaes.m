@@ -561,7 +561,7 @@ else % flgresume
     error(['Initial search volume (SIGMA) must be greater than zero']);
   end
   if max(insigma)/min(insigma) > 1e6
-    error(['Initial search volume (SIGMA) badly conditioned']);
+    warning(['Initial search volume (SIGMA) badly conditioned']);
   end
   sigma = max(insigma);              % overall standard deviation
   pc = zeros(N,1); ps = zeros(N,1);  % evolution paths for C and sigma
