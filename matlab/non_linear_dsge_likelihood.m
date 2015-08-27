@@ -303,7 +303,11 @@ ReducedForm.StateVectorVariance = StateVectorVariance;
 %------------------------------------------------------------------------------
 DynareOptions.warning_for_steadystate = 0;
 [s1,s2] = get_dynare_random_generator_state();
-LIK = feval(DynareOptions.particle.algorithm,ReducedForm,Y,start,DynareOptions.particle,DynareOptions.threads);
+try
+    LIK = feval(DynareOptions.particle.algorithm,ReducedForm,Y,start,DynareOptions.particle,DynareOptions.threads);
+catch
+    LIK = NaN;
+end
 set_dynare_random_generator_state(s1,s2);
 if imag(LIK)
     info = 46;
