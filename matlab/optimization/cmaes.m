@@ -1310,8 +1310,7 @@ while isempty(stopflag)
 	if stopOnWarnings
 	  stopflag(end+1) = {'warnconditioncov'};
 	else
-	  warning(['Iteration ' num2str(countiter) ': condition of C ' ...
-		   'at upper limit' ]);
+	  % warning(['Iteration ' num2str(countiter) ': condition of C at upper limit' ]);
 	  tmp = max(diagD)/1e14 - min(diagD);
 	  C = C + tmp*eye(N,N); diagD = diagD + tmp*ones(N,1); 
 	end
