@@ -1,7 +1,4 @@
-
-@#includepath "folder"
-@#include "endovars.mod"
-
+var y y_s R pie dq pie_s de A y_obs pie_obs R_obs;
 varexo e_R e_q e_ys e_pies e_A;
 
 parameters psi1 psi2 psi3 rho_R tau alpha rr k rho_q rho_A rho_ys rho_pies;
@@ -63,10 +60,5 @@ stderr e_A,inv_gamma_pdf,1.2533,0.6551;
 stderr e_ys,inv_gamma_pdf,1.2533,0.6551;
 stderr e_pies,inv_gamma_pdf,1.88,0.9827;
 end;
-
-
-estimation(datafile=data_ca1,first_obs=8,nobs=79,mh_replic=0,nodisplay);
-estimation(datafile=data_ca1,first_obs=8,nobs=79,mode_compute=0,nodisplay, mode_file=ls2003_mode, mh_nblocks=4, prefilter=1, mh_jscale=0.5, mh_replic=2000);
-estimation(datafile=data_ca1,first_obs=8,nobs=79,mode_compute=0,nodisplay, mode_file=ls2003_mode, mh_nblocks=4,prefilter=1,mh_jscale=0.5,mh_replic=2000,bayesian_irf,load_mh_file,smoother,forecast=12, filtered_vars, filter_step_ahead=[1 2 3 4]) y y_s R pie dq pie_s de A y_obs pie_obs R_obs;
-
-
+options_.plot_priors=0;
+estimation(silent_optimizer,datafile='../recursive/data_ca1',first_obs=[8 11],nobs=[76],mh_nblocks=1,prefilter=1,mh_jscale=0.5,mh_replic=2000,forecast=8) y_obs R_obs pie_obs dq de;
