@@ -55,7 +55,7 @@ usage()
 {
   cerr << "Dynare usage: dynare mod_file [debug] [noclearall] [onlyclearglobals] [savemacro[=macro_file]] [onlymacro] [nolinemacro] [notmpterms] [nolog] [warn_uninit]"
        << " [console] [nograph] [nointeractive] [parallel[=cluster_name]] [conffile=parallel_config_path_and_filename] [parallel_slave_open_mode] [parallel_test]"
-       << " [-D<variable>[=<value>]] [-I/path] [nostrict] [fast] [minimal_workspace] [output=dynamic|first|second|third] [language=C|C++]"
+       << " [-D<variable>[=<value>]] [-I/path] [nostrict] [fast] [minimal_workspace] [output=dynamic|first|second|third] [language=C|C++|julia]"
 #if defined(_WIN32) || defined(__CYGWIN32__)
        << " [cygwin] [msvc]"
 #endif
@@ -250,22 +250,26 @@ main(int argc, char **argv)
 	      cerr << "Incorrect syntax for language option" << endl;
 	      usage();
 	    }
-	  // we don't want temp terms in external functions
-	  no_tmp_terms = true;
-	  if (strlen(argv[arg]) == 10 && !strncmp(argv[arg] + 9, "C", 1))
-	    language = c;
-	  else if (strlen(argv[arg]) ==  12 && !strncmp(argv[arg] + 9, "C++", 3))
-	    language = cpp;
-	  else if (strlen(argv[arg]) == 13 && !strncmp(argv[arg] + 9, "cuda", 4))
-	    language = cuda;
-	  else if (strlen(argv[arg]) == 14 && !strncmp(argv[arg] + 9, "julia", 5))
-	    language = julia;
-	  else if (strlen(argv[arg]) == 15 && !strncmp(argv[arg] + 9, "python", 6))
-	    language = python;
-	  else
-	    {
-	      cerr << "Incorrect syntax for language option" << endl;
-	      usage();
+
+          if (strlen(argv[arg]) == 14 && !strncmp(argv[arg] + 9, "julia", 5))
+            language = julia;
+          else
+            {
+              // we don't want temp terms in external functions (except Julia)
+              no_tmp_terms = true;
+              if (strlen(argv[arg]) == 10 && !strncmp(argv[arg] + 9, "C", 1))
+                language = c;
+              else if (strlen(argv[arg]) ==  12 && !strncmp(argv[arg] + 9, "C++", 3))
+                language = cpp;
+              else if (strlen(argv[arg]) == 13 && !strncmp(argv[arg] + 9, "cuda", 4))
+                language = cuda;
+              else if (strlen(argv[arg]) == 15 && !strncmp(argv[arg] + 9, "python", 6))
+                language = python;
+              else
+                {
+                  cerr << "Incorrect syntax for language option" << endl;
+                  usage();
+                }
             }
         }
       else
