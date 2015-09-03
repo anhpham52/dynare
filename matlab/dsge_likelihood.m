@@ -136,7 +136,7 @@ function [fval,DLIK,Hess,exit_flag,SteadyState,trend_coeff,info,Model,DynareOpti
 
 global objective_function_penalty_base
 
-if isempty( objective_function_penalty_base )
+if isempty( objective_function_penalty_base ) || objective_function_penalty_base <= 1
 	objective_function_penalty_base = Inf;
 end
 
