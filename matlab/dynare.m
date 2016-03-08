@@ -220,4 +220,5 @@ end
 if ~ isempty(find(abs(fname) == 46))
     fname = fname(:,1:find(abs(fname) == 46)-1) ;
 end
+warning( 'off', 'MATLAB:lang:cannotClearExecutingFunction' );
 evalin('base',fname) ;
