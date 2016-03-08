@@ -36,11 +36,19 @@ function DynareResults = initial_estimation_checks(objective_function,xparam1,Dy
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
-if DynareDataset.vobs>Model.exo_nbr+EstimatedParameters.nvn
+%get maximum number of simultaneously observed variables for stochastic
+%singularity check
+maximum_number_non_missing_observations=max(sum(~isnan(DynareDataset.data),2));
+
+if DynareOptions.order>1 && any(any(isnan(DynareDataset.data)))
+    error('initial_estimation_checks:: particle filtering does not support missing observations')
+end
+
+if maximum_number_non_missing_observations>Model.exo_nbr+EstimatedParameters.nvn
     error(['initial_estimation_checks:: Estimation can''t take place because there are less declared shocks than observed variables!'])
 end
 
-if DynareDataset.vobs>length(find(diag(Model.Sigma_e)))+EstimatedParameters.nvn
+if maximum_number_non_missing_observations>length(find(diag(Model.Sigma_e)))+EstimatedParameters.nvn
     error(['initial_estimation_checks:: Estimation can''t take place because too many shocks have been calibrated with a zero variance!'])
 end
 
@@ -56,6 +64,10 @@ end
 
 if DynareOptions.TaRB.use_TaRB && (DynareOptions.TaRB.new_block_probability<0 || DynareOptions.TaRB.new_block_probability>1)
     error(['initial_estimation_checks:: The tarb_new_block_probability must be between 0 and 1!'])
+end
+
+if (any(BayesInfo.pshape  >0 ) && DynareOptions.mh_replic) && DynareOptions.mh_nblck<1
+    error(['initial_estimation_checks:: Bayesian estimation cannot be conducted with mh_nblocks=0.'])    
 end
 
 old_steady_params=Model.params; %save initial parameters for check if steady state changes param values
@@ -74,7 +86,7 @@ if isfield(EstimatedParameters,'param_vals') && ~isempty(EstimatedParameters.par
 
     if ~isempty(changed_par_indices)
         fprintf('\nThe steady state file internally changed the values of the following estimated parameters:\n')
-        disp(Model.param_names(changed_par_indices,:));
+        disp(Model.param_names(EstimatedParameters.param_vals(changed_par_indices,1),:));
         fprintf('This will override the parameter values drawn from the proposal density and may lead to wrong results.\n')
         fprintf('Check whether this is really intended.\n')    
         warning('The steady state file internally changes the values of the estimated parameters.')

@@ -315,7 +315,7 @@ if ~isempty(estim_params_) && ~all(strcmp(fieldnames(estim_params_),'full_calibr
             plot_priors(bayestopt_,M_,estim_params_,options_)
         end
         % Set prior bounds
-        bounds = prior_bounds(bayestopt_,options_);
+        bounds = prior_bounds(bayestopt_, options_.prior_trunc);
         bounds.lb = max(bounds.lb,lb);
         bounds.ub = min(bounds.ub,ub);
     else  % estimated parameters but no declared priors
@@ -530,10 +530,8 @@ end
 
 [dataset_, dataset_info, newdatainterfaceflag] = makedataset(options_, options_.dsge_var*options_.dsge_varlag, gsa_flag);
 
-% Set options_.nobs if needed
-if newdatainterfaceflag
-    options_.nobs = dataset_.nobs;
-end
+% Set options_.nobs
+options_.nobs = dataset_.nobs;
 
 % setting steadystate_check_flag option
 if options_.diffuse_filter
@@ -573,3 +571,28 @@ else
         error('The option "prefilter" is inconsistent with the non-zero mean measurement equations in the model.')
     end
 end
+
+%% get the non-zero rows and columns of Sigma_e and H
+
+H_non_zero_rows=find(~all(M_.H==0,1));
+H_non_zero_columns=find(~all(M_.H==0,2));
+if ~isequal(H_non_zero_rows,H_non_zero_columns')
+    error('Measurement error matrix not symmetric')
+end
+if isfield(estim_params_,'nvn_observable_correspondence')
+    estim_params_.H_entries_to_check_for_positive_definiteness=union(H_non_zero_rows,estim_params_.nvn_observable_correspondence(:,1));
+else
+    estim_params_.H_entries_to_check_for_positive_definiteness=H_non_zero_rows;
+end
+
+Sigma_e_non_zero_rows=find(~all(M_.Sigma_e==0,1));
+Sigma_e_non_zero_columns=find(~all(M_.Sigma_e==0,2));
+if ~isequal(Sigma_e_non_zero_rows,Sigma_e_non_zero_columns')
+    error('Structual error matrix not symmetric')
+end
+if isfield(estim_params_,'var_exo') && ~isempty(estim_params_.var_exo)
+    estim_params_.Sigma_e_entries_to_check_for_positive_definiteness=union(Sigma_e_non_zero_rows,estim_params_.var_exo(:,1));
+else
+    estim_params_.Sigma_e_entries_to_check_for_positive_definiteness=Sigma_e_non_zero_rows;
+end
+

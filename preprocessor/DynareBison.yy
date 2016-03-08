@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 Dynare Team
+ * Copyright (C) 2003-2016 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -52,6 +52,7 @@ class ParsingDriver;
   SymbolType symbol_type_val;
   vector<string *> *vector_string_val;
   vector<int> *vector_int_val;
+  pair<string *, string *> *string_pair_val;
   PriorDistributions prior_distributions_val;
 };
 
@@ -101,7 +102,7 @@ class ParsingDriver;
 %token IDENTIFICATION INF_CONSTANT INITVAL INITVAL_FILE BOUNDS JSCALE INIT INFILE INVARS
 %token <string_val> INT_NUMBER
 %token INV_GAMMA_PDF INV_GAMMA1_PDF INV_GAMMA2_PDF IRF IRF_SHOCKS IRF_PLOT_THRESHOLD IRF_CALIBRATION
-%token KALMAN_ALGO KALMAN_TOL DIFFUSE_KALMAN_TOL SUBSAMPLES OPTIONS TOLF
+%token FAST_KALMAN_FILTER KALMAN_ALGO KALMAN_TOL DIFFUSE_KALMAN_TOL SUBSAMPLES OPTIONS TOLF
 %token LAPLACE LIK_ALGO LIK_INIT LINEAR LOAD_IDENT_FILES LOAD_MH_FILE LOAD_PARAMS_AND_STEADY_STATE LOGLINEAR LOGDATA LYAPUNOV LINEAR_APPROXIMATION
 %token LYAPUNOV_FIXED_POINT_TOL LYAPUNOV_DOUBLING_TOL LYAPUNOV_SQUARE_ROOT_SOLVER_TOL LOG_DEFLATOR LOG_TREND_VAR LOG_GROWTH_FACTOR MARKOWITZ MARGINAL_DENSITY MAX MAXIT
 %token MFS MH_CONF_SIG MH_DROP MH_INIT_SCALE MH_JSCALE MH_MODE MH_NBLOCKS MH_REPLIC MH_RECOVER POSTERIOR_MAX_SUBSAMPLE_DRAWS MIN MINIMAL_SOLVING_PERIODS
@@ -114,7 +115,7 @@ class ParsingDriver;
 %token NOGRAPH NOMOMENTS NOPRINT NORMAL_PDF SAVE_DRAWS
 %token OBSERVATION_TRENDS OPTIM OPTIM_WEIGHTS ORDER OSR OSR_PARAMS MAX_DIM_COVA_GROUP ADVANCED OUTFILE OUTVARS OVERWRITE
 %token PARALLEL_LOCAL_FILES PARAMETERS PARAMETER_SET PARTIAL_INFORMATION PERFECT_FORESIGHT PERIODS PERIOD PLANNER_OBJECTIVE PLOT_CONDITIONAL_FORECAST PLOT_PRIORS PREFILTER PRESAMPLE
-%token PERFECT_FORESIGHT_SETUP PERFECT_FORESIGHT_SOLVER POSTERIOR_KERNEL_DENSITY
+%token PERFECT_FORESIGHT_SETUP PERFECT_FORESIGHT_SOLVER NO_POSTERIOR_KERNEL_DENSITY FUNCTION
 %token PRINT PRIOR_MC PRIOR_TRUNC PRIOR_MODE PRIOR_MEAN POSTERIOR_MODE POSTERIOR_MEAN POSTERIOR_MEDIAN PRUNING
 %token <string_val> QUOTED_STRING
 %token QZ_CRITERIUM QZ_ZERO_THRESHOLD FULL DSGE_VAR DSGE_VARLAG DSGE_PRIOR_WEIGHT TRUNCATE
@@ -127,7 +128,7 @@ class ParsingDriver;
 %token UNIFORM_PDF UNIT_ROOT_VARS USE_DLL USEAUTOCORR GSA_SAMPLE_FILE USE_UNIVARIATE_FILTERS_IF_SINGULARITY_IS_DETECTED
 %token VALUES VAR VAREXO VAREXO_DET VAROBS PREDETERMINED_VARIABLES
 %token WRITE_LATEX_DYNAMIC_MODEL WRITE_LATEX_STATIC_MODEL WRITE_LATEX_ORIGINAL_MODEL
-%token XLS_SHEET XLS_RANGE LONG_NAME LMMCP OCCBIN BANDPASS_FILTER
+%token XLS_SHEET XLS_RANGE LMMCP OCCBIN BANDPASS_FILTER
 %left COMMA
 %left EQUAL_EQUAL EXCLAMATION_EQUAL
 %left LESS GREATER LESS_EQUAL GREATER_EQUAL
@@ -162,7 +163,7 @@ class ParsingDriver;
 %token SELECTED_VARIABLES_ONLY COVA_COMPUTE SIMULATION_FILE_TAG FILE_TAG
 %token NO_ERROR_BANDS ERROR_BAND_PERCENTILES SHOCKS_PER_PARAMETER NO_CREATE_INIT
 %token SHOCK_DRAWS FREE_PARAMETERS MEDIAN DATA_OBS_NBR NEIGHBORHOOD_WIDTH PVALUE_KS PVALUE_CORR
-%token FILTERED_PROBABILITIES REAL_TIME_SMOOTHED
+%token FILTERED_PROBABILITIES REAL_TIME_SMOOTHED PRIOR_FUNCTION POSTERIOR_FUNCTION SAMPLING_DRAWS
 %token PROPOSAL_TYPE PROPOSAL_UPPER_BOUND PROPOSAL_LOWER_BOUND PROPOSAL_DRAWS USE_MEAN_CENTER
 %token ADAPTIVE_MH_DRAWS THINNING_FACTOR COEFFICIENTS_PRIOR_HYPERPARAMETERS
 %token CONVERGENCE_STARTING_VALUE CONVERGENCE_ENDING_VALUE CONVERGENCE_INCREMENT_VALUE
@@ -178,8 +179,9 @@ class ParsingDriver;
 %type <string_val> non_negative_number signed_number signed_integer date_str
 %type <string_val> filename symbol vec_of_vec_value vec_value_list date_expr
 %type <string_val> vec_value_1 vec_value signed_inf signed_number_w_inf
-%type <string_val> range vec_value_w_inf vec_value_1_w_inf named_var
+%type <string_val> range vec_value_w_inf vec_value_1_w_inf
 %type <string_val> integer_range signed_integer_range
+%type <string_pair_val> named_var
 %type <symbol_type_val> change_type_arg
 %type <vector_string_val> change_type_var_list subsamples_eq_opt prior_eq_opt options_eq_opt calibration_range
 %type <vector_int_val> vec_int_elem vec_int_1 vec_int vec_int_number
@@ -281,6 +283,8 @@ statement : parameters
           | histval_file
           | perfect_foresight_setup
           | perfect_foresight_solver
+          | prior_function
+          | posterior_function
           ;
 
 dsample : DSAMPLE INT_NUMBER ';'
@@ -368,8 +372,11 @@ predetermined_variables : PREDETERMINED_VARIABLES predetermined_variables_list '
 
 parameters : PARAMETERS parameter_list ';';
 
-named_var : '(' LONG_NAME EQUAL QUOTED_STRING ')'
-            { $$ = $4; }
+named_var : '(' symbol EQUAL QUOTED_STRING ')'
+            {
+              pair<string *, string *> *pr = new pair<string *, string *>($2, $4);
+              $$ = pr;
+            }
           ;
 
 var_list : var_list symbol
@@ -1020,6 +1027,22 @@ perfect_foresight_solver_options : o_stack_solve_algo
                                  | o_no_homotopy
 				 | o_lmmcp
 				 | o_occbin
+                                 ;
+
+prior_function : PRIOR_FUNCTION '(' prior_posterior_function_options_list ')' ';'
+                { driver.prior_posterior_function(true); }
+               ;
+
+posterior_function : POSTERIOR_FUNCTION '(' prior_posterior_function_options_list ')' ';'
+                    { driver.prior_posterior_function(false); }
+                   ;
+
+prior_posterior_function_options_list : prior_posterior_function_options_list COMMA prior_posterior_function_options
+                                      | prior_posterior_function_options
+                                      ;
+
+prior_posterior_function_options : o_function
+                                 | o_sampling_draws
                                  ;
 
 simul : SIMUL ';'
@@ -1680,6 +1703,7 @@ estimation_options : o_datafile
                    | o_moments_varendo
                    | o_contemporaneous_correlation
                    | o_filtered_vars
+                   | o_fast_kalman_filter
                    | o_kalman_algo
                    | o_kalman_tol
 		   | o_diffuse_kalman_tol
@@ -1739,7 +1763,7 @@ estimation_options : o_datafile
                    | o_silent_optimizer
                    | o_proposal_distribution
                    | o_student_degrees_of_freedom
-                   | o_posterior_kernel_density
+                   | o_no_posterior_kernel_density
                    ;
 
 list_optim_option : QUOTED_STRING COMMA QUOTED_STRING
@@ -2145,6 +2169,7 @@ ms_forecast_option : o_output_file_tag
                    | o_regime
                    | o_regimes
                    | o_parameter_uncertainty
+                   | o_horizon
                    ;
 
 ms_forecast_options_list : ms_forecast_option COMMA ms_forecast_options_list
@@ -2524,6 +2549,8 @@ moment_calibration_item : symbol COMMA symbol COMMA calibration_range ';'
 
 irf_calibration : IRF_CALIBRATION ';' irf_calibration_list END ';'
                   { driver.end_irf_calibration(); }
+                | IRF_CALIBRATION '(' o_relative_irf ')' ';' irf_calibration_list END ';'
+                  { driver.end_irf_calibration(); }
                 ;
 
 irf_calibration_list : irf_calibration_item
@@ -2689,8 +2716,8 @@ o_mh_jscale : MH_JSCALE EQUAL non_negative_number { driver.option_num("mh_jscale
 o_optim : OPTIM  EQUAL '(' optim_options ')';
 o_tarb_optim : TARB_OPTIM  EQUAL '(' tarb_optim_options ')';
 o_proposal_distribution : PROPOSAL_DISTRIBUTION EQUAL symbol { driver.option_str("proposal_distribution", $3); };
-o_posterior_kernel_density : POSTERIOR_KERNEL_DENSITY
-                             { driver.option_num("posterior_kernel_density.indicator", "1"); }
+o_no_posterior_kernel_density : NO_POSTERIOR_KERNEL_DENSITY
+                             { driver.option_num("moments_posterior_density.indicator", "0"); }
                            ;
 o_student_degrees_of_freedom : STUDENT_DEGREES_OF_FREEDOM EQUAL INT_NUMBER { driver.option_num("student_degrees_of_freedom", $3); };
 o_mh_init_scale : MH_INIT_SCALE EQUAL non_negative_number { driver.option_num("mh_init_scale", $3); };
@@ -2725,6 +2752,7 @@ o_moments_varendo : MOMENTS_VARENDO { driver.option_num("moments_varendo", "1");
 o_contemporaneous_correlation : CONTEMPORANEOUS_CORRELATION { driver.option_num("contemporaneous_correlation", "1"); };
 o_filtered_vars : FILTERED_VARS { driver.option_num("filtered_vars", "1"); };
 o_relative_irf : RELATIVE_IRF { driver.option_num("relative_irf", "1"); };
+o_fast_kalman_filter : FAST_KALMAN_FILTER  { driver.option_num("fast_kalman_filter", "1"); };
 o_kalman_algo : KALMAN_ALGO EQUAL INT_NUMBER { driver.option_num("kalman_algo", $3); };
 o_kalman_tol : KALMAN_TOL EQUAL non_negative_number { driver.option_num("kalman_tol", $3); };
 o_diffuse_kalman_tol : DIFFUSE_KALMAN_TOL EQUAL non_negative_number { driver.option_num("diffuse_kalman_tol", $3); };
@@ -3062,7 +3090,9 @@ o_period : PERIOD EQUAL INT_NUMBER { driver.option_num("period", $3); };
 o_outfile : OUTFILE EQUAL filename { driver.option_str("outfile", $3); };
 o_outvars : OUTVARS EQUAL '(' symbol_list ')' { driver.option_symbol_list("outvars"); };
 o_lmmcp : LMMCP {driver.option_num("lmmcp", "1"); }; 
-o_occbin : OCCBIN {driver.option_num("occbin", "1"); }; 
+o_occbin : OCCBIN {driver.option_num("occbin", "1"); };
+o_function : FUNCTION EQUAL filename { driver.option_str("function", $3); };
+o_sampling_draws : SAMPLING_DRAWS EQUAL INT_NUMBER { driver.option_num("sampling_draws",$3); };
 
 range : symbol ':' symbol
         {

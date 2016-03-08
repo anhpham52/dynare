@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 Dynare Team
+ * Copyright (C) 2003-2016 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -216,6 +216,10 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 }
 <INITIAL>std {BEGIN DYNARE_STATEMENT; return token::STD;}
 <INITIAL>corr {BEGIN DYNARE_STATEMENT; return token::CORR;}
+<DYNARE_STATEMENT>function {return token::FUNCTION;}
+<DYNARE_STATEMENT>sampling_draws {return token::SAMPLING_DRAWS;}
+<INITIAL>prior_function {BEGIN DYNARE_STATEMENT; return token::PRIOR_FUNCTION;}
+<INITIAL>posterior_function {BEGIN DYNARE_STATEMENT; return token::POSTERIOR_FUNCTION;}
 
  /* Inside  of a Dynare statement */
 <DYNARE_STATEMENT>{DATE} {
@@ -291,6 +295,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>logdata 	{return token::LOGDATA;}
 <DYNARE_STATEMENT>nodiagnostic 	{return token::NODIAGNOSTIC;}
 <DYNARE_STATEMENT>kalman_algo 	{return token::KALMAN_ALGO;}
+<DYNARE_STATEMENT>fast_kalman_filter {return token::FAST_KALMAN_FILTER;}
 <DYNARE_STATEMENT>kalman_tol 	{return token::KALMAN_TOL;}
 <DYNARE_STATEMENT>diffuse_kalman_tol 	{return token::DIFFUSE_KALMAN_TOL;}
 <DYNARE_STATEMENT>forecast 	{return token::FORECAST;}
@@ -303,7 +308,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>posterior_max_subsample_draws	{return token::POSTERIOR_MAX_SUBSAMPLE_DRAWS;}
 <DYNARE_STATEMENT>filtered_vars	{return token::FILTERED_VARS;}
 <DYNARE_STATEMENT>filter_step_ahead	{return token::FILTER_STEP_AHEAD;}
-<DYNARE_STATEMENT>relative_irf 	{return token::RELATIVE_IRF;}
+<DYNARE_STATEMENT,DYNARE_BLOCK>relative_irf {return token::RELATIVE_IRF;}
 <DYNARE_STATEMENT>tex		{return token::TEX;}
 <DYNARE_STATEMENT>nomoments	{return token::NOMOMENTS;}
 <DYNARE_STATEMENT>std		{return token::STD;}
@@ -377,7 +382,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>montecarlo {return token::MONTECARLO;}
 <DYNARE_STATEMENT>distribution_approximation {return token::DISTRIBUTION_APPROXIMATION;}
 <DYNARE_STATEMENT>proposal_distribution {return token::PROPOSAL_DISTRIBUTION;}
-<DYNARE_STATEMENT>posterior_kernel_density {return token::POSTERIOR_KERNEL_DENSITY;}
+<DYNARE_STATEMENT>no_posterior_kernel_density {return token::NO_POSTERIOR_KERNEL_DENSITY;}
 <DYNARE_STATEMENT>student_degrees_of_freedom {return token::STUDENT_DEGREES_OF_FREEDOM;}
 
 <DYNARE_STATEMENT>alpha {
@@ -567,7 +572,6 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>analytic_derivation {return token::ANALYTIC_DERIVATION;}
 <DYNARE_STATEMENT>solver_periods {return token::SOLVER_PERIODS;}
 <DYNARE_STATEMENT>endogenous_prior {return token::ENDOGENOUS_PRIOR;}
-<DYNARE_STATEMENT>long_name {return token::LONG_NAME;}
 <DYNARE_STATEMENT>consider_all_endogenous {return token::CONSIDER_ALL_ENDOGENOUS;}
 <DYNARE_STATEMENT>consider_only_observed {return token::CONSIDER_ONLY_OBSERVED;}
 <DYNARE_STATEMENT>infile {return token::INFILE;}
@@ -783,7 +787,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>max_dim_cova_group {return token::MAX_DIM_COVA_GROUP;}
 <DYNARE_STATEMENT>gsa_sample_file {return token::GSA_SAMPLE_FILE;}
 
-<DYNARE_STATEMENT,DYNARE_BLOCK>[A-Za-z_\x80-\xf3][A-Za-z0-9_\x80-\xf3]* {
+<DYNARE_STATEMENT,DYNARE_BLOCK>[A-Za-z_][A-Za-z0-9_]* {
   yylval->string_val = new string(yytext);
   return token::NAME;
 }
@@ -845,7 +849,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
     element in initval (in which case Dynare recognizes the matrix name as an external
     function symbol), and may want to modify the matrix later with Matlab statements.
  */
-<INITIAL>[A-Za-z_\x80-\xf3][A-Za-z0-9_\x80-\xf3]* {
+<INITIAL>[A-Za-z_][A-Za-z0-9_]* {
   if (driver.symbol_exists_and_is_not_modfile_local_or_external_function(yytext))
     {
       BEGIN DYNARE_STATEMENT;
@@ -863,7 +867,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
  /* For joint prior statement, match [symbol, symbol, ...]
    If no match, begin native and push everything back on stack
  */
-<INITIAL>\[([[:space:]]*[A-Za-z_\x80-\xf3][A-Za-z0-9_\x80-\xf3]*[[:space:]]*,{1}[[:space:]]*)*([[:space:]]*[A-Za-z_\x80-\xf3][A-Za-z0-9_\x80-\xf3]*[[:space:]]*){1}\] {
+<INITIAL>\[([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*,{1}[[:space:]]*)*([[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*){1}\] {
   string yytextcpy = string(yytext);
   yytextcpy.erase(remove(yytextcpy.begin(), yytextcpy.end(), '['), yytextcpy.end());
   yytextcpy.erase(remove(yytextcpy.begin(), yytextcpy.end(), ']'), yytextcpy.end());

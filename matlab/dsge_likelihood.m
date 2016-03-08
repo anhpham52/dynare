@@ -226,7 +226,7 @@ H = Model.H;
 
 % Test if Q is positive definite.
 if ~issquare(Q) || EstimatedParameters.ncx || isfield(EstimatedParameters,'calibrated_covariances')
-    [Q_is_positive_definite, penalty] = ispd(Q);
+    [Q_is_positive_definite, penalty] = ispd(Q(EstimatedParameters.Sigma_e_entries_to_check_for_positive_definiteness,EstimatedParameters.Sigma_e_entries_to_check_for_positive_definiteness));
     if ~Q_is_positive_definite
         fval = objective_function_penalty_base+penalty;
         exit_flag = 0;
@@ -247,7 +247,7 @@ end
 
 % Test if H is positive definite.
 if ~issquare(H) || EstimatedParameters.ncn || isfield(EstimatedParameters,'calibrated_covariances_ME')
-    [H_is_positive_definite, penalty] = ispd(H);
+    [H_is_positive_definite, penalty] = ispd(H(EstimatedParameters.H_entries_to_check_for_positive_definiteness,EstimatedParameters.H_entries_to_check_for_positive_definiteness));
     if ~H_is_positive_definite
         fval = objective_function_penalty_base+penalty;
         exit_flag = 0;
@@ -275,8 +275,8 @@ end
 [T,R,SteadyState,info,Model,DynareOptions,DynareResults] = dynare_resolve(Model,DynareOptions,DynareResults,'restrict');
 
 % Return, with endogenous penalty when possible, if dynare_resolve issues an error code (defined in resol).
-if info(1) == 1 || info(1) == 2 || info(1) == 5 || info(1) == 7 || info(1) == 8 || ...
-            info(1) == 22 || info(1) == 24 || info(1) == 19 || info(1) == 25 || info(1) == 10 || info(1) == 9
+if info(1) == 1 || info(1) == 2 || info(1) == 5 || info(1) == 7 || info(1) == 8 || info(1) == 9 || ...
+            info(1) == 22 || info(1) == 24 || info(1) == 19 || info(1) == 25 || info(1) == 10
     fval = objective_function_penalty_base+1;
     info = info(1);
     exit_flag = 0;
@@ -418,11 +418,20 @@ switch DynareOptions.lik_init
             error(['The model requires Diffuse filter, but you specified a different Kalman filter. You must set options_.kalman_algo ' ...
                    'to 0 (default), 3 or 4'])
     end
-    [Z,T,R,QT,Pstar,Pinf] = schur_statespace_transformation(Z,T,R,Q,DynareOptions.qz_criterium);
+    [Ztmp,Ttmp,Rtmp,QT,Pstar,Pinf] = schur_statespace_transformation(Z,T,R,Q,DynareOptions.qz_criterium,[1:length(T)]);
+    Pinf = QT*Pinf*QT';
+    Pstar = QT*Pstar*QT';
+    Z1=Ztmp*0;
+    for jz=1:length(Z)
+        Z1(jz,Z(jz))=1;
+    end
+    Z=Z1;
+    clear Ztmp Z1
     Zflag = 1;
     % Run diffuse kalman filter on first periods.
     if (kalman_algo==3)
         % Multivariate Diffuse Kalman Filter
+        Pstar0 = Pstar; % store Pstar
         if no_missing_data_flag
             [dLIK,dlik,a,Pstar] = kalman_filter_d(Y, 1, size(Y,2), ...
                                                        zeros(mm,1), Pinf, Pstar, ...
@@ -439,6 +448,7 @@ switch DynareOptions.lik_init
         if isinf(dLIK)
             % Go to univariate diffuse filter if singularity problem.
             singular_diffuse_filter = 1;
+            Pstar = Pstar0;
         end
     end
     if singular_diffuse_filter || (kalman_algo==4)
@@ -662,30 +672,38 @@ end
 % 4. Likelihood evaluation
 %------------------------------------------------------------------------------
 
+singularity_has_been_detected = false;
+
 if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
     if no_missing_data_flag
         if DynareOptions.block
             [err, LIK] = block_kalman_filter(T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
             mexErrCheck('block_kalman_filter', err);
+        elseif DynareOptions.fast_kalman_filter
+            [LIK,lik] = kalman_filter_fast(Y,diffuse_periods+1,size(Y,2), ...
+                                           a,Pstar, ...
+                                           kalman_tol, riccati_tol, ...
+                                           DynareOptions.presample, ...
+                                           T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
+                                           analytic_deriv_info{:});
         else
             [LIK,lik] = kalman_filter(Y,diffuse_periods+1,size(Y,2), ...
-                                a,Pstar, ...
-                                kalman_tol, riccati_tol, ...
-                                DynareOptions.presample, ...
-                                T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
-                                analytic_deriv_info{:});
-
+                                      a,Pstar, ...
+                                      kalman_tol, riccati_tol, ...
+                                      DynareOptions.presample, ...
+                                      T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
+                                      analytic_deriv_info{:});
         end
     else
         if 0 %DynareOptions.block
             [err, LIK,lik] = block_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,...
-                                                                 T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
+                                                 T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
         else
             [LIK,lik] = missing_observations_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
-                                               a, Pstar, ...
-                                               kalman_tol, DynareOptions.riccati_tol, ...
-                                               DynareOptions.presample, ...
-                                               T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods);
+                                                           a, Pstar, ...
+                                                           kalman_tol, DynareOptions.riccati_tol, ...
+                                                           DynareOptions.presample, ...
+                                                           T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods);
         end
     end
     if analytic_derivation,
@@ -696,6 +714,7 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
     end
     if isinf(LIK)
         if DynareOptions.use_univariate_filters_if_singularity_is_detected
+            singularity_has_been_detected = true;
             if kalman_algo == 1
                 kalman_algo = 2;
             else
@@ -713,7 +732,11 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
         if DynareOptions.lik_init==3
             LIK = LIK + dLIK;
             if analytic_derivation==0 && nargout==2,
-                lik = [dlik; lik];
+                if ~singular_diffuse_filter,
+                    lik = [dlik; lik];
+                else
+                    lik = [sum(dlik,2); lik];
+                end
             end
         end
     end
@@ -749,19 +772,21 @@ if (kalman_algo==2) || (kalman_algo==4)
                 Pinf  = blkdiag(Pinf,zeros(pp));
                 H1 = zeros(pp,1);
                 mmm   = mm+pp;
+                if singularity_has_been_detected
+                    a = zeros(mmm,1);
+                end
             end
         end
         if analytic_derivation,
             analytic_deriv_info{5}=DH;
         end
     end
-
     [LIK, lik] = univariate_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
-                                       a,Pstar, ...
-                                       DynareOptions.kalman_tol, ...
-                                       DynareOptions.riccati_tol, ...
-                                       DynareOptions.presample, ...
-                                       T,Q,R,H1,Z,mmm,pp,rr,Zflag,diffuse_periods,analytic_deriv_info{:});
+                                          a,Pstar, ...
+                                          DynareOptions.kalman_tol, ...
+                                          DynareOptions.riccati_tol, ...
+                                          DynareOptions.presample, ...
+                                          T,Q,R,H1,Z,mmm,pp,rr,Zflag,diffuse_periods,analytic_deriv_info{:});
     if analytic_derivation,
         LIK1=LIK;
         LIK=LIK1{1};
@@ -787,11 +812,11 @@ if analytic_derivation
         %                     Hess0 = getHessian(Y,T,DT,D2T, R*Q*transpose(R),DOm,D2Om,Z,DYss,D2Yss);
     end
     if asy_Hess,
-%         if ~((kalman_algo==2) || (kalman_algo==4)),
-%             [Hess] = AHessian(T,R,Q,H,Pstar,Y,DT,DYss,DOm,DH,DP,start,Z,kalman_tol,riccati_tol);
-%         else
+        %         if ~((kalman_algo==2) || (kalman_algo==4)),
+        %             [Hess] = AHessian(T,R,Q,H,Pstar,Y,DT,DYss,DOm,DH,DP,start,Z,kalman_tol,riccati_tol);
+        %         else
         Hess = LIK1{3};
-%         end
+        %         end
     end
 end
 

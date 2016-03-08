@@ -174,7 +174,7 @@ Q = Model.Sigma_e;
 H = Model.H;
 
 if ~issquare(Q) || EstimatedParameters.ncx || isfield(EstimatedParameters,'calibrated_covariances')
-    [Q_is_positive_definite, penalty] = ispd(Q);
+    [Q_is_positive_definite, penalty] = ispd(Q(EstimatedParameters.Sigma_e_entries_to_check_for_positive_definiteness,EstimatedParameters.Sigma_e_entries_to_check_for_positive_definiteness));
     if ~Q_is_positive_definite
         fval = objective_function_penalty_base+penalty;
         exit_flag = 0;
@@ -195,7 +195,7 @@ if ~issquare(Q) || EstimatedParameters.ncx || isfield(EstimatedParameters,'calib
 end
 
 if ~issquare(H) || EstimatedParameters.ncn || isfield(EstimatedParameters,'calibrated_covariances_ME')
-    [H_is_positive_definite, penalty] = ispd(H);
+    [H_is_positive_definite, penalty] = ispd(H(EstimatedParameters.H_entries_to_check_for_positive_definiteness,EstimatedParameters.H_entries_to_check_for_positive_definiteness));
     if ~H_is_positive_definite
         fval = objective_function_penalty_base+penalty;
         exit_flag = 0;
@@ -222,7 +222,7 @@ end
 % Linearize the model around the deterministic sdteadystate and extract the matrices of the state equation (T and R).
 [T,R,SteadyState,info,Model,DynareOptions,DynareResults] = dynare_resolve(Model,DynareOptions,DynareResults,'restrict');
 
-if info(1) == 1 || info(1) == 2 || info(1) == 5 || info(1) == 25 || info(1) == 10
+if info(1) == 1 || info(1) == 2 || info(1) == 5 || info(1) == 25 || info(1) == 10 || info(1) == 7 || info(1) == 9
     fval = objective_function_penalty_base+1;
     exit_flag = 0;
     return

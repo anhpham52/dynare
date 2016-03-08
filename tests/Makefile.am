@@ -1,14 +1,23 @@
 MODFILES = \
 	estimation/fs2000.mod \
+	estimation/fs2000_with_weibull_prior.mod \
 	estimation/fs2000_MCMC_jumping_covariance.mod \
 	estimation/fs2000_initialize_from_calib.mod	\
 	estimation/fs2000_calibrated_covariance.mod \
+	estimation/fs2000_model_comparison.mod \
+	estimation/fs2000_fast.mod \
 	estimation/MH_recover/fs2000_recover.mod \
 	estimation/t_proposal/fs2000_student.mod \
 	estimation/TaRB/fs2000_tarb.mod \
+	moments/example1_var_decomp.mod \
+	moments/example1_hp_test.mod \
+	moments/example1_bp_test.mod \
+	moments/test_AR1_spectral_density.mod \
+	moments/example1_one_sided_hp_test.mod \
 	gsa/ls2003.mod \
 	gsa/ls2003a.mod \
 	gsa/cod_ML_morris/cod_ML_morris.mod \
+	gsa/morris/nk_est.mod \
 	ramst.mod \
 	ramst_a.mod \
 	ramst_static_tag.mod \
@@ -41,8 +50,10 @@ MODFILES = \
 	optimal_policy/Ramsey/ramsey_ex.mod \
 	optimal_policy/Ramsey/ramsey_ex_initval_AR2.mod \
 	optimal_policy/Ramsey/ramsey_ex_aux.mod \
+	optimal_policy/Ramsey/Gali_commitment.mod \
 	optimal_policy/RamseyConstraints/test1.mod \
 	discretionary_policy/dennis_1.mod \
+	discretionary_policy/Gali_discretion.mod \
 	initval_file/ramst_initval_file.mod \
 	ramst_normcdf_and_friends.mod \
 	ramst_vec.mod \
@@ -135,13 +146,15 @@ MODFILES = \
 	simul/Solow_no_varexo.mod \
 	simul/simul_ZLB_purely_forward.mod \
 	simul/simul_ZLB_purely_forward_no_solution.mod \
-	conditional_forecasts/fs2000_cal.mod \
-	conditional_forecasts/fs2000_est.mod \
-	conditional_forecasts/fs2000_conditional_forecast_initval.mod \
-	conditional_forecasts/fs2000_conditional_forecast_histval.mod \
+	conditional_forecasts/1/fs2000_cal.mod \
+	conditional_forecasts/2/fs2000_est.mod \
+	conditional_forecasts/3/fs2000_conditional_forecast_initval.mod \
+	conditional_forecasts/4/fs2000_conditional_forecast_histval.mod \
+	conditional_forecasts/5/fs2000_cal.mod \
 	recursive/ls2003.mod \
 	recursive/ls2003_bayesian.mod \
 	recursive/ls2003_bayesian_xls.mod \
+	recursive/ls2003_bayesian_csv.mod \
 	ms-sbvar/test_exclusions.mod \
 	ms-sbvar/test_exclusions_nc.mod \
 	ms-sbvar/test_lower_cholesky.mod \
@@ -242,7 +255,7 @@ MODFILES = \
 	optimizers/fs2000_w.mod \
 	differentiate_forward_vars/RBC_differentiate_forward.mod \
 	TeX/fs2000_corr_ME.mod \
-	reporting/example1.mod
+	prior_posterior_function/fs2000_prior_posterior_function.mod
 
 XFAIL_MODFILES = ramst_xfail.mod \
 	estim_param_in_shock_value_xfail.mod \
@@ -294,6 +307,9 @@ AIM/fs2000x10L9_L_AIM.o.trs: AIM/fs2000x10L9_L.o.trs
 AIM/fs2000x10_L9_L_AIM.o.trs: AIM/fs2000x10_L9_L.o.trs
 AIM/ls2003_2L0L_AIM.o.trs: AIM/ls2003_2L0L.o.trs
 AIM/ls2003_2L2L_AIM.o.trs: AIM/ls2003_2L2L.o.trs
+
+estimation/fs2000_model_comparison.m.trs: estimation/fs2000.m.trs estimation/fs2000_initialize_from_calib.m.trs estimation/fs2000_calibrated_covariance.m.trs
+estimation/fs2000_model_comparison.o.trs: estimation/fs2000.o.trs estimation/fs2000_initialize_from_calib.o.trs estimation/fs2000_calibrated_covariance.o.trs
 
 optimizers/fs2000_102.m.trs: estimation/fs2000.m.trs
 optimizers/fs2000_102.o.trs: estimation/fs2000.o.trs
@@ -404,6 +420,7 @@ EXTRA_DIST = \
 	expectations/expectation_ss_old_steadystate.m \
 	steady_state/walsh1_old_ss_steadystate.m \
 	data/test.xls \
+	gsa/morris/nk_est_data.m \
 	analytic_derivatives/fsdat_simul.m \
 	fs2000/fsdat_simul.m \
 	k_order_perturbation/run_fs2000kplusplus.m \
@@ -412,7 +429,7 @@ EXTRA_DIST = \
 	measurement_errors/fs2000_corr_me_ml_mcmc/fsdat_simul.m \
 	missing/simulate_data_with_missing_observations.m \
 	objectives/sgu_ex1.mat \
-	conditional_forecasts/fsdat_simul.m \
+	conditional_forecasts/2/fsdat_simul.m \
 	ms-sbvar/data.m \
 	ms-sbvar/archive-files/ftd_2s_caseall_upperchol3v.m \
 	ms-sbvar/archive-files/ftd_2s_caseall_upperchol4v.m \
@@ -446,21 +463,27 @@ EXTRA_DIST = \
 	optimal_policy/Ramsey/find_c.m \
 	optimal_policy/Ramsey/oo_ramsey_policy_initval.mat \
 	optimizers/optimizer_function_wrapper.m \
-	optimizers/fs2000.common.inc
+	optimizers/fs2000.common.inc \
+	prior_posterior_function/posterior_function_demo.m
+
 
 TARGETS =
+TEXTOUT =
 
 if HAVE_CMD_LINE_MATLAB
 TARGETS += check-matlab
+TEXTOUT += run_test_matlab_output.txt
 endif
 
 if HAVE_OCTAVE
 TARGETS += check-octave
+TEXTOUT += run_test_octave_output.txt
 endif
 
-check-local: $(TARGETS)
-	@cat run_test_matlab_output.txt
-	@cat run_test_octave_output.txt
+check-local: $(TEXTOUT)
+	@cat $(TEXTOUT)
+
+$(TEXTOUT): $(TARGETS)
 
 check-matlab: $(M_XFAIL_TRS_FILES) $(M_TRS_FILES)
 	./read_trs_files.sh "$(M_TRS_FILES)" "$(M_XFAIL_TRS_FILES)"

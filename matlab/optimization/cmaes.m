@@ -3070,6 +3070,3 @@ function f=frand(x)
 % Optimization with an Application to Feedback Control of
 % Combustion. To appear in IEEE Transactions on Evolutionary
 % Computation.
-
-
-

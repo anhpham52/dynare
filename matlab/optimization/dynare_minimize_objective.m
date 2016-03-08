@@ -244,7 +244,7 @@ switch minimizer_algorithm
         Save_files = 0; 
         Verbose = 0;
     end    
-    [opt_par_values,hessian_mat,gg,fval,invhess] = newrat(objective_function,start_par_value,analytic_grad,crit,nit,0,Verbose, Save_files,varargin{:});
+    [opt_par_values,hessian_mat,gg,fval,invhess] = newrat(objective_function,start_par_value,bounds,analytic_grad,crit,nit,0,Verbose, Save_files,varargin{:});
     %hessian_mat is the plain outer product gradient Hessian
   case 6
     [opt_par_values, hessian_mat, Scale, fval] = gmhmaxlik(objective_function, start_par_value, ...
@@ -302,9 +302,11 @@ switch minimizer_algorithm
     [opt_par_values,fval,exitflag] = simplex_optimization_routine(objective_function,start_par_value,simplexOptions,parameter_names,varargin{:});
   case 9
     % Set defaults
-    H0 = ( bounds(:,2) - bounds(:,1) ) * 0.2;
-    H0( ~isfinite( H0 ) ) = 0.01;
+    H0 = (bounds(:,2)-bounds(:,1))*0.2;
+    H0(~isfinite(H0)) = 0.01;
     cmaesOptions = options_.cmaes;
+    cmaesOptions.LBounds = bounds(:,1);
+    cmaesOptions.UBounds = bounds(:,2);
     % Modify defaults
     if ~isempty(options_.optim_opt)
         options_list = read_key_value_string(options_.optim_opt);
@@ -329,6 +331,10 @@ switch minimizer_algorithm
                   cmaesOptions.LogModulo = '0';    % [0:Inf] if >1 record data less frequently after gen=100';
                   cmaesOptions.LogTime   = '0';    % [0:100] max. percentage of time for recording data';
                 end
+              case 'CMAESResume'
+                  if options_list{i,2}==1
+                    cmaesOptions.Resume = 'yes';
+                  end
               otherwise
                 warning(['cmaes: Unknown option (' options_list{i,1}  ')!'])
             end

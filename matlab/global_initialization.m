@@ -11,7 +11,7 @@ function global_initialization()
 % SPECIAL REQUIREMENTS
 %    none
 
-% Copyright (C) 2003-2015 Dynare Team
+% Copyright (C) 2003-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -28,10 +28,11 @@ function global_initialization()
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
-global oo_ M_ options_ estim_params_ bayestopt_ estimation_info ex0_ ys0_
-
+global oo_ M_ options_ estim_params_ bayestopt_ estimation_info ex0_ ys0_ dataset_ dataset_info
 estim_params_ = [];
 bayestopt_ = [];
+dataset_=[];
+dataset_info=[];
 options_.datafile = '';
 options_.dirname = M_.fname;
 M_.dname = M_.fname;
@@ -152,7 +153,7 @@ options_.impulse_responses.plot_threshold=1e-10;
 options_.relative_irf = 0;
 options_.ar = 5;
 options_.hp_filter = 0;
-options_.one_sided_hp_filter = 1600;
+options_.one_sided_hp_filter = 0;
 options_.hp_ngrid = 512;
 options_.nodecomposition = 0;
 options_.nomoments = 0;
@@ -295,6 +296,9 @@ options_.xls_range = '';
 % Prior draws
 options_.prior_draws = 10000;
 
+% Prior posterior function sampling draws
+options_.sampling_draws = 500;
+
 options_.forecast = 0;
 
 % Model
@@ -403,7 +407,7 @@ options_.filtered_vars = 0;
 options_.first_obs = NaN;
 options_.nobs = NaN;
 options_.kalman_algo = 0;
-options_.fast_kalman = 0;
+options_.fast_kalman_filter = 0;
 options_.kalman_tol = 1e-10;
 options_.diffuse_kalman_tol = 1e-6;
 options_.use_univariate_filters_if_singularity_is_detected = 1;
@@ -483,6 +487,10 @@ options_.selected_variables_only = 0;
 options_.contemporaneous_correlation = 0;
 options_.initialize_estimated_parameters_with_the_prior_mode = 0;
 options_.estimation_dll = 0;
+options_.estimation.moments_posterior_density.indicator = 1;
+options_.estimation.moments_posterior_density.gridpoints = 2^9;
+options_.estimation.moments_posterior_density.bandwidth = 0; % Rule of thumb optimal bandwidth parameter.
+options_.estimation.moments_posterior_density.kernel_function = 'gaussian'; % Gaussian kernel for Fast Fourrier Transform approximaton.
 % Misc
 options_.conf_sig = 0.6;
 oo_.exo_simul = [];
@@ -501,6 +509,16 @@ M_.exo_det_histval = [];
 M_.Correlation_matrix = [];
 M_.Correlation_matrix_ME = [];
 M_.parameter_used_with_lead_lag = false;
+
+M_.xref1.param = {};
+M_.xref1.endo = {};
+M_.xref1.exo = {};
+M_.xref1.exo_det = {};
+
+M_.xref2.param = {};
+M_.xref2.endo = {};
+M_.xref2.exo = {};
+M_.xref2.exo_det = {};
 
 % homotopy for steady state
 options_.homotopy_mode = 0;
@@ -536,7 +554,7 @@ simplex.delta_factor=0.05;
 options_.simplex = simplex;
 
 % CMAES optimization routine.
-cmaes.SaveVariables='off';
+cmaes.SaveVariables='on';
 cmaes.DispFinal='on';
 cmaes.WarnOnEqualFunctionValues='no';
 cmaes.DispModulo='10';
@@ -544,6 +562,7 @@ cmaes.LogModulo='0';
 cmaes.LogTime='0';
 cmaes.TolFun = 1e-7;
 cmaes.TolX = 1e-7;
+cmaes.Resume = 0;
 options_.cmaes = cmaes;
 
 % simpsa optimization routine.

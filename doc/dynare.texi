@@ -733,8 +733,13 @@ cannot be named @file{test.mod}.
 
 @item noclearall
 By default, @code{dynare} will issue a @code{clear all} command to
-MATLAB or Octave, thereby deleting all workspace variables; this option
-instructs @code{dynare} not to clear the workspace
+MATLAB (<R2015b) or Octave, thereby deleting all workspace variables and
+functions; this option instructs @code{dynare} not to clear the
+workspace. Note that starting with Matlab 2015b @code{dynare} only
+deletes the global variables and the functions using persistent
+variables, in order to benefit from the JIT (Just In Time)
+compilation. In this case the option instructs @code{dynare} not to
+clear the globals and functions.
 
 @item onlyclearglobals
 By default, @code{dynare} will issue a @code{clear all} command to
@@ -874,6 +879,10 @@ Instructs Dynare not to write parameter assignments to parameter names
 in the @file{.m} file produced by the preprocessor. This is
 potentially useful when running @code{dynare} on a large @file{.mod}
 file that runs into workspace size limitations imposed by MATLAB.
+
+@item compute_xrefs
+Tells Dynare to compute the equation cross references, writing them to the
+output @file{.m} file.
 @end table
 
 @outputhead
@@ -1091,9 +1100,9 @@ number @var{i} and the index in many loops. Rather, name investment @var{invest}
 
 Declarations of variables and parameters are made with the following commands:
 
-@deffn Command var @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})]@dots{};
-@deffnx Command var (deflator = @var{MODEL_EXPRESSION}) @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})]@dots{};
-@deffnx Command var (log_deflator = @var{MODEL_EXPRESSION}) @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})]@dots{};
+@deffn Command var @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})] [(NAME=@var{QUOTED_STRING})]@dots{};
+@deffnx Command var (deflator = @var{MODEL_EXPRESSION}) @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})] [(NAME=@var{QUOTED_STRING})]@dots{};
+@deffnx Command var (log_deflator = @var{MODEL_EXPRESSION}) @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})] [(NAME=@var{QUOTED_STRING})]@dots{};
 
 @descriptionhead
 
@@ -1134,19 +1143,25 @@ multiplicative trend).
 @item long_name = @var{QUOTED_STRING}
 This is the long version of the variable name. Its value is stored in
 @code{M_.endo_names_long}. Default: @var{VARIABLE_NAME}
+
+@anchor{partitioning}
+@item NAME = @var{QUOTED_STRING}
+This is used to create a partitioning of variables. It results in the direct
+output in the @file{.m} file analogous to: @code{M_.endo_}@var{NAME}@code{ =
+}@var{QUOTED_STRING}@code{;}.
 @end table
 
 @examplehead
 
 @example
-var c gnp q1 q2;
+var c gnp q1 (country=`US') q2 (country=`FR');
 var(deflator=A) i b;
 var c $C$ (long_name=`Consumption');
 @end example
 
 @end deffn
 
-@deffn Command varexo @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})]@dots{};
+@deffn Command varexo @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})] [(NAME=@var{QUOTED_STRING})]@dots{};
 
 @descriptionhead
 
@@ -1164,6 +1179,9 @@ will concatenate them.
 @table @code
 @item long_name = @var{QUOTED_STRING}
 Like @ref{long_name} but value stored in @code{M_.exo_names_long}.
+
+@item NAME = @var{QUOTED_STRING}
+Like @ref{partitioning} but @var{QUOTED_STRING} stored in @code{M_.exo_}@var{NAME}.
 @end table
 
 @examplehead
@@ -1174,7 +1192,7 @@ varexo m gov;
 
 @end deffn
 
-@deffn Command varexo_det @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})]@dots{};
+@deffn Command varexo_det @var{VARIABLE_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})] [(NAME=@var{QUOTED_STRING})]@dots{};
 
 @descriptionhead
 
@@ -1198,6 +1216,9 @@ Dynare will concatenate them.
 @table @code
 @item long_name = @var{QUOTED_STRING}
 Like @ref{long_name} but value stored in @code{M_.exo_det_names_long}.
+
+@item NAME = @var{QUOTED_STRING}
+Like @ref{partitioning} but @var{QUOTED_STRING} stored in @code{M_.exo_det_}@var{NAME}.
 @end table
 
 @examplehead
@@ -1211,7 +1232,7 @@ varexo_det tau;
 
 @end deffn
 
-@deffn Command parameters @var{PARAMETER_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})]@dots{};
+@deffn Command parameters @var{PARAMETER_NAME} [$@var{LATEX_NAME}$] [(long_name=@var{QUOTED_STRING})] [(NAME=@var{QUOTED_STRING})]@dots{};
 
 @descriptionhead
 
@@ -1230,6 +1251,9 @@ Dynare will concatenate them.
 @table @code
 @item long_name = @var{QUOTED_STRING}
 Like @ref{long_name} but value stored in @code{M_.param_names_long}.
+
+@item NAME = @var{QUOTED_STRING}
+Like @ref{partitioning} but @var{QUOTED_STRING} stored in @code{M_.param_}@var{NAME}.
 @end table
 
 @examplehead
@@ -2656,7 +2680,7 @@ You can use the following types of entries in the block:
 Specifies the standard error of a variable.
 
 @item var @var{VARIABLE_NAME} = @var{EXPRESSION};
-Specifies the variance error of a variable.
+Specifies the variance of a variable.
 
 @item var @var{VARIABLE_NAME}, @var{VARIABLE_NAME} = @var{EXPRESSION};
 Specifies the covariance of two variables.
@@ -2667,9 +2691,9 @@ Specifies the correlation of two variables.
 @end table
 
 In an estimation context, it is also possible to specify variances and
-covariances on endogenous variables: in that case, these values are
-interpreted as the calibration of the measurement errors on these
-variables. This requires the @code{var_obs}-command to be specified before the @code{shocks}-block.
+covariances on endogenous variables: in that case, these values are interpreted
+as the calibration of the measurement errors on these variables. This requires
+the @code{varobs} command to be specified before the @code{shocks} block.
 
 Here is an example:
 
@@ -3698,12 +3722,26 @@ Number of points (burnin) dropped at the beginning of simulation before computin
 
 @item hp_filter = @var{DOUBLE}
 Uses HP filter with @math{\lambda} = @var{DOUBLE} before computing
-moments. Default: no filter.
+moments. If theoretical moments are requested, the spectrum of the model solution is filtered 
+following the approach outlined in @cite{Uhlig (2001)}.
+Default: no filter.
 
 @item hp_ngrid = @var{INTEGER}
 Number of points in the grid for the discrete Inverse Fast Fourier
 Transform used in the HP filter computation. It may be necessary to
 increase it for highly autocorrelated processes. Default: @code{512}.
+
+@item bandpass_filter
+Uses a bandpass filter with the default passband before computing moments. If theoretical moments are
+requested, the spectrum of the model solution is filtered using an ideal bandpass
+filter. If empirical moments are requested, the @cite{Baxter and King (1999)}-filter
+is used.
+Default: no filter.
+
+@item bandpass_filter = @var{[HIGHEST_PERIODICITY LOWEST_PERIODICITY]}
+Uses a bandpass filter before computing moments. The passband is set to a periodicity of @code{HIGHEST_PERIODICITY} 
+to @code{LOWEST_PERIODICITY}, e.g. 6 to 32 quarters if the model frequency is quarterly.
+Default: @code{[6,32]}.
 
 @item irf = @var{INTEGER}
 @anchor{irf}
@@ -4518,7 +4556,7 @@ likelihood estimation. In a Bayesian estimation context, sets a lower bound
 only effective while maximizing the posterior kernel. This lower bound does not
 modify the shape of the prior density, and is only aimed at helping the
 optimizer in identifying the posterior mode (no consequences for the MCMC). For
-some prior densities (namely inverse gamma, gamma, uniform or beta) it is
+some prior densities (namely inverse gamma, gamma, uniform, beta or weibull) it is
 possible to shift the support of the prior distributions to the left or the right using
 @ref{prior_3rd_parameter}. In this case the prior density is effectively
 modified (note that the truncated Gaussian density is not implemented in
@@ -4533,7 +4571,7 @@ A keyword specifying the shape of the prior density.
 The possible values are: @code{beta_pdf},
 @code{gamma_pdf}, @code{normal_pdf},
 @code{uniform_pdf}, @code{inv_gamma_pdf},
-@code{inv_gamma1_pdf}, @code{inv_gamma2_pdf}. Note
+@code{inv_gamma1_pdf}, @code{inv_gamma2_pdf} and @code{weibull_pdf}. Note
 that @code{inv_gamma_pdf} is equivalent to
 @code{inv_gamma1_pdf}
 
@@ -4546,7 +4584,7 @@ that @code{inv_gamma_pdf} is equivalent to
 @item @var{PRIOR_3RD_PARAMETER}
 @anchor{prior_3rd_parameter}
 A third parameter of the prior used for generalized beta distribution,
-generalized gamma and for the uniform distribution. Default: @code{0}
+generalized gamma, generalized weibull and for the uniform distribution. Default: @code{0}
 
 @item @var{PRIOR_4TH_PARAMETER}
 @anchor{prior_4th_parameter}
@@ -5275,6 +5313,10 @@ Available options are:
 
 @table @code
 
+@item 'CMAESResume'
+Resume previous run. Requires the @code{variablescmaes.mat} from the last run. 
+Set to 1 to enable. Default: @code{0}
+
 @item 'MaxIter'
 Maximum number of iterations.
 
@@ -5427,6 +5469,9 @@ controlled by the @code{ar} option.
 @xref{contemporaneous_correlation}. Results are stored in @code{oo_.PosteriorTheoreticalMoments}. 
 Note that the @code{nocorr}-option has no effect.
 
+@item no_posterior_kernel_density 
+Shuts off the computation of the kernel density estimator for the posterior objects (@pxref{density-field}). 
+
 @item conditional_variance_decomposition = @var{INTEGER}
 See below.
 
@@ -5500,6 +5545,12 @@ If this happens, the respective observation enters with a weight of zero in the 
 from the likelihood computations (for details see @cite{Durbin and Koopman (2012), Ch. 6.4 and 7.2.5}). If the use of a multivariate Kalman filter is specified and a
 singularity is encountered, Dynare by default automatically switches to the univariate Kalman filter for this parameter draw. This behavior can be changed via the
 @ref{use_univariate_filters_if_singularity_is_detected} option.
+
+@item fast_kalman_filter
+@anchor{fast_kalman_filter} Select the fast Kalman filter using Chandrasekhar
+recursions as described by @cite{Herbst, 2015}. This setting is only used with
+@code{kalman_algo=1} or @code{kalman_algo=3}. It is not yet compatible with
+@code{analytical_derivation}.
 
 @item kalman_tol = @var{DOUBLE}
 @anchor{kalman_tol} Numerical tolerance for determining the singularity of the covariance matrix of the prediction errors during the Kalman filter (minimum allowed reciprocal of the matrix condition number). Default value is @code{1e-10}
@@ -5805,8 +5856,10 @@ Variance of the posterior distribution
 Deciles of the distribution.
 
 @item density
-Non parametric estimate of the posterior density. First and second
-columns are respectively abscissa and ordinate coordinates.
+@anchor{density-field}
+Non parametric estimate of the posterior density following the approach outlined in @cite{Skoeld and Roberts (2003)}. First and second
+columns are respectively abscissa and ordinate coordinates. 
+
 @end table
 
 @item ESTIMATED_OBJECT
@@ -5835,12 +5888,14 @@ Standard deviation of structural shocks
 
 
 @defvr {MATLAB/Octave variable} oo_.MarginalDensity.LaplaceApproximation
-Variable set by the @code{estimation} command.
+Variable set by the @code{estimation} command. Stores the marginal data density 
+based on the Laplace Approximation.
 @end defvr
 
 @defvr {MATLAB/Octave variable} oo_.MarginalDensity.ModifiedHarmonicMean
 Variable set by the @code{estimation} command, if it is used with
-@code{mh_replic > 0} or @code{load_mh_file} option.
+@code{mh_replic > 0} or @code{load_mh_file} option. Stores the marginal data density 
+based on @cite{Geweke (1999)} Modified Harmonic Mean estimator.
 @end defvr
 
 @defvr {MATLAB/Octave variable} oo_.FilteredVariables
@@ -6175,6 +6230,20 @@ Dynare: it is the user's responsibility to make sure that model comparison is
 based on proper priors. Note that, for obvious reasons, this is not an issue if
 the compared marginal densities are based on Laplace approximations.
 
+@optionshead
+
+@table @code
+
+@item marginal_density = @var{ESTIMATOR}
+Specifies the estimator for computing the marginal data density. @var{ESTIMATOR} can 
+take one of the following two values:
+@code{laplace} for the Laplace estimator or @code{modifiedharmonicmean} for the 
+@cite{Geweke (1999)} Modified Harmonic Mean estimator. Default value: @code{laplace}
+@end table
+
+@outputhead
+
+The results are stored in @code{oo_.Model_Comparison}, which is described below.
 
 @examplehead
 
@@ -6185,6 +6254,32 @@ This example attributes a 70% prior over @code{my_model} and 30% prior
 over @code{alt_model}.
 
 @end deffn
+
+@defvr {MATLAB/Octave variable} oo_.Model_Comparison
+Variable set by the @code{model_comparison} command. Fields are of the form:
+@example
+@code{oo_.Model_Comparison.@var{FILENAME}.@var{VARIABLE_NAME}}
+@end example
+where @var{FILENAME} is the file name of the model and @var{VARIABLE_NAME} is one of the following:
+
+@table @code
+
+@item Prior
+(Normalized) prior density over the model
+
+@item Log_Marginal_Density
+Logarithm of the marginal data density
+
+@item Bayes_Ratio
+Ratio of the marginal data density of the model relative to the one of the first declared model
+
+@item Posterior_Model_Probability
+Posterior probability of the respective model
+
+@end table
+
+@end defvr
+
 
 @deffn Command shock_decomposition [@var{VARIABLE_NAME}]@dots{};
 @deffnx Command shock_decomposition (@var{OPTIONS}@dots{}) [@var{VARIABLE_NAME}]@dots{};
@@ -6989,7 +7084,7 @@ The planner objective must be declared with the @code{planner_objective} command
 
 This command only creates the expanded model, it doesn't perform any
 computations. It needs to be followed by other instructions to actually
-perfrom desired computations. Note that it is the only way to perform
+perform desired computations. Note that it is the only way to perform
 perfect foresight simulation of the Ramsey policy problem.
 
 @xref{Auxiliary
@@ -7130,7 +7225,9 @@ In contrast, the second entry stores the value of the planner objective with
 initial Lagrange multipliers of the planner's problem set to 0, i.e. it is assumed 
 that the planner succumbs to the temptation to exploit the preset private expecatations 
 in the first period (but not in later periods due to commitment).
-
+Because it entails computing at least a second order approximation, this
+computation is skipped with a message when the model is too large (more than 180 state
+variables, including lagged Lagrange multipliers).
 @customhead{Steady state}
 @xref{Ramsey steady state}.
 
@@ -7465,7 +7562,7 @@ Maximum number of lags for moments in identification analysis. Default: @code{1}
 
 IRF and moment calibration can be defined in @code{irf_calibration} and @code{moment_calibration} blocks:
 
-@deffn Block irf_calibration;
+@deffn Block irf_calibration ;
 @deffnx Block irf_calibration (@var{OPTIONS}@dots{});
 
 @descriptionhead
@@ -7485,6 +7582,15 @@ To set IRF restrictions with specific intervals, the following syntax is used
 When @code{(@var{INTEGER}:@var{INTEGER})} is used, the restriction is considered to be fulfilled by a logical OR.
 A list of restrictions must always be fulfilled with logical AND.
 
+@optionshead
+
+@table @code
+
+@item relative_irf
+@xref{relative_irf}.
+
+@end table
+
 @examplehead
 
 @example
@@ -7498,7 +7604,7 @@ end;
 
 @end deffn
 
-@deffn Block moment_calibration;
+@deffn Block moment_calibration ;
 @deffnx Block moment_calibration (@var{OPTIONS}@dots{});
 
 @descriptionhead
@@ -8689,12 +8795,13 @@ The number of data points included in the output. Default: @code{0}
 @xref{regime}.
 
 @item regimes
-
 @xref{regimes}.
 
 @item median
-
 @xref{median}.
+
+@item horizon = @var{INTEGER}
+@xref{horizon}.
 
 @end table
 
@@ -9485,8 +9592,9 @@ following @LaTeX{} packages: @code{longtable}
 
 Writes a @LaTeX{} file named @code{<<M_.fname>>_TeX_binder.tex} that collects all @TeX{} output generated by Dynare 
 into a file. This file can be compiled using pdflatex and automatically tries to load all required packages. 
-Requires the following @LaTeX{} packages: @code{longtable}, @code{psfrag}, 
-@code{graphicx}, @code{epstopdf}, @code{longtable}, and @code{float}
+Requires the following @LaTeX{} packages: @code{breqn}, @code{psfrag},
+@code{graphicx}, @code{epstopdf}, @code{longtable},  @code{booktabs},  @code{caption},
+@code{float}, and @code{morefloats}
 @end deffn
 
 
@@ -10569,9 +10677,8 @@ A @code{nobs} by @code{vobs} array of doubles, the data.
 
 @deftypefn  {dseries} dseries ()
 @deftypefnx {dseries} dseries (@var{INITIAL_DATE})
-@deftypefnx {dseries} dseries (@var{RANGE_OF_DATES})
 
-Instantiates an empty @dseries object, with, if defined, an initial date given by the single element @dates object @var{INITIAL_DATE} or the first element of the @dates object @var{RANGE_OF_DATES}.
+Instantiates an empty @dseries object, with, if defined, an initial date given by the single element @dates object @var{INITIAL_DATE}.
 
 @end deftypefn
 
@@ -10709,7 +10816,7 @@ ts1 is a dseries object:
 
 @deftypefn {dseries} {@var{B} = } baxter_king_filter (@var{A}, @var{hf}, @var{lf}, @var{K})
 
-Implementation of the Baxter and King (1999) band pass filter for @dseries objects. This filter isolates business cycle fluctuations with a period of length ranging between @var{hf} (high frequency) to @var{lf} (low frequency) using a symmetric moving average smoother with @math{2K+1} points, so that K observations at the beginning and at the end of the  sample are lost in the computation of the filter. The default value for @var{hf} is @math{6}, for @var{lf} is @math{32}, and for @var{K} is 12.
+Implementation of the @cite{Baxter and King (1999)} band pass filter for @dseries objects. This filter isolates business cycle fluctuations with a period of length ranging between @var{hf} (high frequency) to @var{lf} (low frequency) using a symmetric moving average smoother with @math{2K+1} points, so that K observations at the beginning and at the end of the  sample are lost in the computation of the filter. The default value for @var{hf} is @math{6}, for @var{lf} is @math{32}, and for @var{K} is 12.
 
 @examplehead
 @example
@@ -11832,6 +11939,28 @@ ts1 is a dseries object:
 
 @sp 1
 
+@deftypefn{dseries} {@var{B} =} rename (@var{A},@var{newname})
+
+Replace the names in @var{A} with those passed in the cell string array
+@var{newname}. @var{newname} must have the same number of cells as @var{A} has
+@var{dseries}. Returns a @dseries object.
+
+@examplehead
+@example
+>> ts0 = dseries(ones(2,3));
+>> ts1 = ts0.rename(@{'Tree','Worst','President'@})
+
+ts1 is a dseries object:
+
+   | Bush | Worst | President
+1Y | 1    | 1     | 1
+2Y | 1    | 1     | 1
+@end example
+
+@end deftypefn
+
+@sp 1
+
 @deftypefn{dseries} save (@var{A}, @var{basename}[, @var{format}])
 
 Overloads the Matlab/Octave @code{save} function and saves @dseries
@@ -11933,6 +12062,16 @@ ans =
 
 Redefines the tex name of variable @var{name} to @var{newtexname}
 in @dseries object @var{A}. Returns a @dseries object.
+
+@end deftypefn
+
+@sp 1
+
+@deftypefn{dseries} {@var{B} =} tex_rename (@var{A}, @var{newtexname})
+
+Redefines the tex names of the @var{A} to those contained in
+@var{newtexname}. Here, @var{newtexname} is a cell string array with the same
+number of entries as variables in @var{A}
 
 @end deftypefn
 
@@ -12426,7 +12565,7 @@ with the same base name as specified by @ref{tableName} with the ending
 @end defmethod
 
 @anchor{addSeries}
-@defmethod Report addSeries data, graphBar, graphBarColor, graphBarFillColor, graphBarWidth, graphFanShadeColor, graphFanShadeOpacity, graphHline, graphLegendName, graphLineColor, graphLineStyle, graphLineWidth, graphMarker, graphMarkerEdgeColor, graphMarkerFaceColor, graphMarkerSize, graphMiscTikzAddPlotOptions, graphShowInLegend, graphVline, tableDataRhs, tableRowColor, tableRowIndent, tableShowMarkers, tableAlignRight, tableNegColor, tablePosColor, tableSubSectionHeader, zeroTol
+@defmethod Report addSeries data, graphBar, graphBarColor, graphBarFillColor, graphBarWidth, graphFanShadeColor, graphFanShadeOpacity, graphHline, graphLegendName, graphLineColor, graphLineStyle, graphLineWidth, graphMarker, graphMarkerEdgeColor, graphMarkerFaceColor, graphMarkerSize, graphMiscTikzAddPlotOptions, graphShowInLegend, graphVline, tableDataRhs, tableRowColor, tableRowIndent, tableShowMarkers, tableAlignRight, tableNaNSymb, tableNegColor, tablePosColor, tableSubSectionHeader, zeroTol
 Adds a @code{Series} to a @code{Graph} or a @code{Table}. NB: Options specific
 to graphs begin with `@code{graph}' while options specific to tables begin with
 `@code{table}'.
@@ -12542,6 +12681,9 @@ For values less than @math{-1*@code{tableMarkerLimit}}, mark the cell
 with the color denoted by @ref{tableNegColor}. For those greater than
 @code{tableMarkerLimit}, mark the cell with the color denoted by
 @ref{tablePosColor}. Default: @code{1e-4}
+
+@item tableNaNSymb, @code{STRING}
+Replace @code{NaN} values with the text in this option. Default: @code{NaN}
 
 @anchor{tableNegColor}
 @item tableNegColor, @code{LATEX_COLOR}
@@ -12742,6 +12884,52 @@ Baseline New Keynesian Model estimated in @cite{Fernández-Villaverde (2010)}. I
 @node Dynare misc commands
 @chapter Dynare misc commands
 
+@anchor{prior_function}
+@deffn Command prior_function(@var{OPTIONS}) ;
+
+Executes a user-defined function on parameter draws from the prior
+distribution. Dynare returns the results of the computations for all draws in an
+@math{ndraws} by @math{n} cell array named @var{oo_.prior_function_results}.
+
+@optionshead
+
+@table @code
+
+@anchor{prior_function_function}
+@item function = @var{FUNCTION_NAME}
+The function must have the following header @code{output_cell =
+FILENAME(xparam1,M_,options_,oo_,estim_params_,bayestopt_,dataset_,dataset_info)},
+providing read-only access to all Dynare structures. The only output argument
+allowed is a @math{1} by @math{n} cell array, which allows for storing any type of
+output/computations. This option is required.
+
+@anchor{prior_function_sampling_draws}
+@item sampling_draws = @var{INTEGER}
+Number of draws used for sampling. Default: 500.
+
+@end table
+
+@end deffn
+
+@deffn Command posterior_function(@var{OPTIONS}) ;
+
+Same as the @ref{prior_function} command but for the posterior
+distribution. Results returned in @var{oo_.posterior_function_results}
+
+@optionshead
+
+@table @code
+
+@item function = @var{FUNCTION_NAME}
+@xref{prior_function_function}
+
+@item sampling_draws = @var{INTEGER}
+@xref{prior_function_sampling_draws}
+
+@end table
+
+@end deffn
+
 @anchor{internals}
 @deffn {MATLAB/Octave command} internals @var{FLAG} @var{ROUTINENAME}[.m]|@var{MODFILENAME}
 
@@ -12816,7 +13004,6 @@ A @code{1*Nblck} array of doubles. Current acceptance ratios.
 
 @end deffn
 
-
 @node Bibliography
 @chapter Bibliography
 
@@ -12840,6 +13027,11 @@ Andreasen, Martin M., Jesús Fernández-Villaverde, and Juan Rubio-Ramírez (201
 Backus, David K., Patrick J. Kehoe, and Finn E. Kydland (1992):
 ``International Real Business Cycles,'' @i{Journal of Political
 Economy}, 100(4), 745--775
+
+@item
+Baxter, Marianne and Robert G. King (1999):
+``Measuring Business Cycles: Approximate Band-pass Filters for Economic Time Series,'' 
+@i{Review of Economics and Statistics}, 81(4), 575--593
 
 @item
 Boucekkine, Raouf (1995): ``An alternative methodology for solving
@@ -12935,6 +13127,11 @@ of Statistical Functions with Simulated Annealing,'' @i{Journal of Econometrics}
 Hansen, Nikolaus and Stefan Kern (2004): ``Evaluating the CMA Evolution Strategy 
 on Multimodal Test Functions''. In: @i{Eighth International Conference on Parallel 
 Problem Solving from Nature PPSN VIII, Proceedings}, Berlin: Springer, 282--291 
+
+@item
+Herbst, Edward (2015):
+``Using the ``Chandrasekhar Recursions'' for Likelihood Evaluation of DSGE
+Models,'' @i{Computational Economics}, 45(4), 693--705.
 
 @item
 Ireland, Peter (2004): ``A Method for Taking Models to the Data,''
@@ -13033,9 +13230,18 @@ inference in large multiple-equation Markov-switching models,''
 @i{Journal of Econometrics}, 146, 255--274
 
 @item
+Skoeld, Martin and Gareth O. Roberts (2003): ``Density Estimation for the
+Metropolis-Hastings Algorithm,'' @i{Scandinavian Journal of Statistics}, 30, 699--718
+
+@item
 Smets, Frank and Rafael Wouters (2003): ``An Estimated Dynamic
 Stochastic General Equilibrium Model of the Euro Area,'' @i{Journal of
 the European Economic Association}, 1(5), 1123--1175
+
+@item
+Uhlig, Harald (2001): ``A Toolkit for Analysing Nonlinear Dynamic Stochastic Models Easily,''
+in @i{Computational Methods for the Study of Dynamic
+Economies}, Eds. Ramon Marimon and Andrew Scott, Oxford University Press, 30--61
 
 @item
 Villemot, Sébastien (2011): ``Solving rational expectations models at

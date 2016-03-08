@@ -137,7 +137,7 @@ ncn = estim_params_.ncn;  % Covariance of the measurement innovations (number of
 np  = estim_params_.np ;  % Number of deep parameters.
 nx  = nvx+nvn+ncx+ncn+np; % Total number of parameters to be estimated.
 %% Set the names of the priors.
-pnames = ['     ';'beta ';'gamm ';'norm ';'invg ';'unif ';'invg2'];
+pnames = ['     '; 'beta '; 'gamm '; 'norm '; 'invg '; 'unif '; 'invg2'; '     '; 'weibl'];
 
 dr = oo_.dr;
 
@@ -213,7 +213,21 @@ if isequal(options_.mode_compute,0) && isempty(options_.mode_file) && options_.m
     return
 end
 
-% Estimation of the posterior mode or likelihood mode
+%% Estimation of the posterior mode or likelihood mode
+
+% analytical derivation is not yet available for kalman_filter_fast
+if options_.analytic_derivation && options_.fast_kalman_filter
+    error(['estimation option conflict: analytic_derivation isn''t available ' ...
+           'for fast_kalman_filter'])
+end
+
+% fast kalman filter is only available with kalman_algo == 1,3
+if options_.fast_kalman_filter && ...
+        (options_.kalman_algo == 1 || options_.kalman_algo == 3)
+    error(['estimation option conflict: fast_kalman_filter is only available ' ...
+           'with kalman_algo = 1 or kalman_algo = 3'])
+end
+
 if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
     %prepare settings for newrat
     if options_.mode_compute==5
@@ -420,7 +434,7 @@ end
 
 if (any(bayestopt_.pshape  >0 ) && options_.mh_replic) || ...
         (any(bayestopt_.pshape >0 ) && options_.load_mh_file)  %% not ML estimation
-    bounds = prior_bounds(bayestopt_,options_);
+    bounds = prior_bounds(bayestopt_, options_.prior_trunc);
     outside_bound_pars=find(xparam1 < bounds.lb | xparam1 > bounds.ub);
     if ~isempty(outside_bound_pars)
         for ii=1:length(outside_bound_pars)
@@ -457,13 +471,13 @@ if (any(bayestopt_.pshape  >0 ) && options_.mh_replic) || ...
         if ~options_.nodiagnostic && options_.mh_replic>0
             oo_= McMCDiagnostics(options_, estim_params_, M_,oo_);
         end
-        %% Here i discard first half of the draws:
+        %% Here I discard first mh_drop percent of the draws:
         CutSample(M_, options_, estim_params_);
         %% Estimation of the marginal density from the Mh draws:
         if options_.mh_replic
             [marginal,oo_] = marginal_density(M_, options_, estim_params_, oo_);
             % Store posterior statistics by parameter name
-            oo_ = GetPosteriorParametersStatistics(estim_params_, M_, options_, bayestopt_, oo_);
+            oo_ = GetPosteriorParametersStatistics(estim_params_, M_, options_, bayestopt_, oo_, pnames);
             if ~options_.nograph
                 oo_ = PlotPosteriorDistributions(estim_params_, M_, options_, bayestopt_, oo_);
             end
@@ -474,7 +488,7 @@ if (any(bayestopt_.pshape  >0 ) && options_.mh_replic) || ...
         else
             load([M_.fname '_results'],'oo_');
         end
-        error_flag = metropolis_draw(1);
+        [error_flag,junk,options_]= metropolis_draw(1,options_,estim_params_,M_);
         if options_.bayesian_irf
             if error_flag
                 error('Estimation::mcmc: I cannot compute the posterior IRFs!')
@@ -780,7 +794,7 @@ if (~((any(bayestopt_.pshape > 0) && options_.mh_replic) || (any(bayestopt_.psha
 end
 
 if options_.forecast > 0 && options_.mh_replic == 0 && ~options_.load_mh_file
-    dyn_forecast(var_list_,'smoother');
+    oo_.forecast = dyn_forecast(var_list_,M_,options_,oo_,'smoother');
 end
 
 if np > 0

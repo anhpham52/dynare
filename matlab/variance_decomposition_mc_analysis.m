@@ -1,14 +1,14 @@
-function oo_ = variance_decomposition_mc_analysis(NumberOfSimulations,type,dname,fname,exonames,exo,vartan,var,mh_conf_sig,oo_)
+function oo_ = variance_decomposition_mc_analysis(NumberOfSimulations,type,dname,fname,exonames,exo,vartan,var,mh_conf_sig,oo_,options_)
 % function oo_ = variance_decomposition_mc_analysis(NumberOfSimulations,type,dname,fname,exonames,exo,vartan,var,mh_conf_sig,oo_)
 % This function analyses the (posterior or prior) distribution of the
 % endogenous variables' variance decomposition.
-% 
+%
 % INPUTS
 %   NumberOfSimulations     [integer]           scalar, number of simulations.
 %   type                    [string]            'prior' or 'posterior'
 %   dname                   [string]            directory name where to save
 %   fname                   [string]            name of the mod-file
-%   exonames                [string]            (n_exo*char_length) character array with names of exogenous variables        
+%   exonames                [string]            (n_exo*char_length) character array with names of exogenous variables
 %   exo                     [string]            name of current exogenous
 %                                               variable
 %   vartan                  [string]            (n_endo*char_length) character array with name
@@ -18,6 +18,7 @@ function oo_ = variance_decomposition_mc_analysis(NumberOfSimulations,type,dname
 %   mh_conf_sig             [double]            2 by 1 vector with upper
 %                                               and lower bound of HPD intervals
 %   oo_                     [structure]         Dynare structure where the results are saved.
+%   options_                [structure]         Dynare options structure
 %
 % OUTPUTS
 %   oo_          [structure]        Dynare structure where the results are saved.
@@ -60,13 +61,16 @@ if isempty(jndx)
     return
 end
 
+var=deblank(var);
+exo=deblank(exo);
+
 name = [ var '.' exo ];
 if isfield(oo_, [ TYPE 'TheoreticalMoments'])
-    eval(['temporary_structure = oo_.' TYPE 'TheoreticalMoments;'])
+    temporary_structure = oo_.([TYPE, 'TheoreticalMoments']);
     if isfield(temporary_structure,'dsge')
-        eval(['temporary_structure = oo_.' TYPE 'TheoreticalMoments.dsge;'])
+        temporary_structure = oo_.([TYPE, 'TheoreticalMoments']).dsge;
         if isfield(temporary_structure,'VarianceDecomposition')
-            eval(['temporary_structure = oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.Mean;'])
+            temporary_structure = oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.Mean;
             if isfield(temporary_structure,name)
                 % Nothing to do.
                 return
@@ -85,29 +89,20 @@ for file = 1:length(ListOfFiles)
     i1 = i2+1;
 end
 
-t1 = min(tmp); t2 = max(tmp);
-t3 = t2-t1;% How to normalize ? t1 and t2 may be zero...
-if t3<1.0e-12
-    if t1<1.0e-12
-        t1 = 0;
-    end
-    if abs(t1-1)<1.0e-12
-        t1 = 1;
-    end 
-    p_mean = t1;
-    p_median = t1;
-    p_var = 0;
-    hpd_interval = NaN(2,1);
-    p_deciles = NaN(9,1);
-    density = NaN;
-else
+if options_.estimation.moments_posterior_density.indicator
     [p_mean, p_median, p_var, hpd_interval, p_deciles, density] = ...
         posterior_moments(tmp,1,mh_conf_sig);
+else
+    [p_mean, p_median, p_var, hpd_interval, p_deciles] = ...
+        posterior_moments(tmp,0,mh_conf_sig);        
 end
-eval(['oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.Mean.' name ' = p_mean;']);
-eval(['oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.Median.' name ' = p_median;']);
-eval(['oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.Variance.' name ' = p_var;']);
-eval(['oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.HPDinf.' name ' = hpd_interval(1);']);
-eval(['oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.HPDsup.' name ' = hpd_interval(2);']);
-eval(['oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.deciles.' name ' = p_deciles;']);
-eval(['oo_.' TYPE 'TheoreticalMoments.dsge.VarianceDecomposition.density.' name ' = density;']);
+
+oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.Mean.(var).(exo) = p_mean;
+oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.Median.(var).(exo) = p_median;
+oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.Variance.(var).(exo) = p_var;
+oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.HPDinf.(var).(exo) = hpd_interval(1);
+oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.HPDsup.(var).(exo) = hpd_interval(2);
+oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.deciles.(var).(exo) = p_deciles;
+if options_.estimation.moments_posterior_density.indicator
+    oo_.([TYPE, 'TheoreticalMoments']).dsge.VarianceDecomposition.density.(var).(exo) = density;
+end

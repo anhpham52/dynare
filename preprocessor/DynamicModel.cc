@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 Dynare Team
+ * Copyright (C) 2003-2016 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -2466,7 +2466,7 @@ DynamicModel::writeDynamicModel(ostream &DynamicOutput, bool use_dll, bool julia
 }
 
 void
-DynamicModel::writeOutput(ostream &output, const string &basename, bool block_decomposition, bool byte_code, bool use_dll, int order, bool estimation_present, bool julia) const
+DynamicModel::writeOutput(ostream &output, const string &basename, bool block_decomposition, bool byte_code, bool use_dll, int order, bool estimation_present, bool compute_xrefs, bool julia) const
 {
   /* Writing initialisation for M_.lead_lag_incidence matrix
      M_.lead_lag_incidence is a matrix with as many columns as there are
@@ -3049,6 +3049,9 @@ DynamicModel::writeOutput(ostream &output, const string &basename, bool block_de
   output << modstruct << "params = " << (julia ? "fill(NaN, " : "NaN(")
          << symbol_table.param_nbr() << ", 1);" << endl;
 
+  if (compute_xrefs)
+    writeXrefs(output);
+
   // Write number of non-zero derivatives
   // Use -1 if the derivatives have not been computed
   output << modstruct << (julia ? "nnzderivatives" : "NNZDerivatives")
@@ -3092,7 +3095,8 @@ DynamicModel::runTrendTest(const eval_context_t &eval_context)
 
 void
 DynamicModel::computingPass(bool jacobianExo, bool hessian, bool thirdDerivatives, bool paramsDerivatives,
-                            const eval_context_t &eval_context, bool no_tmp_terms, bool block, bool use_dll, bool bytecode)
+                            const eval_context_t &eval_context, bool no_tmp_terms, bool block, bool use_dll,
+                            bool bytecode, bool compute_xrefs)
 {
   assert(jacobianExo || !(hessian || thirdDerivatives || paramsDerivatives));
 
@@ -3200,6 +3204,9 @@ DynamicModel::computingPass(bool jacobianExo, bool hessian, bool thirdDerivative
         if (bytecode)
           computeTemporaryTermsMapping();
       }
+
+  if (compute_xrefs)
+    computeXrefs();
 }
 
 map<pair<pair<int, pair<int, int> >, pair<int, int> >, int>
@@ -4237,6 +4244,40 @@ DynamicModel::substituteLeadLagInternal(aux_var_t type, bool deterministic_model
       equations[i] = substeq;
     }
 
+
+  // Substitute in aux_equations
+  // Without this loop, the auxiliary equations in equations
+  // will diverge from those in aux_equations
+  for (int i = 0; i < (int) aux_equations.size(); i++)
+    {
+      expr_t subst;
+      switch (type)
+        {
+        case avEndoLead:
+          subst = aux_equations[i]->substituteEndoLeadGreaterThanTwo(subst_table,
+                                                                     neweqs, deterministic_model);
+          break;
+        case avEndoLag:
+          subst = aux_equations[i]->substituteEndoLagGreaterThanTwo(subst_table, neweqs);
+          break;
+        case avExoLead:
+          subst = aux_equations[i]->substituteExoLead(subst_table, neweqs, deterministic_model);
+          break;
+        case avExoLag:
+          subst = aux_equations[i]->substituteExoLag(subst_table, neweqs);
+          break;
+        case avDiffForward:
+          subst = aux_equations[i]->differentiateForwardVars(subset, subst_table, neweqs);
+          break;
+        default:
+          cerr << "DynamicModel::substituteLeadLagInternal: impossible case" << endl;
+          exit(EXIT_FAILURE);
+        }
+      BinaryOpNode *substeq = dynamic_cast<BinaryOpNode *>(subst);
+      assert(substeq != NULL);
+      aux_equations[i] = substeq;
+    }
+
   // Add new equations
   for (int i = 0; i < (int) neweqs.size(); i++)
     addEquation(neweqs[i], -1);
@@ -4807,19 +4848,20 @@ DynamicModel::writeFirstDerivativesC_csr(const string &basename, bool cuda) cons
       int eq = it->first.first;
       int dynvar = it->first.second;
       int lag = getLagByDerivID(dynvar);
-      int symb = getSymbIDByDerivID(dynvar);
+      int symb_id = getSymbIDByDerivID(dynvar);
       SymbolType type = getTypeByDerivID(dynvar);
+      int tsid = symbol_table.getTypeSpecificID(symb_id);
       int col_id;
       switch(type)
 	{
 	case eEndogenous:
-	  col_id = symb+(lag+1)*symbol_table.endo_nbr();
+	  col_id = tsid+(lag+1)*symbol_table.endo_nbr();
 	  break;
 	case eExogenous:
-	  col_id = symb+3*symbol_table.endo_nbr();
+	  col_id = tsid+3*symbol_table.endo_nbr();
 	  break;
 	case eExogenousDet:
-	  col_id = symb+3*symbol_table.endo_nbr()+symbol_table.exo_nbr();
+	  col_id = tsid+3*symbol_table.endo_nbr()+symbol_table.exo_nbr();
 	  break;
 	default:
 	  std::cerr << "This case shouldn't happen" << std::endl;

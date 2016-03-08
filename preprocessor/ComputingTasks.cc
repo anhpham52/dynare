@@ -127,8 +127,7 @@ PerfectForesightSolverStatement::checkPass(ModFileStructure &mod_file_struct, Wa
 {
   mod_file_struct.perfect_foresight_solver_present = true;
   // Fill in option_occbin of mod_file_struct
-  OptionsList::string_options_t::const_iterator it = options_list.num_options.find("occbin");
-  if (it != options_list.string_options.end())
+  if (options_list.num_options.find("occbin") != options_list.num_options.end())
     mod_file_struct.occbin_option = true;
 }
 
@@ -137,6 +136,39 @@ PerfectForesightSolverStatement::writeOutput(ostream &output, const string &base
 {
   options_list.writeOutput(output);
   output << "perfect_foresight_solver;" << endl;
+}
+
+PriorPosteriorFunctionStatement::PriorPosteriorFunctionStatement(const bool prior_func_arg,
+                                                                 const OptionsList &options_list_arg) :
+  prior_func(prior_func_arg),
+  options_list(options_list_arg)
+{
+}
+
+void
+PriorPosteriorFunctionStatement::checkPass(ModFileStructure &mod_file_struct, WarningConsolidation &warnings)
+{
+  OptionsList::string_options_t::const_iterator it2 = options_list.string_options.find("function");
+  if (it2 == options_list.string_options.end() || it2->second.empty())
+      {
+          cerr << "ERROR: both the prior_function and posterior_function commands require the 'function' argument"
+               << endl;
+          exit(EXIT_FAILURE);
+      }
+}
+
+void
+PriorPosteriorFunctionStatement::writeOutput(ostream &output, const string &basename, bool minimal_workspace) const
+{
+  options_list.writeOutput(output);
+  string type = "posterior";
+  if (prior_func)
+      type = "prior";
+
+  output << "oo_ = execute_prior_posterior_function("
+         << "'" << options_list.string_options.find("function")->second << "', "
+         << "M_, options_, oo_, estim_params_, bayestopt_, dataset_, dataset_info, "
+         << "'" << type << "');" << endl;
 }
 
 StochSimulStatement::StochSimulStatement(const SymbolList &symbol_list_arg,
@@ -207,7 +239,7 @@ ForecastStatement::writeOutput(ostream &output, const string &basename, bool min
 {
   options_list.writeOutput(output);
   symbol_list.writeOutput("var_list_", output);
-  output << "info = dyn_forecast(var_list_,'simul');" << endl;
+  output << "[oo_.forecast,info] = dyn_forecast(var_list_,M_,options_,oo_,'simul');" << endl;
 }
 
 RamseyModelStatement::RamseyModelStatement(const SymbolList &symbol_list_arg,
@@ -1171,7 +1203,7 @@ ModelComparisonStatement::writeOutput(ostream &output, const string &basename, b
       output << "ModelNames_ = { ModelNames_{:} '" << (*it).first << "'};" << endl;
       output << "ModelPriors_ = [ ModelPriors_ ; " << (*it).second << "];" << endl;
     }
-  output << "model_comparison(ModelNames_,ModelPriors_,oo_,options_,M_.fname);" << endl;
+  output << "oo_ = model_comparison(ModelNames_,ModelPriors_,oo_,options_,M_.fname);" << endl;
 }
 
 PlannerObjectiveStatement::PlannerObjectiveStatement(StaticModel *model_tree_arg) :
