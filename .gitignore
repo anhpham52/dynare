@@ -123,19 +123,6 @@ mex/build/matlab/run_m2html.m
 # JULIA dir
 /julia/preprocessor*
 
-# DLL rules
-*.mex
-*.dll
-*.oct
-*.mexglx
-*.mexa64
-*.mexw32
-*.mexw64
-*.mexmaci
-*.mexmaci64
-/mex/matlab/
-/mex/octave/
-
 # Dynare++
 /dynare++/integ/cc/*.cpp
 /dynare++/integ/cc/*.h
@@ -171,7 +158,6 @@ mex/build/matlab/run_m2html.m
 # Windows
 /windows/dynare-version.nsi
 *.asv
-*.exe
 
 # Estimation DLL tests
 /mex/sources/estimation/tests/test-dr
