@@ -27,3 +27,6 @@
 [submodule "matlab/modules/reporting"]
 	path = matlab/modules/reporting
 	url = https://github.com/DynareTeam/reporting.git
+[submodule "matlab/modules/nlma"]
+	path = matlab/modules/nlma
+	url = https://github.com/tholden/nlma.git

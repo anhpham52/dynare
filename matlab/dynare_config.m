@@ -45,6 +45,7 @@ if ~nargin || nargin==1
     verbose = 1;
 end
 
+addpath([dynareroot '/modules/nlma/'])
 addpath([dynareroot '/distributions/'])
 addpath([dynareroot '/kalman/'])
 addpath([dynareroot '/kalman/likelihood'])
