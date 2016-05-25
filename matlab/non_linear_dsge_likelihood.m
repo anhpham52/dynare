@@ -101,7 +101,7 @@ function [fval,ys,trend_coeff,exit_flag,info,Model,DynareOptions,BayesInfo,Dynar
 %! @end deftypefn
 %@eod:
 
-% Copyright (C) 2010-2013 Dynare Team
+% Copyright (C) 2010-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -235,6 +235,21 @@ end
 % Define a vector of indices for the observed variables. Is this really usefull?...
 BayesInfo.mf = BayesInfo.mf1;
 
+% Define the deterministic linear trend of the measurement equation.
+if DynareOptions.noconstant
+    constant = zeros(DynareDataset.vobs,1);
+else
+    constant = SteadyState(BayesInfo.mfys);
+end
+
+% Define the deterministic linear trend of the measurement equation.
+if BayesInfo.with_trend
+    [trend_addition, trend_coeff]=compute_trend_coefficients(Model,DynareOptions,DynareDataset.vobs,DynareDataset.nobs);
+    trend = repmat(constant,1,DynareDataset.info.ntobs)+trend_addition;
+else
+    trend = repmat(constant,1,DynareDataset.nobs);
+end
+
 % Get needed informations for kalman filter routines.
 start = DynareOptions.presample+1;
 np    = size(T,1);
@@ -252,7 +267,7 @@ dr = DynareResults.dr;
 if isempty(init_flag)
     mf0 = BayesInfo.mf0;
     mf1 = BayesInfo.mf1;
-    restrict_variables_idx  = BayesInfo.restrict_var_list;
+    restrict_variables_idx  = dr.restrict_var_list;
     observed_variables_idx  = restrict_variables_idx(mf1);
     state_variables_idx     = restrict_variables_idx(mf0);
     sample_size = size(Y,2);

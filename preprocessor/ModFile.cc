@@ -39,8 +39,7 @@ ModFile::ModFile(WarningConsolidation &warnings_arg)
     static_model(symbol_table, num_constants, external_functions_table),
     steady_state_model(symbol_table, num_constants, external_functions_table, static_model),
     linear(false), block(false), byte_code(false), use_dll(false), no_static(false), 
-    differentiate_forward_vars(false),
-    nonstationary_variables(false), orig_eqn_nbr(0), ramsey_eqn_nbr(0),
+    differentiate_forward_vars(false), nonstationary_variables(false),
     param_used_with_lead_lag(false), warnings(warnings_arg)
 {
 }
@@ -345,7 +344,7 @@ ModFile::transformPass(bool nostrict)
       dynamic_model.removeTrendVariableFromEquations();
     }
 
-  orig_eqn_nbr = dynamic_model.equation_number();
+  mod_file_struct.orig_eq_nbr = dynamic_model.equation_number();
   if (mod_file_struct.ramsey_model_present)
     {
       StaticModel *planner_objective = NULL;
@@ -364,7 +363,7 @@ ModFile::transformPass(bool nostrict)
       dynamic_model.cloneDynamic(ramsey_FOC_equations_dynamic_model);
       ramsey_FOC_equations_dynamic_model.computeRamseyPolicyFOCs(*planner_objective);
       ramsey_FOC_equations_dynamic_model.replaceMyEquations(dynamic_model);
-      ramsey_eqn_nbr = dynamic_model.equation_number() - orig_eqn_nbr;
+      mod_file_struct.ramsey_eq_nbr = dynamic_model.equation_number() - mod_file_struct.orig_eq_nbr;
     }
 
   if (mod_file_struct.stoch_simul_present
@@ -446,7 +445,7 @@ ModFile::transformPass(bool nostrict)
     cout << "Found " << dynamic_model.equation_number() << " equation(s)." << endl;
   else
     {
-      cout << "Found " << orig_eqn_nbr  << " equation(s)." << endl;
+      cout << "Found " << mod_file_struct.orig_eq_nbr  << " equation(s)." << endl;
       cout << "Found " << dynamic_model.equation_number() << " FOC equation(s) for Ramsey Problem." << endl;
     }
 
@@ -470,7 +469,7 @@ ModFile::transformPass(bool nostrict)
 }
 
 void
-ModFile::computingPass(bool no_tmp_terms, FileOutputType output, bool compute_xrefs)
+ModFile::computingPass(bool no_tmp_terms, FileOutputType output, bool compute_xrefs, int params_derivs_order)
 {
   // Mod file may have no equation (for example in a standalone BVAR estimation)
   if (dynamic_model.equation_number() > 0)
@@ -490,10 +489,11 @@ ModFile::computingPass(bool no_tmp_terms, FileOutputType output, bool compute_xr
 
 	  const bool static_hessian = mod_file_struct.identification_present
 	    || mod_file_struct.estimation_analytic_derivation;
-	  const bool paramsDerivatives = mod_file_struct.identification_present
-	    || mod_file_struct.estimation_analytic_derivation;
+          int paramsDerivsOrder = 0;
+          if (mod_file_struct.identification_present || mod_file_struct.estimation_analytic_derivation)
+            paramsDerivsOrder = params_derivs_order;
 	  static_model.computingPass(global_eval_context, no_tmp_terms, static_hessian,
-				     false, paramsDerivatives, block, byte_code);
+				     false, paramsDerivsOrder, block, byte_code);
 	}
       // Set things to compute for dynamic model
       if (mod_file_struct.perfect_foresight_solver_present || mod_file_struct.check_present
@@ -503,7 +503,7 @@ ModFile::computingPass(bool no_tmp_terms, FileOutputType output, bool compute_xr
 	  || mod_file_struct.calib_smoother_present)
 	{
 	  if (mod_file_struct.perfect_foresight_solver_present)
-	    dynamic_model.computingPass(true, false, false, false, global_eval_context, no_tmp_terms, block, use_dll, byte_code, compute_xrefs);
+	    dynamic_model.computingPass(true, false, false, none, global_eval_context, no_tmp_terms, block, use_dll, byte_code, compute_xrefs);
 	      else
 		{
 		  if (mod_file_struct.stoch_simul_present
@@ -524,12 +524,14 @@ ModFile::computingPass(bool no_tmp_terms, FileOutputType output, bool compute_xr
 		  bool thirdDerivatives = mod_file_struct.order_option == 3 
 		    || mod_file_struct.estimation_analytic_derivation
 		    || output == third;
-		  bool paramsDerivatives = mod_file_struct.identification_present || mod_file_struct.estimation_analytic_derivation;
-		  dynamic_model.computingPass(true, hessian, thirdDerivatives, paramsDerivatives, global_eval_context, no_tmp_terms, block, use_dll, byte_code, compute_xrefs);
+                  int paramsDerivsOrder = 0;
+                  if (mod_file_struct.identification_present || mod_file_struct.estimation_analytic_derivation)
+                    paramsDerivsOrder = params_derivs_order;
+		  dynamic_model.computingPass(true, hessian, thirdDerivatives, paramsDerivsOrder, global_eval_context, no_tmp_terms, block, use_dll, byte_code, compute_xrefs);
 		}
 	    }
 	  else // No computing task requested, compute derivatives up to 2nd order by default
-	    dynamic_model.computingPass(true, true, false, false, global_eval_context, no_tmp_terms, block, use_dll, byte_code, compute_xrefs);
+	    dynamic_model.computingPass(true, true, false, none, global_eval_context, no_tmp_terms, block, use_dll, byte_code, compute_xrefs);
     }
 
   for (vector<Statement *>::iterator it = statements.begin();
@@ -748,9 +750,9 @@ ModFile::writeOutputFiles(const string &basename, bool clear_all, bool clear_glo
   if (block && !byte_code)
     mOutputFile << "addpath " << basename << ";" << endl;
 
-  mOutputFile << "M_.orig_eq_nbr = " << orig_eqn_nbr << ";" << endl
+  mOutputFile << "M_.orig_eq_nbr = " << mod_file_struct.orig_eq_nbr << ";" << endl
               << "M_.eq_nbr = " << dynamic_model.equation_number() << ";" << endl
-              << "M_.ramsey_eq_nbr = " << ramsey_eqn_nbr << ";" << endl;
+              << "M_.ramsey_eq_nbr = " << mod_file_struct.ramsey_eq_nbr << ";" << endl;
 
   if (dynamic_model.equation_number() > 0)
     {
@@ -798,6 +800,8 @@ ModFile::writeOutputFiles(const string &basename, bool clear_all, bool clear_glo
               << "  save('" << basename << "_results.mat', 'dataset_', '-append');" << endl << "end" << endl
               << "if exist('estimation_info', 'var') == 1" << endl
               << "  save('" << basename << "_results.mat', 'estimation_info', '-append');" << endl << "end" << endl
+              << "if exist('dataset_info', 'var') == 1" << endl
+              << "  save('" << basename << "_results.mat', 'dataset_info', '-append');" << endl << "end" << endl
               << "if exist('oo_recursive_', 'var') == 1" << endl
               << "  save('" << basename << "_results.mat', 'oo_recursive_', '-append');" << endl << "end" << endl;
 
@@ -1107,44 +1111,49 @@ ModFile::writeExternalFilesJulia(const string &basename, FileOutputType output) 
                << "using Utils" << endl
                << "using " << basename << "Static" << endl
                << "using " << basename << "Dynamic" << endl
-               << "using " << basename << "SteadyState2" << endl << endl
-               << "export model" << endl;
+               << "if isfile(\"" << basename << "SteadyState.jl"  "\")" << endl
+               << "    using " << basename << "SteadyState" << endl
+               << "end" << endl
+               << "if isfile(\"" << basename << "SteadyState2.jl"  "\")" << endl
+               << "    using " << basename << "SteadyState2" << endl
+               << "end" << endl << endl
+	       << "export model_, options_, oo_" << endl;
 
   // Write Output
   jlOutputFile << endl
-               << "output = dynare_output()" << endl
-               << "output.dynare_version = \"" << PACKAGE_VERSION << "\"" << endl;
+               << "oo_ = dynare_output()" << endl
+               << "oo_.dynare_version = \"" << PACKAGE_VERSION << "\"" << endl;
 
   // Write Options
   jlOutputFile << endl
-               << "options = dynare_options()" << endl
-               << "options.dynare_version = \"" << PACKAGE_VERSION << "\"" << endl;
+               << "options_ = dynare_options()" << endl
+               << "options_.dynare_version = \"" << PACKAGE_VERSION << "\"" << endl;
   if (linear == 1)
-    jlOutputFile << "options.linear = true" << endl;
+    jlOutputFile << "options_.linear = true" << endl;
 
   // Write Model
   jlOutputFile << endl
-               << "model = dynare_model()" << endl
-               << "model.fname = \"" << basename << "\"" << endl
-               << "model.dynare_version = \"" << PACKAGE_VERSION << "\"" << endl
-               << "model.sigma_e = zeros(Float64, " << symbol_table.exo_nbr() << ", "
+               << "model_ = dynare_model()" << endl
+               << "model_.fname = \"" << basename << "\"" << endl
+               << "model_.dynare_version = \"" << PACKAGE_VERSION << "\"" << endl
+               << "model_.sigma_e = zeros(Float64, " << symbol_table.exo_nbr() << ", "
                << symbol_table.exo_nbr() << ")" << endl
-               << "model.correlation_matrix = ones(Float64, " << symbol_table.exo_nbr() << ", "
+               << "model_.correlation_matrix = ones(Float64, " << symbol_table.exo_nbr() << ", "
                << symbol_table.exo_nbr() << ")" << endl
-               << "model.orig_eq_nbr = " << orig_eqn_nbr << endl
-               << "model.eq_nbr = " << dynamic_model.equation_number() << endl
-               << "model.ramsey_eq_nbr = " << ramsey_eqn_nbr << endl;
+               << "model_.orig_eq_nbr = " << mod_file_struct.orig_eq_nbr << endl
+               << "model_.eq_nbr = " << dynamic_model.equation_number() << endl
+               << "model_.ramsey_eq_nbr = " << mod_file_struct.ramsey_eq_nbr << endl;
 
   if (mod_file_struct.calibrated_measurement_errors)
-    jlOutputFile << "model.h = zeros(Float64,"
+    jlOutputFile << "model_.h = zeros(Float64,"
                  << symbol_table.observedVariablesNbr() << ", "
                  << symbol_table.observedVariablesNbr() << ");" << endl
-                 << "model.correlation_matrix_me = ones(Float64, "
+                 << "model_.correlation_matrix_me = ones(Float64, "
                  << symbol_table.observedVariablesNbr() << ", "
                  << symbol_table.observedVariablesNbr() << ");" << endl;
   else
-    jlOutputFile << "model.h = zeros(Float64, 1, 1)" << endl
-                 << "model.correlation_matrix_me = ones(Float64, 1, 1)" << endl;
+    jlOutputFile << "model_.h = zeros(Float64, 1, 1)" << endl
+                 << "model_.correlation_matrix_me = ones(Float64, 1, 1)" << endl;
 
   cout << "Processing outputs ..." << endl;
   symbol_table.writeJuliaOutput(jlOutputFile);
@@ -1165,20 +1174,28 @@ ModFile::writeExternalFilesJulia(const string &basename, FileOutputType output) 
     }
   steady_state_model.writeSteadyStateFile(basename, mod_file_struct.ramsey_model_present, true);
 
-  jlOutputFile << "model.static = " << basename << "Static.static!" << endl
-               << "model.dynamic = " << basename << "Dynamic.dynamic!" << endl
-               << "model.steady_state = " << basename << "SteadyState2.steady_state!" << endl
-               << "try" << endl
-               << "    using " << basename << "StaticParamsDerivs" << endl
-               << "    model.static_params_derivs = " << basename
-               << "StaticParamsDerivs.params_derivs" << endl
-               << "catch" << endl
+  // Print statements (includes parameter values)
+    for (vector<Statement *>::const_iterator it = statements.begin();
+         it != statements.end(); it++)
+        (*it)->writeJuliaOutput(jlOutputFile, basename);
+
+  jlOutputFile << "model_.static = " << basename << "Static.static!" << endl
+               << "model_.dynamic = " << basename << "Dynamic.dynamic!" << endl
+               << "if isfile(\"" << basename << "SteadyState.jl"  "\")" << endl
+               << "    model_.user_written_analytical_steady_state = true" << endl
+               << "    model_.steady_state = " << basename << "SteadyState.steady_state!" << endl
                << "end" << endl
-               << "try" << endl
+               << "if isfile(\"" << basename << "SteadyState2.jl"  "\")" << endl
+               << "    model_.analytical_steady_state = true" << endl
+               << "    model_.steady_state = " << basename << "SteadyState2.steady_state!" << endl
+               << "end" << endl
+               << "if isfile(\"" << basename << "StaticParamsDerivs.jl"  "\")" << endl
+               << "    using " << basename << "StaticParamsDerivs" << endl
+               << "    model_.static_params_derivs = " << basename << "StaticParamsDerivs.params_derivs" << endl
+               << "end" << endl
+               << "if isfile(\"" << basename << "DynamicParamsDerivs.jl"  "\")" << endl
                << "    using " << basename << "DynamicParamsDerivs" << endl
-               << "    model.dynamic_params_derivs = " << basename
-               << "DynamicParamsDerivs.params_derivs" << endl
-               << "catch" << endl
+               << "    model_.dynamic_params_derivs = " << basename << "DynamicParamsDerivs.params_derivs" << endl
                << "end" << endl
                << "end" << endl;
   jlOutputFile.close();

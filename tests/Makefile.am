@@ -6,7 +6,12 @@ MODFILES = \
 	estimation/fs2000_calibrated_covariance.mod \
 	estimation/fs2000_model_comparison.mod \
 	estimation/fs2000_fast.mod \
+	estimation/slice/fs2000_slice.mod \
+	estimation/independent_mh/fs2000_independent_mh.mod \
 	estimation/MH_recover/fs2000_recover.mod \
+	estimation/MH_recover/fs2000_recover_2.mod \
+	estimation/MH_recover/fs2000_recover_3.mod \
+	estimation/MH_recover/fs2000_recover_tarb.mod \
 	estimation/t_proposal/fs2000_student.mod \
 	estimation/TaRB/fs2000_tarb.mod \
 	moments/example1_var_decomp.mod \
@@ -30,9 +35,10 @@ MODFILES = \
 	example1_macroif.mod \
 	t_sgu_ex1.mod \
 	irfs/example1_unit_std.mod \
-	optimal_policy/osr_example.mod \
-	optimal_policy/osr_example_objective_correctness.mod \
-	optimal_policy/osr_example_obj_corr_non_stat_vars.mod \
+	optimal_policy/OSR/osr_example.mod \
+	optimal_policy/OSR/osr_example_objective_correctness.mod \
+	optimal_policy/OSR/osr_example_obj_corr_non_stat_vars.mod \
+	optimal_policy/OSR/osr_example_param_bounds.mod \
 	optimal_policy/OSR/osr_obj_corr_algo_1.mod \
 	optimal_policy/OSR/osr_obj_corr_algo_3.mod \
 	optimal_policy/OSR/osr_obj_corr_algo_4.mod \
@@ -146,7 +152,7 @@ MODFILES = \
 	simul/Solow_no_varexo.mod \
 	simul/simul_ZLB_purely_forward.mod \
 	simul/simul_ZLB_purely_forward_no_solution.mod \
-	conditional_forecasts/1/fs2000_cal.mod \
+	simul/Irreversible_investment.mod \
 	conditional_forecasts/2/fs2000_est.mod \
 	conditional_forecasts/3/fs2000_conditional_forecast_initval.mod \
 	conditional_forecasts/4/fs2000_conditional_forecast_histval.mod \
@@ -166,6 +172,14 @@ MODFILES = \
 	ms-sbvar/test_ms_variances_repeated_runs.mod \
 	ms-dsge/test_ms_dsge.mod \
 	kalman/lyapunov/fs2000_lyap.mod \
+	kalman/lik_init/fs2000_ns_lik_init_2.mod \
+	kalman/lik_init/fs2000_ns_lik_init_3.mod \
+	kalman/lik_init/fs2000_ns_lik_init_5.mod \
+	kalman/lik_init/fs2000_lik_init_1.mod \
+	kalman/lik_init/fs2000_lik_init_2.mod \
+	kalman/lik_init/fs2000_lik_init_3.mod \
+	kalman/lik_init/fs2000_lik_init_4.mod \
+	kalman/lik_init/fs2000_lik_init_5.mod \
 	kalman_filter_smoother/gen_data.mod \
 	kalman_filter_smoother/algo1.mod \
 	kalman_filter_smoother/algo2.mod \
@@ -181,6 +195,7 @@ MODFILES = \
 	kalman_filter_smoother/fs2000_2.mod \
 	kalman_filter_smoother/fs2000a.mod \
 	kalman_filter_smoother/fs2000_smoother_only.mod \
+	kalman_filter_smoother/fs2000_smoother_only_ns.mod \
 	kalman_filter_smoother/check_variable_dimensions/fs2000.mod \
 	kalman_filter_smoother/check_variable_dimensions/fs2000_ML.mod \
 	kalman/likelihood_from_dynare/fs2000_corr_ME.mod \
@@ -188,14 +203,22 @@ MODFILES = \
 	kalman/likelihood_from_dynare/fs2000_uncorr_ME.mod \
 	kalman/likelihood_from_dynare/fs2000_uncorr_ME_missing.mod \
 	second_order/burnside_1.mod \
+	kalman_filter_smoother/compare_results_simulation/fs2000_ML.mod \
+	kalman_filter_smoother/compare_results_simulation/fs2000_ML_loglinear.mod \
+	kalman_filter_smoother/compare_results_simulation/fs2000.mod \
+	kalman_filter_smoother/compare_results_simulation/fs2000_loglinear.mod \
+	second_order/burnside_1.mod \
 	second_order/ds1.mod \
 	second_order/ds2.mod \
 	ep/rbc.mod \
+	ep/rbc_mc.mod \
 	ep/rbc2.mod \
 	ep/rbcii.mod \
-	ep/linearmodel.mod \
-	deterministic_simulations/deterministic_model_purely_forward.mod \
-	deterministic_simulations/deterministic_model_purely_backward.mod \
+	ep/linearmodel0.mod \
+	ep/linearmodel1.mod \
+	deterministic_simulations/purely_forward/ar1.mod \
+        deterministic_simulations/purely_forward/nk.mod \
+	deterministic_simulations/purely_backward/ar1.mod \
 	deterministic_simulations/rbc_det1.mod \
 	deterministic_simulations/rbc_det2.mod \
 	deterministic_simulations/rbc_det3.mod \
@@ -203,6 +226,7 @@ MODFILES = \
 	deterministic_simulations/rbc_det5.mod \
 	deterministic_simulations/rbc_det6.mod \
 	deterministic_simulations/homotopy.mod \
+	deterministic_simulations/homotopy_histval.mod \
 	deterministic_simulations/rbc_det_exo_lag_2a.mod \
 	deterministic_simulations/rbc_det_exo_lag_2b.mod \
 	deterministic_simulations/rbc_det_exo_lag_2c.mod \
@@ -215,7 +239,15 @@ MODFILES = \
 	deterministic_simulations/multiple_lead_lags/sim_lead_lag.mod \
 	deterministic_simulations/lola_solve_one_boundary.mod \
 	deterministic_simulations/linear_approximation/sw.mod \
-	walsh.mod \
+	deterministic_simulations/multiple_lead_lags/AR2.mod \
+	deterministic_simulations/multiple_lead_lags/AR2_forward.mod \
+	deterministic_simulations/multiple_lead_lags/ramst_augmented_histval.mod \
+        deterministic_simulations/lbj/rbc.mod \
+        lmmcp/rbc.mod \
+        lmmcp/rbcii.mod \
+	lmmcp/sw_lmmcp.mod \
+	lmmcp/sw_newton.mod \
+        walsh.mod \
 	measurement_errors/fs2000_corr_me_ml_mcmc/fs2000_corr_ME.mod \
 	trend_var/fs2000_nonstationary.mod \
 	trend_var/fs2000_log_nonstationary.mod \
@@ -224,6 +256,7 @@ MODFILES = \
 	shock_decomposition/example1_calib_shock_decomp.mod \
 	shock_decomposition/fs2000_est.mod \
 	shock_decomposition/fs2000_est_varlist.mod \
+	shock_decomposition/fs2000_cal_groups.mod \
 	stochastic_purely_forward/stochastic_purely_forward.mod \
 	stochastic_purely_forward/stochastic_purely_forward_with_static.mod \
 	forecast/Hansen_exo_det_forecast.mod \
@@ -236,6 +269,8 @@ MODFILES = \
 	filter_step_ahead/fs2000_filter_step_ahead_bayesian.mod \
 	filter_step_ahead/fs2000_filter_step_ahead_ML.mod \
 	loglinear/example4_loglinear.mod \
+	loglinear/example4_loglinear_lagged_exogenous.mod \
+	loglinear/example4_loglinear_lagged_exogenous_a.mod \
 	smoother2histval/fs2000_simul.mod \
 	smoother2histval/fs2000_smooth.mod \
 	smoother2histval/fs2000_smooth_stoch_simul.mod \
@@ -255,7 +290,33 @@ MODFILES = \
 	optimizers/fs2000_w.mod \
 	differentiate_forward_vars/RBC_differentiate_forward.mod \
 	TeX/fs2000_corr_ME.mod \
-	prior_posterior_function/fs2000_prior_posterior_function.mod
+	prior_posterior_function/fs2000_prior_posterior_function.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_loglin_no_prefilt_first_obs_MC.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_loglin_prefilt_first_obs_MC.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_loglinear_no_prefilter_MC.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_loglinear_prefilter_MC.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_no_prefilter_first_obs_MC.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_no_prefilter_MC.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_prefilter_first_obs_MC.mod \
+	observation_trends_and_prefiltering/MCMC/Trend_prefilter_MC.mod \
+	observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter.mod \
+	observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter_first_obs.mod \
+	observation_trends_and_prefiltering/ML/Trend_loglinear_prefilter.mod \
+	observation_trends_and_prefiltering/ML/Trend_loglinear_prefilter_first_obs.mod \
+	observation_trends_and_prefiltering/ML/Trend_no_prefilter.mod \
+	observation_trends_and_prefiltering/ML/Trend_no_prefilter_first_obs.mod \
+	observation_trends_and_prefiltering/ML/Trend_prefilter.mod \
+	observation_trends_and_prefiltering/ML/Trend_prefilter_first_obs.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_no_prefilter_calib_smoother.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_no_prefilt_first_obs_cal_smooth.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_prefilter_calib_smoother.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_prefilt_first_obs_cal_smooth.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_no_prefilter_loglin_calib_smoother.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_no_prefil_f_obs_loglin_cal_smoother.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_prefilter_loglin_calib_smoother.mod \
+	observation_trends_and_prefiltering/calib_smoother/Tr_prefil_f_obs_loglin_cal_smoother.mod \
+	observation_trends_and_prefiltering/ML/Trend_no_prefilter_selected_var.mod
+
 
 XFAIL_MODFILES = ramst_xfail.mod \
 	estim_param_in_shock_value_xfail.mod \
@@ -364,6 +425,20 @@ deterministic_simulations/multiple_lead_lags/sim_lead_lag_aux_vars.o.trs: determ
 deterministic_simulations/multiple_lead_lags/sim_lead_lag.m.trs: deterministic_simulations/multiple_lead_lags/sim_base.m.trs deterministic_simulations/multiple_lead_lags/sim_lead_lag_aux_vars.m.trs
 deterministic_simulations/multiple_lead_lags/sim_lead_lag.o.trs: deterministic_simulations/multiple_lead_lags/sim_base.o.trs deterministic_simulations/multiple_lead_lags/sim_lead_lag_aux_vars.o.trs
 
+deterministic_simulations/multiple_lead_lags/ramst_augmented_histval.m.trs: ramst.m.trs 
+deterministic_simulations/multiple_lead_lags/ramst_augmented_histval.o.trs: ramst.o.trs
+
+loglinear/example4_loglinear_lagged_exogenous_a.m.trs: loglinear/example4_loglinear_lagged_exogenous.m.trs 
+loglinear/example4_loglinear_lagged_exogenous_a.o.trs: loglinear/example4_loglinear_lagged_exogenous.o.trs 
+
+observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter_first_obs.m.trs: observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter.m.trs
+observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter_first_obs.o.trs: observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter.o.trs
+observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter.m.trs: observation_trends_and_prefiltering/ML/Trend_no_prefilter.m.trs
+observation_trends_and_prefiltering/ML/Trend_loglinear_no_prefilter.o.trs: observation_trends_and_prefiltering/ML/Trend_no_prefilter.o.trs
+
+lmmcp/sw_newton.m.trs: lmmcp/sw_lmmcp.m.trs
+lmmcp/sw_newton.o.trs: lmmcp/sw_lmmcp.o.trs
+
 # Matlab TRS Files
 M_TRS_FILES = $(patsubst %.mod, %.m.trs, $(MODFILES))
 M_TRS_FILES += run_block_byte_tests_matlab.m.trs run_reporting_test_matlab.m.trs run_all_unitary_tests.m.trs
@@ -451,6 +526,9 @@ EXTRA_DIST = \
 	kalman/likelihood_from_dynare/fsdat_simul_corr_ME_missing.m \
 	kalman/likelihood_from_dynare/fsdat_simul_uncorr_ME.m \
 	kalman/likelihood_from_dynare/fsdat_simul_uncorr_ME_missing.m \
+	kalman/lik_init/fs2000_common.inc \
+	kalman/lik_init/fs2000_ns_common.inc \
+	kalman_filter_smoother/compare_results_simulation/fsdat_simul_logged.m \
 	identification/kim/kim2_steadystate.m \
 	identification/as2007/as2007_steadystate.m \
 	estimation/fsdat_simul.m \
@@ -462,8 +540,23 @@ EXTRA_DIST = \
 	smoother2histval/fsdat_simul.m \
 	optimal_policy/Ramsey/find_c.m \
 	optimal_policy/Ramsey/oo_ramsey_policy_initval.mat \
+	observation_trends_and_prefiltering/Trend_diagnostics_MCMC_common.inc \
+	observation_trends_and_prefiltering/Trend_diagnostics_calib_common.inc \
+	observation_trends_and_prefiltering/Trend_diagnostics_ML_common.inc \
+	observation_trends_and_prefiltering/Trend_exp_model_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_exp_model_no_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_model_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_model_no_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_exp_model_calib_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_exp_model_calib_no_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_model_calib_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_model_calib_no_prefilter_common.inc \
+	observation_trends_and_prefiltering/Trend_load_data_common.inc \
+	observation_trends_and_prefiltering/Trend_no_prefilter_conditional_forecast.inc \
+	optimal_policy/Ramsey/oo_ramsey_policy_initval.mat \
 	optimizers/optimizer_function_wrapper.m \
 	optimizers/fs2000.common.inc \
+	estimation/MH_recover/fs2000.common.inc \
 	prior_posterior_function/posterior_function_demo.m
 
 

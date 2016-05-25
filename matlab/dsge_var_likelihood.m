@@ -17,7 +17,7 @@ function [fval,grad,hess,exit_flag,info,PHI,SIGMAu,iXX,prior] = dsge_var_likelih
 % SPECIAL REQUIREMENTS
 %   None.
 
-% Copyright (C) 2006-2012 Dynare Team
+% Copyright (C) 2006-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -138,7 +138,7 @@ if info(1) == 1 || info(1) == 2 || info(1) == 5 || info(1) == 7 || info(1) == 8 
     info = info(1);
     exit_flag = 0;
     return
-elseif info(1) == 3 || info(1) == 4 || info(1) == 19 || info(1) == 20 || info(1) == 21
+elseif info(1) == 3 || info(1) == 4 || info(1) == 6 || info(1) == 19 || info(1) == 20 || info(1) == 21
     fval = objective_function_penalty_base+info(2);
     info = info(1);
     exit_flag = 0;

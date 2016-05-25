@@ -29,7 +29,7 @@ function [dr,info] = stochastic_solvers(dr,task,M_,options_,oo_)
 %   none.
 %  
 
-% Copyright (C) 1996-2013 Dynare Team
+% Copyright (C) 1996-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -210,7 +210,7 @@ if M_.maximum_endo_lead == 0
         if M_.exo_nbr
             dr.ghu =  -b\jacobia_(:,nz+1:end); 
         end
-        dr.eigval = eig(transition_matrix(dr));
+        dr.eigval = eig(kalman_transition_matrix(dr,nstatic+(1:nspred),1:nspred,M_.exo_nbr));
         dr.full_rank = 1;
         if any(abs(dr.eigval) > options_.qz_criterium)
             temp = sort(abs(dr.eigval));
@@ -334,12 +334,22 @@ end
 
 if options_.loglinear
     % this needs to be extended for order=2,3
-    k = find(dr.kstate(:,2) <= M_.maximum_endo_lag+1);
-    klag = dr.kstate(k,[1 2]);
-    k1 = dr.order_var;
-    dr.ghx = repmat(1./dr.ys(k1),1,size(dr.ghx,2)).*dr.ghx.* ...
-             repmat(dr.ys(k1(klag(:,1)))',size(dr.ghx,1),1);
-    dr.ghu = repmat(1./dr.ys(k1),1,size(dr.ghu,2)).*dr.ghu;
+    [il,il1,ik,k1] = indices_lagged_leaded_exogenous_variables(dr.order_var,M_);
+    [illag,illag1,iklag,klag1] = indices_lagged_leaded_exogenous_variables(dr.order_var(M_.nstatic+(1:M_.nspred)),M_);
+    if ~isempty(ik)
+        if M_.nspred > 0
+            dr.ghx(ik,iklag) = repmat(1./dr.ys(k1),1,length(klag1)).*dr.ghx(ik,iklag).* ...
+                repmat(dr.ys(klag1)',length(ik),1);
+            dr.ghx(ik,illag) = repmat(1./dr.ys(k1),1,length(illag)).*dr.ghx(ik,illag);
+        end
+        if M_.exo_nbr > 0
+            dr.ghu(ik,:) = repmat(1./dr.ys(k1),1,M_.exo_nbr).*dr.ghu(ik,:);
+        end
+    end
+    if ~isempty(il) && M_.nspred > 0
+        dr.ghx(il,iklag) = dr.ghx(il,iklag).*repmat(dr.ys(klag1)', ...
+                                                    length(il),1);
+    end
     if options_.order>1
        error('Loglinear options currently only works at order 1')
     end

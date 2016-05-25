@@ -81,7 +81,7 @@ function [dLIK, dlikk, a, Pstar, llik] = univariate_kalman_filter_d(data_index, 
 %! @end deftypefn
 %@eod:
 
-% Copyright (C) 2004-2012 Dynare Team
+% Copyright (C) 2004-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -112,6 +112,7 @@ llik = zeros(smpl,pp);
 
 newRank = rank(Pinf,diffuse_kalman_tol);
 l2pi = log(2*pi);
+s=0;
 
 while newRank && (t<=last)
     s = t-start+1;

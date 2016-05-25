@@ -187,12 +187,14 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <INITIAL>endval {BEGIN DYNARE_BLOCK; return token::ENDVAL;}
 <INITIAL>histval {BEGIN DYNARE_BLOCK; return token::HISTVAL;}
 <INITIAL>shocks {BEGIN DYNARE_BLOCK; return token::SHOCKS;}
+<INITIAL>shock_groups {BEGIN DYNARE_BLOCK; return token::SHOCK_GROUPS;}
 <INITIAL>mshocks {BEGIN DYNARE_BLOCK; return token::MSHOCKS;}
 <INITIAL>estimated_params {BEGIN DYNARE_BLOCK; return token::ESTIMATED_PARAMS;}
  /* priors is an alias for estimated_params */
 <INITIAL>priors {BEGIN DYNARE_BLOCK;return token::ESTIMATED_PARAMS;}
 <INITIAL>estimated_params_init 		{BEGIN DYNARE_BLOCK; return token::ESTIMATED_PARAMS_INIT;}
 <INITIAL>estimated_params_bounds 	{BEGIN DYNARE_BLOCK; return token::ESTIMATED_PARAMS_BOUNDS;}
+<INITIAL>osr_params_bounds              {BEGIN DYNARE_BLOCK; return token::OSR_PARAMS_BOUNDS;}
 <INITIAL>observation_trends {BEGIN DYNARE_BLOCK; return token::OBSERVATION_TRENDS;}
 <INITIAL>optim_weights {BEGIN DYNARE_BLOCK; return token::OPTIM_WEIGHTS;}
 <INITIAL>homotopy_setup {BEGIN DYNARE_BLOCK; return token::HOMOTOPY_SETUP;}
@@ -238,7 +240,13 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
                            unput('d');
                            free( yycopy );
                          }
-<DYNARE_STATEMENT>${DATE} { yylloc->step(); *yyout << yytext + 1; }
+<DYNARE_STATEMENT>${DATE} { yylloc->step();
+#if (YY_FLEX_MAJOR_VERSION > 2) || (YY_FLEX_MAJOR_VERSION == 2 && YY_FLEX_MINOR_VERSION >= 6)
+                            yyout << yytext + 1;
+#else
+                            *yyout << yytext + 1;
+#endif
+                          }
 <DYNARE_STATEMENT>dates  {dates_parens_nb=0; BEGIN DATES_STATEMENT; yylval->string_val = new string("dates");}
 <DYNARE_STATEMENT>file                  {return token::FILE;}
 <DYNARE_STATEMENT>datafile 		{return token::DATAFILE;}
@@ -383,7 +391,6 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>distribution_approximation {return token::DISTRIBUTION_APPROXIMATION;}
 <DYNARE_STATEMENT>proposal_distribution {return token::PROPOSAL_DISTRIBUTION;}
 <DYNARE_STATEMENT>no_posterior_kernel_density {return token::NO_POSTERIOR_KERNEL_DENSITY;}
-<DYNARE_STATEMENT>student_degrees_of_freedom {return token::STUDENT_DEGREES_OF_FREEDOM;}
 
 <DYNARE_STATEMENT>alpha {
   yylval->string_val = new string(yytext);
@@ -570,6 +577,7 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>cova_compute {return token::COVA_COMPUTE;}
 <DYNARE_STATEMENT>discretionary_tol {return token::DISCRETIONARY_TOL;}
 <DYNARE_STATEMENT>analytic_derivation {return token::ANALYTIC_DERIVATION;}
+<DYNARE_STATEMENT>analytic_derivation_mode {return token::ANALYTIC_DERIVATION_MODE;}
 <DYNARE_STATEMENT>solver_periods {return token::SOLVER_PERIODS;}
 <DYNARE_STATEMENT>endogenous_prior {return token::ENDOGENOUS_PRIOR;}
 <DYNARE_STATEMENT>consider_all_endogenous {return token::CONSIDER_ALL_ENDOGENOUS;}
@@ -581,10 +589,8 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>outvars {return token::OUTVARS;}
 <DYNARE_STATEMENT>huge_number {return token::HUGE_NUMBER;}
 <DYNARE_STATEMENT>dr_display_tol {return token::DR_DISPLAY_TOL;}
-<DYNARE_STATEMENT>use_tarb {return token::USE_TARB;}
-<DYNARE_STATEMENT>tarb_mode_compute {return token::TARB_MODE_COMPUTE;}
-<DYNARE_STATEMENT>tarb_new_block_probability {return token::TARB_NEW_BLOCK_PROBABILITY;}
-<DYNARE_STATEMENT>tarb_optim {return token::TARB_OPTIM;}
+<DYNARE_STATEMENT>posterior_sampling_method {return token::POSTERIOR_SAMPLING_METHOD;}
+<DYNARE_STATEMENT>posterior_sampler_options {return token::POSTERIOR_SAMPLER_OPTIONS;}
 <DYNARE_STATEMENT>silent_optimizer {return token::SILENT_OPTIMIZER;}
 <DYNARE_STATEMENT>lmmcp {return token::LMMCP;}
 <DYNARE_STATEMENT>occbin {return token::OCCBIN;}
@@ -786,6 +792,9 @@ DATE -?[0-9]+([YyAa]|[Mm]([1-9]|1[0-2])|[Qq][1-4]|[Ww]([1-9]{1}|[1-4][0-9]|5[0-2
 <DYNARE_STATEMENT>advanced {return token::ADVANCED;}
 <DYNARE_STATEMENT>max_dim_cova_group {return token::MAX_DIM_COVA_GROUP;}
 <DYNARE_STATEMENT>gsa_sample_file {return token::GSA_SAMPLE_FILE;}
+
+<DYNARE_STATEMENT>use_shock_groups {return token::USE_SHOCK_GROUPS;}
+<DYNARE_STATEMENT>colormap {return token::COLORMAP;}
 
 <DYNARE_STATEMENT,DYNARE_BLOCK>[A-Za-z_][A-Za-z0-9_]* {
   yylval->string_val = new string(yytext);

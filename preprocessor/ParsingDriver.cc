@@ -88,6 +88,7 @@ ParsingDriver::parse(istream &in, bool debug)
 
   reset_data_tree();
   estim_params.init(*data_tree);
+  osr_params.init(*data_tree);
   reset_current_external_function_options();
 
   lexer = new DynareFlex(&in);
@@ -229,8 +230,6 @@ ParsingDriver::declare_optimal_policy_discount_factor_parameter(expr_t exprnode)
 {
   string *optimalParName_declare = new string("optimal_policy_discount_factor");
   string *optimalParName_init = new string("optimal_policy_discount_factor");
-  if (mod_file->symbol_table.exists(*optimalParName_declare))
-    error("Symbol optimal_policy_discount_factor is needed by Dynare when using a ramsey_model, a ramsey_policy or a discretionary_policy statement");
   declare_parameter(optimalParName_declare, NULL);
   init_param(optimalParName_init, exprnode);
 }
@@ -378,23 +377,15 @@ ParsingDriver::declare_nonstationary_var(string *name, string *tex_name, pair<st
     declare_endogenous(new string(*name));
   else
     if (tex_name == NULL)
-      declare_endogenous(new string(*name), NULL, new pair<string *, string *>(*partition_value));
+      declare_endogenous(new string(*name), NULL, partition_value);
     else if (partition_value == NULL)
-      declare_endogenous(new string(*name), new string(*tex_name));
+      declare_endogenous(new string(*name), tex_name);
     else
-      declare_endogenous(new string(*name), new string(*tex_name), new pair<string *, string *>(*partition_value));
+      declare_endogenous(new string(*name), tex_name, partition_value);
 
   declared_nonstationary_vars.push_back(mod_file->symbol_table.getID(*name));
   mod_file->nonstationary_variables = true;
   delete name;
-  if (tex_name != NULL)
-    delete tex_name;
-  if (partition_value != NULL)
-    {
-      delete partition_value->first;
-      delete partition_value->second;
-      delete partition_value;
-    }
 }
 
 void
@@ -1295,6 +1286,24 @@ ParsingDriver::estimated_params_bounds()
 }
 
 void
+ParsingDriver::add_osr_params_element()
+{
+  check_symbol_existence(osr_params.name);
+  SymbolType type = mod_file->symbol_table.getType(osr_params.name);
+  if (type != eParameter)
+    error(osr_params.name + " must be a parameter to be used in the osr_bounds block");
+  osr_params_list.push_back(osr_params);
+  osr_params.init(*data_tree);
+}
+
+void
+ParsingDriver::osr_params_bounds()
+{
+  mod_file->addStatement(new OsrParamsBoundsStatement(osr_params_list));
+  osr_params_list.clear();
+}
+
+void
 ParsingDriver::set_unit_root_vars()
 {
   mod_file->addStatement(new UnitRootVarsStatement());
@@ -1657,29 +1666,30 @@ ParsingDriver::optim_options_num(string *name, string *value)
 }
 
 void
-ParsingDriver::tarb_optim_options_helper(const string &name)
+ParsingDriver::sampling_options_helper(const string &name)
 {
-  if (options_list.string_options.find("TaRB.optim_opt") == options_list.string_options.end())
-    options_list.string_options["TaRB.optim_opt"] = "";
+  if (options_list.string_options.find("posterior_sampler_options.sampling_opt") ==
+      options_list.string_options.end())
+    options_list.string_options["posterior_sampler_options.sampling_opt"] = "";
   else
-    options_list.string_options["TaRB.optim_opt"] += ",";
-  options_list.string_options["TaRB.optim_opt"] += "''" + name + "'',";
+    options_list.string_options["posterior_sampler_options.sampling_opt"] += ",";
+  options_list.string_options["posterior_sampler_options.sampling_opt"] += "''" + name + "'',";
 }
 
 void
-ParsingDriver::tarb_optim_options_string(string *name, string *value)
+ParsingDriver::sampling_options_string(string *name, string *value)
 {
-  tarb_optim_options_helper(*name);
-  options_list.string_options["TaRB.optim_opt"] += "''" + *value + "''";
+  sampling_options_helper(*name);
+  options_list.string_options["posterior_sampler_options.sampling_opt"] += "''" + *value + "''";
   delete name;
   delete value;
 }
 
 void
-ParsingDriver::tarb_optim_options_num(string *name, string *value)
+ParsingDriver::sampling_options_num(string *name, string *value)
 {
-  tarb_optim_options_helper(*name);
-  options_list.string_options["TaRB.optim_opt"] += *value;
+  sampling_options_helper(*name);
+  options_list.string_options["posterior_sampler_options.sampling_opt"] += *value;
   delete name;
   delete value;
 }
@@ -1764,7 +1774,7 @@ ParsingDriver::optim_weights()
 void
 ParsingDriver::set_osr_params()
 {
-  mod_file->addStatement(new OsrParamsStatement(symbol_list));
+  mod_file->addStatement(new OsrParamsStatement(symbol_list, mod_file->symbol_table));
   symbol_list.clear();
 }
 
@@ -2874,3 +2884,36 @@ ParsingDriver::add_ramsey_constraint(const string *name, BinaryOpcode op_code, c
   delete name;
 }
 
+void
+ParsingDriver::add_shock_group_element(string *name)
+{
+  check_symbol_existence(*name);
+  int symb_id = mod_file->symbol_table.getID(*name);
+  SymbolType type = mod_file->symbol_table.getType(symb_id);
+
+  if (type != eExogenous)
+    error("shock_groups: " + *name + " should be an exogenous variable");
+
+  shock_group.push_back(*name);
+
+  delete name;
+}
+
+
+void
+ParsingDriver::add_shock_group(string *name)
+{
+  ShockGroupsStatement::Group G;
+  G.name = *name;
+  G.list = shock_group;
+  shock_groups.push_back(G);
+
+  shock_group.clear();
+}
+
+void
+ParsingDriver::end_shock_groups(const string *name)
+{
+  mod_file->addStatement(new ShockGroupsStatement(shock_groups, *name));
+  shock_groups.clear();
+}

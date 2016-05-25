@@ -1,6 +1,6 @@
 function [dataset_, dataset_info, xparam1, hh, M_, options_, oo_, estim_params_,bayestopt_, bounds] = dynare_estimation_init(var_list_, dname, gsa_flag, M_, options_, oo_, estim_params_, bayestopt_)
 
-% function dynare_estimation_init(var_list_, gsa_flag)
+% function [dataset_, dataset_info, xparam1, hh, M_, options_, oo_, estim_params_,bayestopt_, bounds] = dynare_estimation_init(var_list_, dname, gsa_flag, M_, options_, oo_, estim_params_, bayestopt_)
 % performs initialization tasks before estimation or
 % global sensitivity analysis
 %
@@ -14,7 +14,6 @@ function [dataset_, dataset_info, xparam1, hh, M_, options_, oo_, estim_params_,
 %   estim_params_:  structure storing information about estimated
 %                   parameters
 %   bayestopt_:     structure storing information about priors
-%   optim:          structure storing optimization bounds
     
 % OUTPUTS
 %   dataset_:       the dataset after required transformation
@@ -28,11 +27,12 @@ function [dataset_, dataset_info, xparam1, hh, M_, options_, oo_, estim_params_,
 %   estim_params_:  structure storing information about estimated
 %                   parameters
 %   bayestopt_:     structure storing information about priors
+%   bounds:         structure containing prior bounds
 % 
 % SPECIAL REQUIREMENTS
 %   none
 
-% Copyright (C) 2003-2014 Dynare Team
+% Copyright (C) 2003-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -144,7 +144,7 @@ else
 end
 
 % Set priors over the estimated parameters.
-if ~isempty(estim_params_)
+if ~isempty(estim_params_) && ~(isfield(estim_params_,'nvx') && sum(estim_params_.nvx+estim_params_.nvn+estim_params_.ncx+estim_params_.ncn+estim_params_.np)==0)
     [xparam1,estim_params_,bayestopt_,lb,ub,M_] = set_prior(estim_params_,M_,options_);
 end
 
@@ -158,7 +158,7 @@ if exist([M_.fname '_prior_restrictions.m'])
 end
 
 % Check that the provided mode_file is compatible with the current estimation settings.
-if ~isempty(estim_params_) && ~isempty(options_.mode_file) && ~options_.mh_posterior_mode_estimation
+if ~isempty(estim_params_) && ~(isfield(estim_params_,'nvx') && sum(estim_params_.nvx+estim_params_.nvn+estim_params_.ncx+estim_params_.ncn+estim_params_.np)==0) && ~isempty(options_.mode_file) && ~options_.mh_posterior_mode_estimation
     number_of_estimated_parameters = length(xparam1);
     mode_file = load(options_.mode_file);
     if number_of_estimated_parameters>length(mode_file.xparam1)
@@ -289,7 +289,7 @@ if ~isempty(estim_params_) && ~isempty(options_.mode_file) && ~options_.mh_poste
 end
 
 %check for calibrated covariances before updating parameters
-if ~isempty(estim_params_)
+if ~isempty(estim_params_) && ~(isfield(estim_params_,'nvx') && sum(estim_params_.nvx+estim_params_.nvn+estim_params_.ncx+estim_params_.ncn+estim_params_.np)==0)
     estim_params_=check_for_calibrated_covariances(xparam1,estim_params_,M_);
 end
 
@@ -308,7 +308,7 @@ if options_.use_calibration_initialization %set calibration as starting values
     end
 end
 
-if ~isempty(estim_params_) && ~all(strcmp(fieldnames(estim_params_),'full_calibration_detected'))
+if ~isempty(estim_params_) && ~(all(strcmp(fieldnames(estim_params_),'full_calibration_detected'))  || (isfield(estim_params_,'nvx') && sum(estim_params_.nvx+estim_params_.nvn+estim_params_.ncx+estim_params_.ncn+estim_params_.np)==0))
     if ~isempty(bayestopt_) && any(bayestopt_.pshape > 0)
         % Plot prior densities.
         if ~options_.nograph && options_.plot_priors
@@ -339,7 +339,7 @@ if ~isempty(estim_params_) && ~all(strcmp(fieldnames(estim_params_),'full_calibr
     end        
 end
 
-if isempty(estim_params_) || all(strcmp(fieldnames(estim_params_),'full_calibration_detected'))% If estim_params_ is empty (e.g. when running the smoother on a calibrated model)
+if isempty(estim_params_) || all(strcmp(fieldnames(estim_params_),'full_calibration_detected')) || (isfield(estim_params_,'nvx') && sum(estim_params_.nvx+estim_params_.nvn+estim_params_.ncx+estim_params_.ncn+estim_params_.np)==0) % If estim_params_ is empty (e.g. when running the smoother on a calibrated model)
     if ~options_.smoother
         error('Estimation: the ''estimated_params'' block is mandatory (unless you are running a smoother)')
     end
@@ -375,13 +375,11 @@ if ~isfield(options_,'trend_coeffs') % No!
 else% Yes!
     bayestopt_.with_trend = 1;
     bayestopt_.trend_coeff = {};
-    trend_coeffs = options_.trend_coeffs;
-    nt = length(trend_coeffs);
     for i=1:options_.number_of_observed_variables
-        if i > length(trend_coeffs)
+        if i > length(options_.trend_coeffs)
             bayestopt_.trend_coeff{i} = '0';
         else
-            bayestopt_.trend_coeff{i} = trend_coeffs{i};
+            bayestopt_.trend_coeff{i} = options_.trend_coeffs{i};
         end
     end
 end
@@ -396,29 +394,22 @@ nstatic = M_.nstatic;          % Number of static variables.
 npred = M_.nspred;             % Number of predetermined variables.
 nspred = M_.nspred;            % Number of predetermined variables in the state equation.
 
-% Setting resticted state space (observed + predetermined variables)
-var_obs_index = [];
+%% Setting resticted state space (observed + predetermined variables)
+% oo_.dr.restrict_var_list: location of union of observed and state variables in decision rules (decision rule order)
+% bayestopt_.mfys: position of observables in oo_.dr.ys (declaration order)
+% bayestopt_.mf0: position of state variables in restricted state vector (oo_.dr.restrict_var_list)
+% bayestopt_.mf1: positions of observed variables in decision rules (oo_.dr.restrict_var_list)
+% bayestopt_.mf2: positions of observed variables in decision rules (decision rule order)
+% bayestopt_.smoother_var_list: positions of observed variables and requested smoothed variables in decision rules (decision rule order)
+% bayestopt_.smoother_saved_var_list: positions of requested smoothed variables in bayestopt_.smoother_var_list
+% bayestopt_.smoother_restrict_columns: positions of states in observed variables and requested smoothed variables in decision rules (decision rule order)
+% bayestopt_.smoother_mf: positions of observed variables and requested smoothed variables in bayestopt_.smoother_var_list
+var_obs_index_dr = [];
 k1 = [];
 for i=1:options_.number_of_observed_variables
-    var_obs_index = [var_obs_index; strmatch(options_.varobs{i},M_.endo_names(dr.order_var,:),'exact')];
+    var_obs_index_dr = [var_obs_index_dr; strmatch(options_.varobs{i},M_.endo_names(dr.order_var,:),'exact')];
     k1 = [k1; strmatch(options_.varobs{i},M_.endo_names, 'exact')];
 end
-
-% Define union of observed and state variables
-k2 = union(var_obs_index,[M_.nstatic+1:M_.nstatic+M_.nspred]', 'rows');
-% Set restrict_state to postion of observed + state variables in expanded state vector.
-oo_.dr.restrict_var_list = k2;
-bayestopt_.restrict_var_list = k2;
-% set mf0 to positions of state variables in restricted state vector for likelihood computation.
-[junk,bayestopt_.mf0] = ismember([M_.nstatic+1:M_.nstatic+M_.nspred]',k2);
-% Set mf1 to positions of observed variables in restricted state vector for likelihood computation.
-[junk,bayestopt_.mf1] = ismember(var_obs_index,k2);
-% Set mf2 to positions of observed variables in expanded state vector for filtering and smoothing.
-bayestopt_.mf2  = var_obs_index;
-bayestopt_.mfys = k1;
-
-[junk,ic] = intersect(k2,nstatic+(1:npred)');
-oo_.dr.restrict_columns = [ic; length(k2)+(1:nspred-npred)'];
 
 k3 = [];
 k3p = [];
@@ -449,7 +440,7 @@ if options_.block == 1
     % Set mf1 to positions of observed variables in restricted state vector for likelihood computation.
     [junk,bayestopt_.mf1] = ismember(k1,oo_.dr.restrict_var_list);
     % Set mf2 to positions of observed variables in expanded state vector for filtering and smoothing.
-    bayestopt_.mf2  = var_obs_index;
+    bayestopt_.mf2  = var_obs_index_dr;
     bayestopt_.mfys = k1;
     oo_.dr.restrict_columns = [size(i_posA,1)+(1:size(M_.state_var,2))];
     [k2, i_posA, i_posB] = union(k3p, M_.state_var', 'rows');
@@ -459,15 +450,16 @@ if options_.block == 1
     bayestopt_.smoother_restrict_columns = ic;
     [junk,bayestopt_.smoother_mf] = ismember(k1, bayestopt_.smoother_var_list);
 else
-    k2 = union(var_obs_index,[M_.nstatic+1:M_.nstatic+M_.nspred]', 'rows');
+    % Define union of observed and state variables
+    k2 = union(var_obs_index_dr,[M_.nstatic+1:M_.nstatic+M_.nspred]', 'rows');
     % Set restrict_state to postion of observed + state variables in expanded state vector.
     oo_.dr.restrict_var_list = k2;
     % set mf0 to positions of state variables in restricted state vector for likelihood computation.
     [junk,bayestopt_.mf0] = ismember([M_.nstatic+1:M_.nstatic+M_.nspred]',k2);
     % Set mf1 to positions of observed variables in restricted state vector for likelihood computation.
-    [junk,bayestopt_.mf1] = ismember(var_obs_index,k2);
+    [junk,bayestopt_.mf1] = ismember(var_obs_index_dr,k2);
     % Set mf2 to positions of observed variables in expanded state vector for filtering and smoothing.
-    bayestopt_.mf2  = var_obs_index;
+    bayestopt_.mf2  = var_obs_index_dr;
     bayestopt_.mfys = k1;
     [junk,ic] = intersect(k2,nstatic+(1:npred)');
     oo_.dr.restrict_columns = [ic; length(k2)+(1:nspred-npred)'];
@@ -475,7 +467,7 @@ else
     [junk,junk,bayestopt_.smoother_saved_var_list] = intersect(k3,bayestopt_.smoother_var_list(:));
     [junk,ic] = intersect(bayestopt_.smoother_var_list,nstatic+(1:npred)');
     bayestopt_.smoother_restrict_columns = ic;
-    [junk,bayestopt_.smoother_mf] = ismember(var_obs_index, bayestopt_.smoother_var_list);
+    [junk,bayestopt_.smoother_mf] = ismember(var_obs_index_dr, bayestopt_.smoother_var_list);
 end;
 
 if options_.analytic_derivation,
@@ -492,7 +484,7 @@ if options_.analytic_derivation,
         M=M_;
         M.params(estim_params_.param_vals(:,1)) = xparam1(estim_params_.nvx+estim_params_.ncx+estim_params_.nvn+estim_params_.ncn+1:end); %set parameters
         M.params(estim_params_.param_vals(:,1)) = M.params(estim_params_.param_vals(:,1))*1.01; %vary parameters
-        if options_.diffuse_filter
+        if options_.diffuse_filter || options_.steadystate.nocheck
             steadystate_check_flag = 0;
         else
             steadystate_check_flag = 1;
@@ -530,11 +522,13 @@ end
 
 [dataset_, dataset_info, newdatainterfaceflag] = makedataset(options_, options_.dsge_var*options_.dsge_varlag, gsa_flag);
 
-% Set options_.nobs
-options_.nobs = dataset_.nobs;
-
+%set options for old interface from the ones for new interface
+if ~isempty(dataset_)
+    options_.nobs = dataset_.nobs;
+    options_.first_obs=double(dataset_.init);
+end
 % setting steadystate_check_flag option
-if options_.diffuse_filter
+if options_.diffuse_filter || options_.steadystate.nocheck
     steadystate_check_flag = 0;
 else
     steadystate_check_flag = 1;
@@ -556,7 +550,7 @@ if info(1)
     print_info(info, 0, options_);
 end
 
-if all(abs(oo_.steady_state(bayestopt_.mfys))<1e-9)
+if (~options_.loglinear && all(abs(oo_.steady_state(bayestopt_.mfys))<1e-9)) || (options_.loglinear && all(abs(log(oo_.steady_state(bayestopt_.mfys)))<1e-9))
     options_.noconstant = 1;
 else
     options_.noconstant = 0;
@@ -596,3 +590,8 @@ else
     estim_params_.Sigma_e_entries_to_check_for_positive_definiteness=Sigma_e_non_zero_rows;
 end
 
+
+if options_.mh_replic
+    [current_options, options_] = check_posterior_sampler_options([], options_, bounds);
+    options_.posterior_sampler_options.current_options = current_options;
+end

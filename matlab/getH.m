@@ -1,8 +1,38 @@
-function [H, dA, dOm, Hss, gp, d2A, d2Om, H2ss] = getH(A, B, M_,oo_,options_,kronflag,indx,indexo,iv)
-
+function [H, dA, dOm, Hss, gp, d2A, d2Om, H2ss] = getH(A, B, estim_params_,M_,oo_,options_,kronflag,indx,indexo,iv)
+% function [H, dA, dOm, Hss, gp, d2A, d2Om, H2ss] = getH(A, B, estim_params_,M_,oo_,options_,kronflag,indx,indexo,iv)
 % computes derivative of reduced form linear model w.r.t. deep params
 %
-% Copyright (C) 2010-2012 Dynare Team
+% Inputs:
+%   A:              Transition matrix of lagged states from Kalman filter
+%   B:              Matrix in state transition equation mapping shocks today to
+%                   states today
+%   M_:             structure storing the model information
+%   oo_:            structure storing the results
+%   options_:       structure storing the options
+%   kronflag:       Indicator whether to rely on Kronecker products (1) or
+%                   not (-1 or -2)
+%   indx:           Index of estimated parameters in M_.params
+%   indexo:         Index of estimated standard deviations in M_.exo_names
+%   iv:             Index of considered variables           
+% 
+% Outputs:
+%   H:              dTAU/dTHETA: Jacobian of TAU, vectorized form of
+%                   linearized reduced form state space model, given ys [steady state],
+%                   A [transition matrix], B [matrix of shocks], Sigma [covariance of shocks]
+%                   TAU = [ys; vec(A); dyn_vech(B*Sigma*B')]. 
+%   dA:             [endo_nbr by endo_nbr by (indx+indexo)] Jacobian of transition matrix A            
+%   dOm:            [endo_nbr by endo_nbr by (indx+indexo)] Jacobian of Omega = (B*Sigma*B')
+%   Hss:            [endo_nbr by (indx)] Jacobian of steady state with respect to estimated
+%                   structural parameters only (indx)
+%   gp:             Jacobian of linear rational expectation matrices [i.e.
+%                   Jacobian of dynamic model] with respect to estimated
+%                   structural parameters only (indx)
+%   d2A:            Hessian of transition matrix A
+%   d2Om:           Hessian of Omega
+%   H2s:            Hessian of steady state with respect to estimated
+%                   structural parameters only (indx)
+
+% Copyright (C) 2010-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -19,16 +49,16 @@ function [H, dA, dOm, Hss, gp, d2A, d2Om, H2ss] = getH(A, B, M_,oo_,options_,kro
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
-if nargin<6 || isempty(kronflag)
+if nargin<7 || isempty(kronflag)
     kronflag = 0; 
 end
-if nargin<7 || isempty(indx)
+if nargin<8 || isempty(indx)
     indx = []; 
 end
-if nargin<8 || isempty(indexo)
+if nargin<9 || isempty(indexo)
     indexo = []; 
 end
-if nargin<9 || isempty(iv)
+if nargin<10 || isempty(iv)
     iv = (1:length(A))'; 
 end
 
@@ -66,7 +96,7 @@ if kronflag==-1, % perturbation
     end
     if nargout>5,
         H2 = hessian_sparse('thet2tau',[sqrt(diag(M_.Sigma_e(indexo,indexo))); M_.params(indx)], ...
-            options_.gstep,M_, oo_, indx,indexo,0,[],[],[],iv);
+            options_.gstep,estim_params_,M_, oo_, indx,indexo,0,[],[],[],iv);
         H2ss = zeros(m1,tot_param_nbr,tot_param_nbr);
         iax=find(triu(rand(tot_param_nbr,tot_param_nbr)));
         H2 = H2(:,iax);
@@ -96,7 +126,7 @@ if kronflag==-2,
     if nargout>5,
         [residual, g1, g2 ] = feval([M_.fname,'_dynamic'],yy0, oo_.exo_steady_state', ...
             M_.params, oo_.dr.ys, 1);
-        g22 = hessian_sparse('thet2tau',[M_.params(indx)],options_.gstep,M_, oo_, indx,[],-1);
+        g22 = hessian_sparse('thet2tau',[M_.params(indx)],options_.gstep,estim_params_,M_, oo_, indx,[],-1);
         H2ss=full(g22(1:M_.endo_nbr,:));
         H2ss = reshape(H2ss,[M_.endo_nbr param_nbr param_nbr]);
         for j=1:M_.endo_nbr,
@@ -117,7 +147,7 @@ if kronflag==-2,
         [residual, g1 ] = feval([M_.fname,'_dynamic'],yy0, oo_.exo_steady_state', ...
             M_.params, oo_.dr.ys, 1);        
     end
-    gp = fjaco('thet2tau',[M_.params(indx)],M_, oo_, indx,[],-1);
+    gp = fjaco('thet2tau',[M_.params(indx)],estim_params_,M_, oo_, indx,[],-1);
     Hss=gp(1:M_.endo_nbr,:);
     gp=gp(M_.endo_nbr+1:end,:);
     gp = reshape(gp,[size(g1) param_nbr]);
@@ -130,26 +160,19 @@ else
 dyssdtheta=zeros(length(oo_.dr.ys),M_.param_nbr);
 d2yssdtheta=zeros(length(oo_.dr.ys),M_.param_nbr,M_.param_nbr);
 [residual, gg1] = feval([M_.fname,'_static'],oo_.dr.ys, oo_.exo_steady_state', M_.params);
-df = feval([M_.fname,'_params_derivs'],yy0, repmat(oo_.exo_steady_state',[M_.maximum_exo_lag+M_.maximum_exo_lead+1]), ...
-    M_.params, oo_.dr.ys, 1, dyssdtheta, d2yssdtheta);
+df = feval([M_.fname,'_static_params_derivs'],oo_.dr.ys, repmat(oo_.exo_steady_state',[M_.maximum_exo_lag+M_.maximum_exo_lead+1]), ...
+    M_.params);
 dyssdtheta = -gg1\df;
 if nargout>5,
     [residual, gg1, gg2] = feval([M_.fname,'_static'],oo_.dr.ys, oo_.exo_steady_state', M_.params);
     [residual, g1, g2, g3] = feval([M_.fname,'_dynamic'],yy0, oo_.exo_steady_state', ...
         M_.params, oo_.dr.ys, 1);
-    [nr, nc]=size(g2);
+    [nr, nc]=size(gg2);
 
-    [df, gp, d2f] = feval([M_.fname,'_params_derivs'],yy0, oo_.exo_steady_state', ...
-        M_.params, oo_.dr.ys, 1, dyssdtheta*0, d2yssdtheta);
+    [df, gpx, d2f] = feval([M_.fname,'_static_params_derivs'],oo_.dr.ys, oo_.exo_steady_state', ...
+        M_.params);%, oo_.dr.ys, 1, dyssdtheta*0, d2yssdtheta);
     d2f = get_all_resid_2nd_derivs(d2f,length(oo_.dr.ys),M_.param_nbr);
-    gpx = zeros(nr,nr,M_.param_nbr);
-    for j=1:nr,
-        for i=1:nr,
-            inx = I == i;
-            gpx(j,i,:)=sum(gp(j,inx,:),2);
-        end
-    end
-%     d2f = d2f(:,indx,indx);
+
     if isempty(find(gg2)),
         for j=1:M_.param_nbr,
         d2yssdtheta(:,:,j) = -gg1\d2f(:,:,j);
@@ -196,9 +219,9 @@ else
         M_.params, oo_.dr.ys, 1, dyssdtheta,d2yssdtheta);
     [residual, g1, g2 ] = feval([M_.fname,'_dynamic'],yy0, repmat(oo_.exo_steady_state',[M_.maximum_exo_lag+M_.maximum_exo_lead+1,1]), ...
         M_.params, oo_.dr.ys, 1);
-    [nr, nc]=size(g2);
 end
 
+[nr, nc]=size(g2);
 nc = sqrt(nc);
 Hss = dyssdtheta(oo_.dr.order_var,indx);
 dyssdtheta = dyssdtheta(I,:);

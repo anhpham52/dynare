@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 Dynare Team
+ * Copyright (C) 2003-2016 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -1047,16 +1047,35 @@ StaticModel::collect_first_order_derivatives_endogenous()
 }
 
 void
-StaticModel::computingPass(const eval_context_t &eval_context, bool no_tmp_terms, bool hessian, bool thirdDerivatives, bool paramsDerivatives, bool block, bool bytecode)
+StaticModel::computingPass(const eval_context_t &eval_context, bool no_tmp_terms, bool hessian, bool thirdDerivatives, int paramsDerivsOrder, bool block, bool bytecode)
 {
   initializeVariablesAndEquations();
 
+  vector<BinaryOpNode *> neweqs;
+  for (unsigned int eq = 0; eq < equations.size() - aux_equations.size(); eq++)
+    {
+      expr_t eq_tmp = equations[eq]->substituteStaticAuxiliaryVariable();
+      neweqs.push_back(dynamic_cast<BinaryOpNode *>(eq_tmp->toStatic(*this)));
+    }
+
+  for (unsigned int eq = 0; eq < aux_equations.size();  eq++)
+    {
+      expr_t eq_tmp = aux_equations[eq]->substituteStaticAuxiliaryDefinition();
+      neweqs.push_back(dynamic_cast<BinaryOpNode *>(eq_tmp->toStatic(*this)));
+    }
+      
+  equations.clear();
+  copy(neweqs.begin(),neweqs.end(),back_inserter(equations));
   // Compute derivatives w.r. to all endogenous, and possibly exogenous and exogenous deterministic
   set<int> vars;
 
   for (int i = 0; i < symbol_table.endo_nbr(); i++)
-    vars.insert(getDerivID(symbol_table.getID(eEndogenous, i), 0));
-
+    {
+      int id = symbol_table.getID(eEndogenous, i);
+      //      if (!symbol_table.isAuxiliaryVariableButNotMultiplier(id))
+      vars.insert(getDerivID(id, 0));
+    }        
+ 
   // Launch computations
   cout << "Computing static model derivatives:" << endl
        << " - order 1" << endl;
@@ -1076,10 +1095,10 @@ StaticModel::computingPass(const eval_context_t &eval_context, bool no_tmp_terms
       computeThirdDerivatives(vars);
     }
 
-if (paramsDerivatives)
+  if (paramsDerivsOrder > 0)
     {
       cout << " - derivatives of Jacobian/Hessian w.r. to parameters" << endl;
-      computeParamsDerivatives();
+      computeParamsDerivatives(paramsDerivsOrder);
 
       if (!no_tmp_terms)
         computeParamsDerivativesTemporaryTerms();
@@ -1160,7 +1179,7 @@ StaticModel::writeStaticMFile(const string &func_name) const
          << "% Outputs:" << endl
          << "%   residual  [M_.endo_nbr by 1] double    vector of residuals of the static model equations " << endl
          << "%                                          in order of declaration of the equations." << endl
-         << "%                                          Dynare may prepend auxiliary equations, see M_.aux_vars" << endl
+         << "%                                          Dynare may prepend or append auxiliary equations, see M_.aux_vars" << endl
          << "%   g1        [M_.endo_nbr by M_.endo_nbr] double    Jacobian matrix of the static model equations;" << endl
          << "%                                                       columns: variables in declaration order" << endl
          << "%                                                       rows: equations in order of declaration" << endl
@@ -1472,10 +1491,10 @@ StaticModel::writeStaticModel(ostream &StaticOutput, bool use_dll, bool julia) c
                    << "params::Vector{Float64}," << endl
                    << "                 residual::Vector{Float64})" << endl
                    << "#=" << endl << comments.str() << "=#" << endl
-                   << "  @assert size(y) == " << symbol_table.endo_nbr() << endl
-                   << "  @assert size(x) == " << symbol_table.exo_nbr() << endl
-                   << "  @assert size(params) == " << symbol_table.param_nbr() << endl
-                   << "  @assert size(residual) == " << equations.size() << endl
+                   << "  @assert length(y) == " << symbol_table.endo_nbr() << endl
+                   << "  @assert length(x) == " << symbol_table.exo_nbr() << endl
+                   << "  @assert length(params) == " << symbol_table.param_nbr() << endl
+                   << "  @assert length(residual) == " << equations.size() << endl
                    << "  #" << endl
                    << "  # Model equations" << endl
                    << "  #" << endl
@@ -1720,7 +1739,7 @@ StaticModel::writeStaticFile(const string &basename, bool block, bool bytecode, 
     writeStaticJuliaFile(basename);
   else
     writeStaticMFile(basename);
-  writeAuxVarRecursiveDefinitions(basename, julia);
+  writeSetAuxiliaryVariables(basename, julia);
 }
 
 void
@@ -2080,8 +2099,9 @@ StaticModel::writeAuxVarInitval(ostream &output, ExprNodeOutputType output_type)
     }
 }
 
-void StaticModel::writeAuxVarRecursiveDefinitions(const string &basename, const bool julia) const
+void StaticModel::writeSetAuxiliaryVariables(const string &basename, const bool julia) const
 {
+  
   string func_name = basename + "_set_auxiliary_variables";
   string filename = julia ? func_name + ".jl" : func_name + ".m";
   string comment = julia ? "#" : "%";
@@ -2102,16 +2122,21 @@ void StaticModel::writeAuxVarRecursiveDefinitions(const string &basename, const 
          << comment << "           from model file (.mod)" << endl
          << endl;
 
+  writeAuxVarRecursiveDefinitions(output, oMatlabStaticModel);
+}
+
+void
+StaticModel::writeAuxVarRecursiveDefinitions(ostream &output, ExprNodeOutputType output_type) const
+{
   deriv_node_temp_terms_t tef_terms;
   temporary_terms_t temporary_terms;
   for (int i = 0; i < (int) aux_equations.size(); i++)
     if (dynamic_cast<ExprNode *>(aux_equations[i])->containsExternalFunction())
       dynamic_cast<ExprNode *>(aux_equations[i])->writeExternalFunctionOutput(output, oMatlabStaticModel,
                                                                               temporary_terms, tef_terms);
-
   for (int i = 0; i < (int) aux_equations.size(); i++)
     {
-      dynamic_cast<ExprNode *>(aux_equations[i])->writeOutput(output, oMatlabStaticModel, temporary_terms, tef_terms);
+      dynamic_cast<ExprNode *>(aux_equations[i]->substituteStaticAuxiliaryDefinition())->writeOutput(output, output_type, temporary_terms, tef_terms);
       output << ";" << endl;
     }
 }
@@ -2140,6 +2165,34 @@ StaticModel::writeParamsDerivativesFile(const string &basename, bool julia) cons
   if (!julia)
     paramsDerivsFile << "function [rp, gp, rpp, gpp, hp] = " << basename << "_static_params_derivs(y, x, params)" << endl
                      << "%" << endl
+                     << "% Status : Computes derivatives of the static model with respect to the parameters" << endl
+                     << "%" << endl
+                     << "% Inputs : " << endl
+                     << "%   y         [M_.endo_nbr by 1] double    vector of endogenous variables in declaration order" << endl
+                     << "%   x         [M_.exo_nbr by 1] double     vector of exogenous variables in declaration order" << endl
+                     << "%   params    [M_.param_nbr by 1] double   vector of parameter values in declaration order" << endl
+                     << "%" << endl
+                     << "% Outputs:" << endl
+                     << "%   rp        [M_.eq_nbr by #params] double    Jacobian matrix of static model equations with respect to parameters " << endl
+                     << "%                                              Dynare may prepend or append auxiliary equations, see M_.aux_vars" << endl
+                     << "%   gp        [M_.endo_nbr by M_.endo_nbr by #params] double    Derivative of the Jacobian matrix of the static model equations with respect to the parameters" << endl
+                     << "%                                                           rows: variables in declaration order" << endl
+                     << "%                                                           rows: equations in order of declaration" << endl
+                     << "%   rpp       [#second_order_residual_terms by 4] double   Hessian matrix of second derivatives of residuals with respect to parameters;" << endl
+                     << "%                                                              rows: respective derivative term" << endl
+                     << "%                                                              1st column: equation number of the term appearing" << endl
+                     << "%                                                              2nd column: number of the first parameter in derivative" << endl
+                     << "%                                                              3rd column: number of the second parameter in derivative" << endl
+                     << "%                                                              4th column: value of the Hessian term" << endl
+                     << "%   gpp      [#second_order_Jacobian_terms by 5] double   Hessian matrix of second derivatives of the Jacobian with respect to the parameters;" << endl
+                     << "%                                                              rows: respective derivative term" << endl
+                     << "%                                                              1st column: equation number of the term appearing" << endl
+                     << "%                                                              2nd column: column number of variable in Jacobian of the static model" << endl                    
+                     << "%                                                              3rd column: number of the first parameter in derivative" << endl
+                     << "%                                                              4th column: number of the second parameter in derivative" << endl
+                     << "%                                                              5th column: value of the Hessian term" << endl
+                     << "%" << endl
+                     << "%" << endl         
                      << "% Warning : this file is generated automatically by Dynare" << endl
                      << "%           from model file (.mod)" << endl << endl;
   else

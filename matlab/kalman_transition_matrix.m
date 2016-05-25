@@ -15,7 +15,7 @@ function [A,B] = kalman_transition_matrix(dr,iv,ic,exo_nbr)
 % SPECIAL REQUIREMENTS
 %    none
 
-% Copyright (C) 2003-2011 Dynare Team
+% Copyright (C) 2003-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -36,11 +36,9 @@ n_iv = length(iv);
 
 A = zeros(n_iv,n_iv);
 
-i_n_iv = 1:n_iv;
-A(i_n_iv,ic) = dr.ghx(iv,:);
+A(:,ic) = dr.ghx(iv,:);
 
 if nargout>1
-    B = zeros(n_iv,exo_nbr);
-    B(i_n_iv,:) = dr.ghu(iv,:);
+    B = dr.ghu(iv,:);
 end
 

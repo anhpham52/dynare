@@ -98,7 +98,7 @@ private:
 
   //! Creates option "optim_opt" in OptionsList if it doesn't exist, else add a comma, and adds the option name
   void optim_options_helper(const string &name);
-  void tarb_optim_options_helper(const string &name);
+  void sampling_options_helper(const string &name);
 
   //! Stores temporary symbol table
   SymbolList symbol_list;
@@ -125,6 +125,8 @@ private:
   ModelComparisonStatement::filename_list_t filename_list;
   //! Temporary storage for list of EstimationParams (from estimated_params* statements)
   vector<EstimationParams> estim_params_list;
+  //! Temporary storage for list of OsrParams (from osr_params_block statements)
+  vector<OsrParams> osr_params_list;
   //! Temporary storage of variances from optim_weights
   OptimWeightsStatement::var_weights_t var_weights;
   //! Temporary storage of covariances from optim_weights
@@ -205,6 +207,10 @@ private:
   //! Temporary storage for subsample statement: map<pair<var_name1, var_name2>>, subsample_declaration_map >
   typedef map<pair<string, string >, SubsamplesStatement::subsample_declaration_map_t > subsample_declarations_t;
   subsample_declarations_t subsample_declarations;
+  //! Temporary storage for shock_groups
+  vector<string> shock_group;
+  vector<ShockGroupsStatement::Group> shock_groups;
+  
   //! reset the values for temporary storage
   void reset_current_external_function_options();
   //! Adds a model lagged variable to ModelTree and VariableTable
@@ -236,6 +242,9 @@ public:
 
   //! Estimation parameters
   EstimationParams estim_params;
+
+  //! OSR parameters
+  OsrParams osr_params;
 
   //! Temporary storage for the prior shape
   PriorDistributions prior_shape;
@@ -410,6 +419,10 @@ public:
   void external_function_option(const string &name_option, const string &opt);
   //! Add a line in an estimated params block
   void add_estimated_params_element();
+  //! Writes osr params bounds command
+  void osr_params_bounds();
+  //! Add a line in an osr params block
+  void add_osr_params_element();
   //! Sets the frequency of the data
   void set_time(string *arg);
   //! Estimation Data
@@ -446,10 +459,10 @@ public:
   void optim_options_string(string *name, string *value);
   //! Adds an optimization option (numeric value)
   void optim_options_num(string *name, string *value);
-  //! Adds a TaRB optimization option (string value)
-  void tarb_optim_options_string(string *name, string *value);
-  //! Adds a TaRB optimization option (numeric value)
-  void tarb_optim_options_num(string *name, string *value);
+  //! Adds an sampling option (string value)
+  void sampling_options_string(string *name, string *value);
+  //! Adds an sampling option (numeric value)
+  void sampling_options_num(string *name, string *value);
   //! Check that no observed variable has yet be defined
   void check_varobs();
   //! Add a new observed variable
@@ -698,7 +711,13 @@ public:
   void add_irf_calibration_item(string *endo, string *periods, string *exo, vector<string *> *range);
   //! End a moment_calibration statement
   void end_irf_calibration();
-
+  //! Add a shock to a group
+  void add_shock_group_element(string *name);
+  //! Add a set of shock groups
+  void add_shock_group(string *name);
+  //! End shock groups declaration
+  void end_shock_groups(const string *name);
+    
   void smoother2histval();
   void histval_file(string *filename);
   void perfect_foresight_setup();

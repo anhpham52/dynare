@@ -11,7 +11,7 @@ function oo_=disp_moments(y,var_list,M_,options_,oo_)
 % OUTPUTS
 %   oo_                 [structure]    Dynare's results structure,
 
-% Copyright (C) 2001-2015 Dynare Team
+% Copyright (C) 2001-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -57,6 +57,8 @@ s2 = mean(y.*y);
 s = sqrt(s2);
 oo_.mean = transpose(m);
 oo_.var = y'*y/size(y,1);
+oo_.skewness = (mean(y.^3)./s2.^1.5)'; 
+oo_.kurtosis = (mean(y.^4)./(s2.*s2)-3)';
 
 labels = deblank(M_.endo_names(ivar,:));
 labels_TeX = deblank(M_.endo_names_tex(ivar,:));
@@ -187,7 +189,7 @@ elseif ~options_.hp_filter && options_.one_sided_hp_filter && ~options_.bandpass
     [hptrend,y] = one_sided_hp_filter(y,options_.one_sided_hp_filter);
 elseif ~options_.hp_filter && ~options_.one_sided_hp_filter && options_.bandpass.indicator
     data_temp=dseries(y,'0q1');
-    data_temp=baxter_king_filter(data_temp,options_.bandpass.passband(1),options_.bandpass.passband(2),12);
+    data_temp=baxter_king_filter(data_temp,options_.bandpass.passband(1),options_.bandpass.passband(2),options_.bandpass.K);
     y=data_temp.data;
 elseif ~options_.hp_filter && ~options_.one_sided_hp_filter  && ~options_.bandpass.indicator
     y = bsxfun(@minus, y, m);

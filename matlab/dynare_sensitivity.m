@@ -4,7 +4,7 @@ function x0=dynare_sensitivity(options_gsa)
 % Reference:
 % M. Ratto, Global Sensitivity Analysis for Macroeconomic models, MIMEO, 2006.
 
-% Copyright (C) 2008-2013 Dynare Team
+% Copyright (C) 2008-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -48,6 +48,8 @@ if isfield(options_gsa,'graph_format'),
 end
 if isfield(options_gsa,'mode_file'),
     options_.mode_file=options_gsa.mode_file;
+elseif isfield(options_gsa,'neighborhood_width') && options_gsa.neighborhood_width>0,
+    options_.mode_file='';    
 end
 
 options_.order = 1;
@@ -180,7 +182,11 @@ if options_gsa.morris==1,
     if ~options_gsa.identification,
         options_gsa.redform=1;
     end
-    options_gsa.pprior=1;
+    if options_gsa.neighborhood_width,
+        options_gsa.pprior=0;
+    else
+        options_gsa.pprior=1;
+    end
     options_gsa.ppost=0;
     %options_gsa.stab=1;
     options_gsa.glue=0;

@@ -113,8 +113,17 @@ if options.solve_algo == 0
         end;
     end
 
-    if exitval > 0
+    if exitval == 1
         info = 0;
+    elseif exitval > 1
+        func2 = str2func(func);
+        func = @(x) func2(x, varargin{:});
+        fvec = feval(func,x);
+        if max(abs(fvec)) >= tolf
+            info = 1;
+        else
+            info = 0;        
+        end
     else
         info = 1;
     end

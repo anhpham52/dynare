@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 Dynare Team
+ * Copyright (C) 2003-2016 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -559,13 +559,6 @@ EstimationStatement::checkPass(ModFileStructure &mod_file_struct, WarningConsoli
 
   it = options_list.num_options.find("dsge_var");
   if (it != options_list.num_options.end())
-    // Ensure that irf_shocks & dsge_var have not both been passed
-    if (options_list.symbol_list_options.find("irf_shocks") != options_list.symbol_list_options.end())
-      {
-        cerr << "The irf_shocks and dsge_var options may not both be passed to estimation." << endl;
-        exit(EXIT_FAILURE);
-      }
-    else
       // Fill in mod_file_struct.dsge_var_calibrated
       mod_file_struct.dsge_var_calibrated = it->second;
 
@@ -1021,7 +1014,7 @@ ObservationTrendsStatement::ObservationTrendsStatement(const trend_elements_t &t
 void
 ObservationTrendsStatement::writeOutput(ostream &output, const string &basename, bool minimal_workspace) const
 {
-  output << "options_.trend_coeff_ = {};" << endl;
+  output << "options_.trend_coeff = {};" << endl;
 
   trend_elements_t::const_iterator it;
 
@@ -1040,21 +1033,30 @@ ObservationTrendsStatement::writeOutput(ostream &output, const string &basename,
     }
 }
 
-OsrParamsStatement::OsrParamsStatement(const SymbolList &symbol_list_arg) :
-  symbol_list(symbol_list_arg)
+OsrParamsStatement::OsrParamsStatement(const SymbolList &symbol_list_arg, const SymbolTable &symbol_table_arg) :
+  symbol_list(symbol_list_arg),
+  symbol_table(symbol_table_arg)
 {
 }
 
 void
 OsrParamsStatement::checkPass(ModFileStructure &mod_file_struct, WarningConsolidation &warnings)
 {
+  if (mod_file_struct.osr_params_present)
+    cerr << "WARNING: You have more than one osr_params statement in the .mod file." << endl;
   mod_file_struct.osr_params_present = true;
 }
 
 void
 OsrParamsStatement::writeOutput(ostream &output, const string &basename, bool minimal_workspace) const
 {
-  symbol_list.writeOutput("osr_params_", output);
+  symbol_list.writeOutput("M_.osr.param_names", output);
+  output << "M_.osr.param_names = cellstr(M_.osr.param_names);" << endl
+         << "M_.osr.param_indices = zeros(length(M_.osr.param_names), 1);" << endl;
+  int i = 0;
+  vector<string> symbols = symbol_list.get_symbols();
+  for (vector<string>::const_iterator it = symbols.begin(); it != symbols.end(); it++)
+    output << "M_.osr.param_indices(" << ++i <<") = " << symbol_table.getTypeSpecificID(*it) + 1 << ";" << endl;
 }
 
 OsrStatement::OsrStatement(const SymbolList &symbol_list_arg,
@@ -1062,6 +1064,38 @@ OsrStatement::OsrStatement(const SymbolList &symbol_list_arg,
   symbol_list(symbol_list_arg),
   options_list(options_list_arg)
 {
+}
+
+OsrParamsBoundsStatement::OsrParamsBoundsStatement(const vector<OsrParams> &osr_params_list_arg) :
+  osr_params_list(osr_params_list_arg)
+{
+}
+
+void
+OsrParamsBoundsStatement::checkPass(ModFileStructure &mod_file_struct, WarningConsolidation &warnings)
+{
+  if (!mod_file_struct.osr_params_present)
+    {
+      cerr << "ERROR: you must have an osr_params statement before the osr_params_bounds block." << endl;
+      exit(EXIT_FAILURE);
+    }
+}
+
+void
+OsrParamsBoundsStatement::writeOutput(ostream &output, const string &basename, bool minimal_workspace) const
+{
+
+  output << "M_.osr.param_bounds = [-inf(length(M_.osr.param_names), 1), inf(length(M_.osr.param_names), 1)];" << endl;
+
+  for (vector<OsrParams>::const_iterator it = osr_params_list.begin();
+       it != osr_params_list.end(); it++)
+    {
+      output << "M_.osr.param_bounds(strcmp(M_.osr.param_names, '" << it->name << "'), :) = [";
+      it->low_bound->writeOutput(output);
+      output << ", ";
+      it->up_bound->writeOutput(output);
+      output << "];" << endl;
+    }
 }
 
 void
@@ -1098,7 +1132,7 @@ OsrStatement::writeOutput(ostream &output, const string &basename, bool minimal_
 
   options_list.writeOutput(output);
   symbol_list.writeOutput("var_list_", output);
-  output << "oo_.osr = osr(var_list_,osr_params_,obj_var_,optim_weights_);" << endl;
+  output << "oo_.osr = osr(var_list_,M_.osr.param_names,M_.osr.variable_indices,M_.osr.variable_weights);" << endl;
 }
 
 OptimWeightsStatement::OptimWeightsStatement(const var_weights_t &var_weights_arg,
@@ -1122,8 +1156,8 @@ OptimWeightsStatement::writeOutput(ostream &output, const string &basename, bool
   output << "%" << endl
          << "% OPTIM_WEIGHTS" << endl
          << "%" << endl
-         << "optim_weights_ = sparse(M_.endo_nbr,M_.endo_nbr);" << endl
-         << "obj_var_ = [];" << endl << endl;
+         << "M_.osr.variable_weights = sparse(M_.endo_nbr,M_.endo_nbr);" << endl
+         << "M_.osr.variable_indices = [];" << endl << endl;
 
   for (var_weights_t::const_iterator it = var_weights.begin();
        it != var_weights.end(); it++)
@@ -1131,10 +1165,10 @@ OptimWeightsStatement::writeOutput(ostream &output, const string &basename, bool
       const string &name = it->first;
       const expr_t value = it->second;
       int id = symbol_table.getTypeSpecificID(name) + 1;
-      output << "optim_weights_(" << id << "," << id << ") = ";
+      output << "M_.osr.variable_weights(" << id << "," << id << ") = ";
       value->writeOutput(output);
       output << ";" << endl;
-      output << "obj_var_ = [obj_var_; " << id << "];" << endl;
+      output << "M_.osr.variable_indices = [M_.osr.variable_indices; " << id << "];" << endl;
     }
 
   for (covar_weights_t::const_iterator it = covar_weights.begin();
@@ -1145,10 +1179,10 @@ OptimWeightsStatement::writeOutput(ostream &output, const string &basename, bool
       const expr_t value = it->second;
       int id1 = symbol_table.getTypeSpecificID(name1) + 1;
       int id2 = symbol_table.getTypeSpecificID(name2) + 1;
-      output << "optim_weights_(" << id1 << "," << id2 << ") = ";
+      output << "M_.osr.variable_weights(" << id1 << "," << id2 << ") = ";
       value->writeOutput(output);
       output << ";" << endl;
-      output << "obj_var_ = [obj_var_; " << id1 << "; " << id2 << "];" << endl;
+      output << "M_.osr.variable_indices = [M_.osr.variable_indices; " << id1 << "; " << id2 << "];" << endl;
     }
 }
 
@@ -1232,7 +1266,7 @@ PlannerObjectiveStatement::getPlannerObjective() const
 void
 PlannerObjectiveStatement::computingPass()
 {
-  model_tree->computingPass(eval_context_t(), false, true, true, false, false, false);
+  model_tree->computingPass(eval_context_t(), false, true, true, none, false, false);
 }
 
 void
@@ -3166,7 +3200,7 @@ ExtendedPathStatement::writeOutput(ostream &output, const string &basename, bool
       output << "options_." << it->first << " = " << it->second << ";" << endl;
 
   output << "extended_path([], " << options_list.num_options.find("periods")->second
-         << ");" << endl;
+         << ", [], options_, M_, oo_);" << endl;
 }
 
 ModelDiagnosticsStatement::ModelDiagnosticsStatement()

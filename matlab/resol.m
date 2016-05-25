@@ -76,7 +76,7 @@ function [dr,info,M,options,oo] = resol(check_flag,M,options,oo)
 %! @end deftypefn
 %@eod:
 
-% Copyright (C) 2001-2012 Dynare Team
+% Copyright (C) 2001-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -126,8 +126,9 @@ if info(1)
 end
 
 if options.loglinear
-    % Find variables with non positive steady state.
-    idx = find(dr.ys<1e-9);
+    % Find variables with non positive steady state. Skip auxiliary
+    % variables for lagges/leaded exogenous variables
+    idx = find(dr.ys(get_all_variables_but_lagged_leaded_exogenous(M)) < 1e-9);
     if length(idx)
         if options.debug
             variables_with_non_positive_steady_state = M.endo_names(idx,:);

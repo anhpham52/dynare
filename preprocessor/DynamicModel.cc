@@ -1536,6 +1536,7 @@ DynamicModel::writeDynamicMFile(const string &dynamic_basename) const
                     << "%                                                 in M_.lead_lag_incidence; see the Manual" << endl
                     << "%   x         [nperiods by M_.exo_nbr] double     matrix of exogenous variables (in declaration order)" << endl
                     << "%                                                 for all simulation periods" << endl
+                    << "%   steady_state  [M_.endo_nbr by 1] double       vector of steady state values" << endl
                     << "%   params    [M_.param_nbr by 1] double          vector of parameter values in declaration order" << endl
                     << "%   it_       scalar double                       time period for exogenous variables for which to evaluate the model" << endl
                     << "%" << endl
@@ -2392,15 +2393,15 @@ DynamicModel::writeDynamicModel(ostream &DynamicOutput, bool use_dll, bool julia
                << endl
                << "## Input" << endl
                << " 1 y:            Array{Float64, num_dynamic_vars, 1}             Vector of endogenous variables in the order stored" << endl
-               << "                                                                 in model.lead_lag_incidence; see the manual" << endl
-               << " 2 x:            Array{Float64, nperiods, length(model.exo)}     Matrix of exogenous variables (in declaration order)" << endl
+               << "                                                                 in model_.lead_lag_incidence; see the manual" << endl
+               << " 2 x:            Array{Float64, nperiods, length(model_.exo)}    Matrix of exogenous variables (in declaration order)" << endl
                << "                                                                 for all simulation periods" << endl
-               << " 3 params:       Array{Float64, length(model.param), 1}          Vector of parameter values in declaration order" << endl
+               << " 3 params:       Array{Float64, length(model_.param), 1}         Vector of parameter values in declaration order" << endl
                << " 4 steady_state:" << endl
                << " 5 it_:          Int                                             Time period for exogenous variables for which to evaluate the model" << endl
                << endl
                << "## Output" << endl
-               << " 6 residual:     Array(Float64, model.eq_nbr, 1)                 Vector of residuals of the dynamic model equations in" << endl
+               << " 6 residual:     Array(Float64, model_.eq_nbr, 1)                Vector of residuals of the dynamic model equations in" << endl
                << "                                                                 order of declaration of the equations." << endl;
 
       DynamicOutput << "function dynamic!(y::Vector{Float64}, x::Matrix{Float64}, "
@@ -2408,9 +2409,9 @@ DynamicModel::writeDynamicModel(ostream &DynamicOutput, bool use_dll, bool julia
                     << "                  steady_state::Vector{Float64}, it_::Int, "
                     << "residual::Vector{Float64})" << endl
                     << "#=" << endl << comments.str() << "=#" << endl
-                    << "  @assert size(y) == " << dynJacobianColsNbr << endl
-                    << "  @assert size(params) == " << symbol_table.param_nbr() << endl
-                    << "  @assert size(residual) == " << nrows << endl
+                    << "  @assert length(y) == " << dynJacobianColsNbr << endl
+                    << "  @assert length(params) == " << symbol_table.param_nbr() << endl
+                    << "  @assert length(residual) == " << nrows << endl
                     << "  #" << endl
                     << "  # Model equations" << endl
                     << "  #" << endl
@@ -2423,9 +2424,9 @@ DynamicModel::writeDynamicModel(ostream &DynamicOutput, bool use_dll, bool julia
                     << "residual::Vector{Float64}," << endl
                     << "                  g1::Matrix{Float64})" << endl;
 
-      comments << " 7 g1:           Array(Float64, model.eq_nbr, num_dynamic_vars)  Jacobian matrix of the dynamic model equations;" << endl
+      comments << " 7 g1:           Array(Float64, model_.eq_nbr, num_dynamic_vars) Jacobian matrix of the dynamic model equations;" << endl
                << "                                                                 rows: equations in order of declaration" << endl
-               << "                                                                 columns: variables in order stored in M_.lead_lag_incidence" << endl;
+               << "                                                                 columns: variables in order stored in model_.lead_lag_incidence" << endl;
 
       DynamicOutput << "#=" << endl << comments.str() << "=#" << endl
                     << "  @assert size(g1) == (" << nrows << ", " << dynJacobianColsNbr << ")" << endl
@@ -2443,9 +2444,9 @@ DynamicModel::writeDynamicModel(ostream &DynamicOutput, bool use_dll, bool julia
                     << "residual::Vector{Float64}," << endl
                     << "                  g1::Matrix{Float64}, g2::Matrix{Float64})" << endl;
 
-      comments << " 8 g2:           spzeros(model.eq_nbr, (num_dynamic_vars)^2)     Hessian matrix of the dynamic model equations;" << endl
+      comments << " 8 g2:           spzeros(model_.eq_nbr, (num_dynamic_vars)^2)    Hessian matrix of the dynamic model equations;" << endl
                << "                                                                 rows: equations in order of declaration" << endl
-               << "                                                                 columns: variables in order stored in M_.lead_lag_incidence" << endl;
+               << "                                                                 columns: variables in order stored in model_.lead_lag_incidence" << endl;
 
       DynamicOutput << "#=" << endl << comments.str() << "=#" << endl
                     << "  @assert size(g2) == (" << nrows << ", " << hessianColsNbr << ")" << endl
@@ -2466,9 +2467,9 @@ DynamicModel::writeDynamicModel(ostream &DynamicOutput, bool use_dll, bool julia
                     << "residual::Vector{Float64}," << endl
                     << "                  g1::Matrix{Float64}, g2::Matrix{Float64}, g3::Matrix{Float64})" << endl;
 
-      comments << " 9 g3:           spzeros(model.eq_nbr, (num_dynamic_vars)^3)     Third order derivative matrix of the dynamic model equations;" << endl
+      comments << " 9 g3:           spzeros(model_.eq_nbr, (num_dynamic_vars)^3)    Third order derivative matrix of the dynamic model equations;" << endl
                << "                                                                 rows: equations in order of declaration" << endl
-               << "                                                                 columns: variables in order stored in M_.lead_lag_incidence" << endl;
+               << "                                                                 columns: variables in order stored in model_.lead_lag_incidence" << endl;
 
       DynamicOutput << "#=" << endl << comments.str() << "=#" << endl
                     << "  @assert size(g3) == (" << nrows << ", " << ncols << ")" << endl
@@ -2499,8 +2500,8 @@ DynamicModel::writeOutput(ostream &output, const string &basename, bool block_de
   string outstruct;
   if (julia)
     {
-      modstruct = "model.";
-      outstruct = "output.";
+      modstruct = "model_.";
+      outstruct = "oo_.";
     }
   else
     {
@@ -3051,21 +3052,21 @@ DynamicModel::writeOutput(ostream &output, const string &basename, bool block_de
 
   output << modstruct << "maximum_endo_lag = " << max_endo_lag << ";" << endl
          << modstruct << "maximum_endo_lead = " << max_endo_lead << ";" << endl
-         << outstruct << "steady_state = zeros(" << symbol_table.endo_nbr() << ", 1);" << endl;
+         << outstruct << "steady_state = zeros(" << symbol_table.endo_nbr() << (julia ? ")" : ", 1);" ) << endl;
 
   output << modstruct << "maximum_exo_lag = " << max_exo_lag << ";" << endl
          << modstruct << "maximum_exo_lead = " << max_exo_lead << ";" << endl
-         << outstruct << "exo_steady_state = zeros(" << symbol_table.exo_nbr() << ", 1);" << endl;
+         << outstruct << "exo_steady_state = zeros(" << symbol_table.exo_nbr() <<  (julia ? ")" : ", 1);" )   << endl;
 
   if (symbol_table.exo_det_nbr())
     {
       output << modstruct << "maximum_exo_det_lag = " << max_exo_det_lag << ";" << endl
              << modstruct << "maximum_exo_det_lead = " << max_exo_det_lead << ";" << endl
-             << outstruct << "exo_det_steady_state = zeros(" << symbol_table.exo_det_nbr() << ", 1);" << endl;
+             << outstruct << "exo_det_steady_state = zeros(" << symbol_table.exo_det_nbr() << (julia ? ")" : ", 1);" ) << endl;
     }
 
   output << modstruct << "params = " << (julia ? "fill(NaN, " : "NaN(")
-         << symbol_table.param_nbr() << ", 1);" << endl;
+         << symbol_table.param_nbr() << (julia ? ")" : ", 1);" ) << endl;
 
   if (compute_xrefs)
     writeXrefs(output);
@@ -3112,11 +3113,11 @@ DynamicModel::runTrendTest(const eval_context_t &eval_context)
 }
 
 void
-DynamicModel::computingPass(bool jacobianExo, bool hessian, bool thirdDerivatives, bool paramsDerivatives,
+DynamicModel::computingPass(bool jacobianExo, bool hessian, bool thirdDerivatives, int paramsDerivsOrder,
                             const eval_context_t &eval_context, bool no_tmp_terms, bool block, bool use_dll,
                             bool bytecode, bool compute_xrefs)
 {
-  assert(jacobianExo || !(hessian || thirdDerivatives || paramsDerivatives));
+  assert(jacobianExo || !(hessian || thirdDerivatives || paramsDerivsOrder));
 
   initializeVariablesAndEquations();
   
@@ -3147,10 +3148,10 @@ DynamicModel::computingPass(bool jacobianExo, bool hessian, bool thirdDerivative
       computeHessian(vars);
     }
 
-  if (paramsDerivatives)
+  if (paramsDerivsOrder > 0)
     {
       cout << " - derivatives of Jacobian/Hessian w.r. to parameters" << endl;
-      computeParamsDerivatives();
+      computeParamsDerivatives(paramsDerivsOrder);
 
       if (!no_tmp_terms)
         computeParamsDerivativesTemporaryTerms();
@@ -3980,6 +3981,46 @@ DynamicModel::writeParamsDerivativesFile(const string &basename, bool julia) con
   if (!julia)
     paramsDerivsFile << "function [rp, gp, rpp, gpp, hp] = " << basename << "_params_derivs(y, x, params, steady_state, it_, ss_param_deriv, ss_param_2nd_deriv)" << endl
                      << "%" << endl
+                     << "% Compute the derivatives of the dynamic model with respect to the parameters" << endl
+                     << "% Inputs :" << endl
+                     << "%   y         [#dynamic variables by 1] double    vector of endogenous variables in the order stored" << endl
+                     << "%                                                 in M_.lead_lag_incidence; see the Manual" << endl
+                     << "%   x         [nperiods by M_.exo_nbr] double     matrix of exogenous variables (in declaration order)" << endl
+                     << "%                                                 for all simulation periods" << endl
+                     << "%   params    [M_.param_nbr by 1] double          vector of parameter values in declaration order" << endl
+                     << "%   steady_state  [M_.endo_nbr by 1] double       vector of steady state values" << endl                    
+                     << "%   it_       scalar double                       time period for exogenous variables for which to evaluate the model" << endl
+                     << "%   ss_param_deriv     [M_.eq_nbr by #params]     Jacobian matrix of the steady states values with respect to the parameters" << endl
+                     << "%   ss_param_2nd_deriv [M_.eq_nbr by #params by #params] Hessian matrix of the steady states values with respect to the parameters" << endl
+                     << "%" << endl
+                     << "% Outputs:" << endl
+                     << "%   rp        [M_.eq_nbr by #params] double    Jacobian matrix of dynamic model equations with respect to parameters " << endl
+					 << "%                                              Dynare may prepend or append auxiliary equations, see M_.aux_vars" << endl
+                     << "%   gp        [M_.endo_nbr by #dynamic variables by #params] double    Derivative of the Jacobian matrix of the dynamic model equations with respect to the parameters" << endl
+                     << "%                                                           rows: equations in order of declaration" << endl
+                     << "%                                                           columns: variables in order stored in M_.lead_lag_incidence" << endl
+                     << "%   rpp       [#second_order_residual_terms by 4] double   Hessian matrix of second derivatives of residuals with respect to parameters;" << endl
+                     << "%                                                              rows: respective derivative term" << endl
+                     << "%                                                              1st column: equation number of the term appearing" << endl
+                     << "%                                                              2nd column: number of the first parameter in derivative" << endl
+                     << "%                                                              3rd column: number of the second parameter in derivative" << endl
+                     << "%                                                              4th column: value of the Hessian term" << endl
+                     << "%   gpp      [#second_order_Jacobian_terms by 5] double   Hessian matrix of second derivatives of the Jacobian with respect to the parameters;" << endl
+                     << "%                                                              rows: respective derivative term" << endl
+                     << "%                                                              1st column: equation number of the term appearing" << endl
+                     << "%                                                              2nd column: column number of variable in Jacobian of the dynamic model" << endl                    
+                     << "%                                                              3rd column: number of the first parameter in derivative" << endl
+                     << "%                                                              4th column: number of the second parameter in derivative" << endl
+                     << "%                                                              5th column: value of the Hessian term" << endl
+                     << "%   hp      [#first_order_Hessian_terms by 5] double   Jacobian matrix of derivatives of the dynamic Hessian with respect to the parameters;" << endl
+                     << "%                                                              rows: respective derivative term" << endl
+                     << "%                                                              1st column: equation number of the term appearing" << endl
+                     << "%                                                              2nd column: column number of first variable in Hessian of the dynamic model" << endl                    
+                     << "%                                                              3rd column: column number of second variable in Hessian of the dynamic model" << endl
+                     << "%                                                              4th column: number of the parameter in derivative" << endl
+                     << "%                                                              5th column: value of the Hessian term" << endl                    
+                     << "%" << endl
+                     << "%" << endl                    
                      << "% Warning : this file is generated automatically by Dynare" << endl
                      << "%           from model file (.mod)" << endl << endl;
   else

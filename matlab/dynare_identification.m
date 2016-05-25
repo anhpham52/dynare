@@ -19,7 +19,7 @@ function [pdraws, TAU, GAM, LRE, gp, H, JJ] = dynare_identification(options_iden
 
 % main 
 %
-% Copyright (C) 2010-2013 Dynare Team
+% Copyright (C) 2010-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -37,6 +37,8 @@ function [pdraws, TAU, GAM, LRE, gp, H, JJ] = dynare_identification(options_iden
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
 global M_ options_ oo_ bayestopt_ estim_params_
+
+options0_ = options_;
 
 if isoctave
     warning('off'),
@@ -66,8 +68,10 @@ else
         warning('IDENTIFICATION:: Previously the diffuse_filter option was used, but it was not passed to the identification command. This may result in problems if your model contains unit roots.')
     end
     if isfield(options_ident,'lik_init') 
+        options_.lik_init=options_ident.lik_init; %make options_ inherit lik_init
         if options_ident.lik_init==3 %user specified diffuse filter using the lik_init option
             options_ident.analytic_derivation=0; %diffuse filter not compatible with analytic derivation
+            options_.analytic_derivation=0; %diffuse filter not compatible with analytic derivation
         end
     end
 end
@@ -144,7 +148,7 @@ options_.mode_compute = 0;
 options_.plot_priors = 0;
 options_.smoother=1;
 [dataset_,dataset_info,xparam1,hh, M_, options_, oo_, estim_params_,bayestopt_]=dynare_estimation_init(M_.endo_names,fname_,1, M_, options_, oo_, estim_params_, bayestopt_);
-options_ident.analytic_derivation_mode = options_.analytic_derivation_mode;
+options_ident = set_default_option(options_ident,'analytic_derivation_mode',options_.analytic_derivation_mode); % if not set by user, inherit default global one
 
 if prior_exist
     if any(bayestopt_.pshape > 0)
@@ -183,10 +187,18 @@ if prior_exist,
     name = bayestopt_.name;
     name_tex = char(M_.exo_names_tex(indexo,:),M_.param_names_tex(indx,:));
 
-    offset = estim_params_.nvx;
-    offset = offset + estim_params_.nvn;
-    offset = offset + estim_params_.ncx;
-    offset = offset + estim_params_.ncn;
+    if estim_params_.nvn || estim_params_.ncn,
+        error('Identification does not support measurement errors. Instead, define them explicitly in measurement equations in model definition.')
+    else
+        offset = estim_params_.nvx;
+        %offset = offset + estim_params_.nvn;
+        offset = offset + estim_params_.ncx;
+        if estim_params_.ncx
+            options_ident.analytic_derivation=0;
+            options_ident.analytic_derivation_mode=-1;
+        end
+        %offset = offset + estim_params_.ncn;
+    end
 else
     indx = [1:M_.param_nbr];
     indexo = [1:M_.exo_nbr];
@@ -238,6 +250,10 @@ if iload <=0,
             disp('Testing ML Starting value')
         else
             switch parameters
+                case 'calibration'
+                    parameters_TeX = 'Calibration';
+                    disp('Testing calibration')
+                    params(1,:) = get_all_parameters(estim_params_,M_);;
                 case 'posterior_mode'
                     parameters_TeX = 'Posterior mode';
                     disp('Testing posterior mode')
@@ -274,7 +290,7 @@ if iload <=0,
         parameters_TeX = 'Current parameter values';
         disp('Testing current parameter values')
     end
-    [idehess_point, idemoments_point, idemodel_point, idelre_point, derivatives_info_point, info] = ...
+    [idehess_point, idemoments_point, idemodel_point, idelre_point, derivatives_info_point, info, options_ident] = ...
         identification_analysis(params,indx,indexo,options_ident,dataset_, dataset_info, prior_exist, name_tex,1);
     if info(1)~=0,
         skipline()
@@ -317,7 +333,7 @@ if iload <=0,
             while kk<50 && info(1),
                 kk=kk+1;
                 params = prior_draw();
-                [idehess_point, idemoments_point, idemodel_point, idelre_point, derivatives_info_point, info] = ...
+                [idehess_point, idemoments_point, idemodel_point, idelre_point, derivatives_info_point, info, options_ident] = ...
                     identification_analysis(params,indx,indexo,options_ident,dataset_,dataset_info, prior_exist, name_tex,1);
             end
         end
@@ -370,7 +386,7 @@ if iload <=0,
         else
             params = prior_draw();
         end
-        [dum1, ideJ, ideH, ideGP, dum2 , info] = ...
+        [dum1, ideJ, ideH, ideGP, dum2 , info, options_MC] = ...
             identification_analysis(params,indx,indexo,options_MC,dataset_, dataset_info, prior_exist, name_tex,0);
         if iteration==0 && info(1)==0,
             MAX_tau   = min(SampleSize,ceil(MaxNumberOfBytes/(size(ideH.siH,1)*nparam)/8));
@@ -541,7 +557,7 @@ if SampleSize > 1,
                 fprintf('\n')
                 disp(['Testing ',tittxt, '. Press ENTER']), pause(5),
                 if ~iload,
-                    [idehess_max, idemoments_max, idemodel_max, idelre_max, derivatives_info_max] = ...
+                    [idehess_max, idemoments_max, idemodel_max, idelre_max, derivatives_info_max, info_max, options_ident] = ...
                         identification_analysis(pdraws(jmax,:),indx,indexo,options_ident,dataset_,dataset_info, prior_exist, name_tex,1);
                     save([IdentifDirectoryName '/' M_.fname '_identif.mat'], 'idehess_max', 'idemoments_max','idemodel_max', 'idelre_max', 'jmax', '-append');
                 end
@@ -556,7 +572,7 @@ if SampleSize > 1,
                 fprintf('\n')
                 disp(['Testing ',tittxt, '. Press ENTER']), pause(5),
                 if ~iload,
-                    [idehess_min, idemoments_min, idemodel_min, idelre_min, derivatives_info_min] = ...
+                    [idehess_min, idemoments_min, idemodel_min, idelre_min, derivatives_info_min, info_min, options_ident] = ...
                         identification_analysis(pdraws(jmin,:),indx,indexo,options_ident,dataset_, dataset_info, prior_exist, name_tex,1);
                     save([IdentifDirectoryName '/' M_.fname '_identif.mat'], 'idehess_min', 'idemoments_min','idemodel_min', 'idelre_min', 'jmin', '-append');
                 end
@@ -571,7 +587,7 @@ if SampleSize > 1,
                     fprintf('\n')
                     disp(['Testing ',tittxt, '. Press ENTER']), pause(5),
                     if ~iload,
-                        [idehess_(j), idemoments_(j), idemodel_(j), idelre_(j), derivatives_info_(j)] = ...
+                        [idehess_(j), idemoments_(j), idemodel_(j), idelre_(j), derivatives_info_(j), info_resolve, options_ident] = ...
                             identification_analysis(pdraws(jcrit(j),:),indx,indexo,options_ident,dataset_, dataset_info, prior_exist, name_tex,1);
                     end
                     disp_identification(pdraws(jcrit(j),:), idemodel_(j), idemoments_(j), name,1);
@@ -597,3 +613,5 @@ end
 skipline()
 disp(['==== Identification analysis completed ====' ]),
 skipline(2)
+
+options_ = options0_;

@@ -109,6 +109,8 @@ type Model
     maximum_exo_lead::Int
     lead_lag_incidence::Matrix{Int}
     nnzderivatives::Vector{Int}
+    analytical_steady_state::Bool
+    user_written_analytical_steady_state::Bool
     static_and_dynamic_models_differ::Bool
     equation_tags::Vector{UTF8String}
     exo_names_orig_ord::Vector{Int}
@@ -117,7 +119,7 @@ type Model
     h::Matrix{Float64}
     correlation_matrix_me::Matrix{Float64}
     sigma_e_is_diagonal::Bool
-    params::Matrix{Float64}
+    params::Vector{Float64}
     static::Function
     static_params_derivs::Function
     dynamic::Function
@@ -156,6 +158,8 @@ function dynare_model()
                  0,                     # maximum_exo_lead
                  Array(Int, 3, 0),      # lead_lag_incidence
                  zeros(Int, 3),         # nnzderivatives
+                 false,                 # analytical_steady_state
+                 false,                 # user_written_analytical_steady_state
                  false,                 # static_and_dynamic_models_differ
                  Array(ASCIIString,0),  # equation_tags
                  Array(Int64,1),        # exo_names_orig_ord
@@ -164,7 +168,7 @@ function dynare_model()
                  Array(Float64, 0, 0),  # h (Cov matrix of the measurement errors)
                  Array(Float64, 0, 0),  # correlation_matrix_me (Cov matrix of the measurement errors)
                  true,                  # sigma_e_is_diagonal
-                 Array(Float64, 0, 0),  # params
+                 Array(Float64, 0),     # params
                  function()end,         # static
                  function()end,         # static_params_derivs
                  function()end,         # dynamic

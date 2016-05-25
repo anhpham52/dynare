@@ -38,7 +38,7 @@ function x0 = stab_map_(OutputDirectoryName,opt_gsa)
 % Reference:
 % M. Ratto, Global Sensitivity Analysis for Macroeconomic models, MIMEO, 2006.
 
-% Copyright (C) 2012-2013 Dynare Team
+% Copyright (C) 2012-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -130,7 +130,6 @@ options_.periods=0;
 options_.nomoments=1;
 options_.irf=0;
 options_.noprint=1;
-options_.simul=0;
 if fload==0,
     %   if prepSA
     %     T=zeros(size(dr_.ghx,1),size(dr_.ghx,2)+size(dr_.ghu,2),Nsam/2);
@@ -242,7 +241,11 @@ if fload==0,
         %             end
         %         end
         %load([fname_,'_mode'])
+        if neighborhood_width>0 && isempty(options_.mode_file),
+            xparam1 = get_all_parameters(estim_params_,M_);
+        else
         eval(['load ' options_.mode_file '.mat;']);
+        end
         if neighborhood_width>0,
             for j=1:nshock,
                 lpmat0(:,j) = randperm(Nsam)'./(Nsam+1); %latin hypercube
@@ -280,7 +283,7 @@ if fload==0,
     iwrong=zeros(1,Nsam);
     inorestriction=zeros(1,Nsam);
     irestriction=zeros(1,Nsam);
-    infox=zeros(1,Nsam);
+    infox=zeros(Nsam,1);
     for j=1:Nsam,
         M_ = set_all_parameters([lpmat0(j,:) lpmat(j,:)]',estim_params_,M_);
         %try stoch_simul([]);
@@ -347,7 +350,6 @@ if fload==0,
             info=endogenous_prior_restrictions(Tt,Rr,M_,options_,oo_);
             infox(j,1)=info(1);
             if info(1),
-                iwrong(j)=j;
                 inorestriction(j)=j;
             else
                 iunstable(j)=0;
@@ -390,7 +392,7 @@ if fload==0,
     iunstable=iunstable(find(iunstable));   % violation of BK & restrictions & solution could not be found (whatever goes wrong)
     iindeterm=iindeterm(find(iindeterm));  % indeterminacy
     iwrong=iwrong(find(iwrong));  % dynare could not find solution
-    ixun=iunstable(find(~ismember(iunstable,[iindeterm,iwrong]))); % explosive roots
+    ixun=iunstable(find(~ismember(iunstable,[iindeterm,iwrong,inorestriction]))); % explosive roots
 
     %     % map stable samples
     %     istable=[1:Nsam];
@@ -527,14 +529,21 @@ delete([OutputDirectoryName,filesep,fname_,'_',awrongname,'.*']);
 
 if length(iunstable)>0 || length(iwrong)>0,
     fprintf(['%4.1f%% of the prior support gives unique saddle-path solution.\n'],length(istable)/Nsam*100)
-    fprintf(['%4.1f%% of the prior support gives explosive dynamics.\n'],(length(iunstable)-length(iwrong)-length(iindeterm) )/Nsam*100)
+    fprintf(['%4.1f%% of the prior support gives explosive dynamics.\n'],(length(ixun) )/Nsam*100)
     if ~isempty(iindeterm),
-        fprintf(['%4.1f%% of the prior support gives indeterminacy.'],length(iindeterm)/Nsam*100)
+        fprintf(['%4.1f%% of the prior support gives indeterminacy.\n'],length(iindeterm)/Nsam*100)
     end
-    if ~isempty(iwrong),
+    inorestriction = istable(find(~ismember(istable,irestriction))); % violation of prior restrictions
+    if ~isempty(iwrong) || ~isempty(inorestriction),
         skipline()
-        disp(['For ',num2str(length(iwrong)/Nsam*100,'%4.1f'),'% of the prior support dynare could not find a solution.'])
-        skipline()
+        if any(infox==49),
+            fprintf(['%4.1f%% of the prior support violates prior restrictions.\n'],(length(inorestriction) )/Nsam*100)
+        end
+        if ~isempty(iwrong),
+            skipline()
+            disp(['For ',num2str(length(iwrong)/Nsam*100,'%4.1f'),'% of the prior support dynare could not find a solution.'])
+            skipline()
+        end
         if any(infox==1),
             disp(['    For ',num2str(length(find(infox==1))/Nsam*100,'%4.1f'),'% The model doesn''t determine the current variables uniquely.'])
         end
@@ -565,14 +574,12 @@ if length(iunstable)>0 || length(iwrong)>0,
         if any(infox==30),
             disp(['    For ',num2str(length(find(infox==30))/Nsam*100,'%4.1f'),'% Ergodic variance can''t be computed.'])
         end
-        if any(infox==49),
-            disp(['    For ',num2str(length(find(infox==49))/Nsam*100,'%4.1f'),'% The model violates one (many) endogenous prior restriction(s).'])
-        end
 
     end
     skipline()
     if length(iunstable)<Nsam || length(istable)>1
         itot = [1:Nsam];
+        isolve = itot(find(~ismember(itot,iwrong))); % dynare could find a solution
         % Blanchard Kahn
         if neighborhood_width,
             options_mcf.xparam1 = xparam1(nshock+1:end);
@@ -586,7 +593,7 @@ if length(iunstable)>0 || length(iwrong)>0,
         mcf_analysis(lpmat, istable, itmp, options_mcf, options_);
 
         if ~isempty(iindeterm),
-            itmp = itot(find(~ismember(itot,iindeterm)));
+            itmp = isolve(find(~ismember(isolve,iindeterm)));
             options_mcf.amcf_name = aindname;
             options_mcf.amcf_title = aindtitle;
             options_mcf.beha_title = 'NO indeterminacy';
@@ -596,7 +603,7 @@ if length(iunstable)>0 || length(iwrong)>0,
         end
         
         if ~isempty(ixun),
-            itmp = itot(find(~ismember(itot,ixun)));
+            itmp = isolve(find(~ismember(isolve,ixun)));
             options_mcf.amcf_name = aunstname;
             options_mcf.amcf_title = aunsttitle;
             options_mcf.beha_title = 'NO explosive solution';
@@ -605,8 +612,8 @@ if length(iunstable)>0 || length(iwrong)>0,
             mcf_analysis(lpmat, itmp, ixun, options_mcf, options_);
         end
         
-        inorestriction = istable(find(~ismember(istable,irestriction))); % what went wrong beyong prior restrictions
-        iwrong = iwrong(find(~ismember(iwrong,inorestriction))); % what went wrong beyong prior restrictions
+        inorestriction = istable(find(~ismember(istable,irestriction))); % violation of prior restrictions
+        iwrong = iwrong(find(~ismember(iwrong,inorestriction))); % what went wrong beyond prior restrictions
         if ~isempty(iwrong),
             itmp = itot(find(~ismember(itot,iwrong)));
             options_mcf.amcf_name = awrongname;
@@ -660,9 +667,7 @@ if isfield(opt,'nomoments'),
 end
 options_.irf=opt.irf;
 options_.noprint=opt.noprint;
-if isfield(opt,'simul'),
-    options_.simul=opt.simul;
-end
+
 
 
 

@@ -211,4 +211,4 @@ tests/reporting/tmpRepDir
 *.orig
 
 # Julia Tests
-/tests/**/*.jl
+tests/julia/rbc/rbc*.jl

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2015 Dynare Team
+ * Copyright (C) 2003-2016 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -141,4 +141,22 @@ public:
   virtual void writeOutput(ostream &output, const string &basename, bool minimal_workspace) const;
 };
 
+class ShockGroupsStatement : public Statement
+{
+public:
+  struct Group
+  {
+    string name;
+    vector<string> list;
+  };
+  typedef vector<Group> group_t;
+private:
+  group_t shock_groups;
+  vector<string> group_names;
+  string name;
+public:
+  ShockGroupsStatement(const group_t &shock_groups_arg, const string &name_arg);
+  virtual void writeOutput(ostream &output, const string &basename, bool minimal_workspace) const;
+};
+  
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2015 Dynare Team
+ * Copyright (C) 2010-2016 Dynare Team
  *
  * This file is part of Dynare.
  *
@@ -161,7 +161,7 @@ SteadyStateModel::writeSteadyStateFile(const string &basename, bool ramsey_model
     output << "    % Auxiliary equations" << endl;
   else
     output << "    # Auxiliary equations" << endl;
-  static_model.writeAuxVarInitval(output, output_type);
+  static_model.writeAuxVarRecursiveDefinitions(output, output_type);
 
   if (!julia)
     output << "    check_=0;" << endl;

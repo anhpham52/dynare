@@ -101,12 +101,6 @@ public:
   /*! Filled using initval blocks and parameters initializations */
   eval_context_t global_eval_context;
 
-  //! Stores the original number of equations in the model_block
-  int orig_eqn_nbr;
-
-  //! Stores the number of equations added to the Ramsey model
-  int ramsey_eqn_nbr;
-
   //! Parameter used with lead/lag
   bool param_used_with_lead_lag;
 
@@ -138,7 +132,8 @@ public:
   //! Execute computations
   /*! \param no_tmp_terms if true, no temporary terms will be computed in the static and dynamic files */
   /*! \param compute_xrefs if true, equation cross references will be computed */
-  void computingPass(bool no_tmp_terms, FileOutputType output, bool compute_xrefs);
+  /*! \param params_derivs_order compute this order of derivs wrt parameters */
+  void computingPass(bool no_tmp_terms, FileOutputType output, bool compute_xrefs, int params_derivs_order);
   //! Writes Matlab/Octave output files
   /*!
     \param basename The base name used for writing output files. Should be the name of the mod file without its extension

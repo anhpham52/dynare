@@ -11,7 +11,7 @@ function []=graph_decomp(z,shock_names,endo_names,i_var,initial_date,DynareModel
 %   DynareModel     [structure]                     Dynare model structure
 %   DynareOptions   [structure]                     Dynare options structure
 
-% Copyright (C) 2010-2015 Dynare Team
+% Copyright (C) 2010-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -27,6 +27,8 @@ function []=graph_decomp(z,shock_names,endo_names,i_var,initial_date,DynareModel
 %
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
+
+new_colormap = DynareOptions.colormap;
 
 % number of components equals number of shocks + 1 (initial conditions)
 comp_nbr = size(z,2)-1;
@@ -88,7 +90,7 @@ for j=1:nvar
     hold on;
     y1 = 0;
     height = 1/comp_nbr;
-    labels = char(shock_names,'Initial values');
+    labels = char(char(shock_names),'Initial values');
 
     for i=1:comp_nbr
         fill([0 0 0.2 0.2],[y1 y1+0.7*height y1+0.7*height y1],i);
@@ -98,6 +100,9 @@ for j=1:nvar
         y1 = y1 + height;
     end
 
+    if ~isempty(new_colormap)
+        colormap(new_colormap)
+    end
     dyn_saveas(fhandle,[DynareModel.fname,'_shock_decomposition_',deblank(endo_names(i_var(j),:))],DynareOptions);
     hold off
     if DynareOptions.TeX && any(strcmp('eps',cellstr(DynareOptions.graph_format)))

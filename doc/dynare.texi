@@ -95,7 +95,7 @@
 @c %**end of header
 
 @copying
-Copyright @copyright{} 1996-2015, Dynare Team.
+Copyright @copyright{} 1996-2016, Dynare Team.
 
 @quotation
 Permission is granted to copy, distribute and/or modify this document
@@ -242,8 +242,8 @@ Stochastic solution and simulation
 Sensitivity and identification analysis
 
 * Performing sensitivity analysis::
-* Performing identification analysis::
 * IRF/Moment calibration::
+* Performing identification analysis::
 * Types of analysis and output files::
 
 Types of analysis and output files
@@ -429,16 +429,15 @@ If you want to give a URL, use the address of the Dynare website:
 
 Packaged versions of Dynare are available for Windows XP/Vista/7/8,
 @uref{http://www.debian.org,Debian GNU/Linux},
-@uref{http://www.ubuntu.com/,Ubuntu} and Mac OS X Leopard/Snow
-Leopard.  Dynare should work on other systems, but some compilation
-steps are necessary in that case.
+@uref{http://www.ubuntu.com/,Ubuntu} and Mac OS X 10.8 or later.  Dynare should
+work on other systems, but some compilation steps are necessary in that case.
 
 In order to run Dynare, you need one of the following:
 
 @itemize
 
 @item
-MATLAB version 7.5 (R2007b) or above;
+MATLAB version 7.5 (R2007b) or above (MATLAB R2009b 64-bit for Mac OS X);
 
 @item
 GNU Octave version 3.6 or above.
@@ -666,7 +665,7 @@ Dynare unusable.
 In order to give instructions to Dynare, the user has to write a
 @emph{model file} whose filename extension must be @file{.mod}. This
 file contains the description of the model and the computing tasks
-required by the user. Its contents is described in @ref{The Model file}.
+required by the user. Its contents are described in @ref{The Model file}.
 
 @menu
 * Dynare invocation::
@@ -780,6 +779,13 @@ line numbering directives.
 @item nolog
 Instructs Dynare to no create a logfile of this run in
 @file{@var{FILENAME}.log}. The default is to create the logfile.
+
+@item params_derivs_order=0|1|2
+When @ref{identification}, @ref{dynare_sensitivity} (with identification), or
+@ref{estimation_cmd} are present, this option is used to limit the order of the
+derivatives with respect to the parameters that are calculated by the
+preprocessor. @code{0} means no derivatives, @code{1} means first derivatives,
+and @code{2} means second derivatives. Default: @code{2}
 
 @item nowarn
 Suppresses all warnings.
@@ -1803,6 +1809,24 @@ used outside. A model local variable declaration looks like:
 # @var{VARIABLE_NAME} = @var{MODEL_EXPRESSION};
 @end example
 
+It is possible to tag equations written in the model block. A tag can serve
+different purposes by allowing the user to attach arbitrary informations to each
+equation and to recover them at runtime. For instance, it is possible to name the
+equations, using a syntax like:
+@example
+mode;
+    ...
+    [name = 'Budget constraint']
+    c + k = k^theta*A;
+    ...
+end;
+@end example
+If all the equations of a model are tagged with a name, the @code{resid} command
+will display the names of the equations (which may be more informative than the
+equation numbers). More informations are available on the @uref{http://www.dynare.org/DynareWiki/EquationTags, DynareWiki
+wiki}.
+
+
 @optionshead
 
 @table @code
@@ -1810,7 +1834,7 @@ used outside. A model local variable declaration looks like:
 @item linear
 Declares the model as being linear. It spares oneself from having to
 declare initial values for computing the steady state of a stationary
-linear model. This options can't be used with non-linear models, it will
+linear model. This option can't be used with non-linear models, it will
 NOT trigger linearization of the model.
 
 @item use_dll
@@ -2458,7 +2482,7 @@ in @ref{stoch_simul}, if the @code{periods} option is specified. Note that this 
 in @ref{forecast} as the initial point at which the forecasts are computed
 
 @item
-in @ref{conditional_forecast} as the initial point at which the conditional forecasts are computed
+in @ref{conditional_forecast} for a calibrated model as the initial point at which the conditional forecasts are computed
 
 @item 
 in @ref{Ramsey} policy, where it also specifies the values of the endogenous states at 
@@ -2878,6 +2902,9 @@ add new variables one by one.
 @item maxit = @var{INTEGER}
 Determines the maximum number of iterations used in the non-linear solver. The
 default value of @code{maxit} is 50. 
+
+@item robust_lin_solve
+Triggers the use of a robust linear solver for the default @code{solve_algo=4}. 
 
 @item solve_algo = @var{INTEGER}
 @anchor{solve_algo}
@@ -3547,6 +3574,17 @@ slower than @code{stack_solve_algo=0}, but may be less memory consuming
 on big models (not available with @code{bytecode} and/or @code{block}
 options).
 
+@item 7
+Allows the user to solve the perfect foresight model with the solvers available
+through option @code{solve_algo} (@xref{solve_algo} for a list of possible
+values, note that values 5, 6, 7 and 8, which require @code{bytecode} and/or
+@code{block} options, are not allowed). For instance, the following commands:
+@example
+perfect_foresight_setup(periods=400);
+perfect_foresight_solver(stack_solve_algo=7, solve_algo=9)
+@end example
+trigger the computation of the solution with a trust region algorithm.
+
 @end table
 
 @item no_homotopy
@@ -3565,6 +3603,32 @@ Specify the minimal number of periods where the model has to be
 solved, before using a constant set of operations for the remaining
 periods. Only used when @code{stack_solve_algo = 5}. Default: @code{1}.
 
+@item lmmcp
+Solves the perfect foresight model with a mixed complementarity problem solver,
+which allows to consider inequality constraints on the endogenous variables
+(such as a ZLB on the nominal interest rate or a model with irreversible
+investment). This option is equivalent to @code{stack_solve_algo=7} @strong{and}
+@code{solve_algo=10}. The inequality constraints on the endogenous variables
+have to be specified with an equation tag @pxref{Model declaration}. For instance,
+a ZLB on the nominal interest rate would be specified as follows in the model block:
+@example
+model;
+   ...
+   [mcp = 'r > -1.94478']
+   r = rho*r(-1) + (1-rho)*(gpi*Infl+gy*YGap) + e;
+   ...
+end;
+@end example
+where 1.94478 is the steady state level of the nominal interest rate and
+@code{r} is the nominal interest rate in deviation to the steady state. In the
+current implementation, the content of the equation tag is not parsed by the
+preprocessor. The inequalities must be as simple as possible: an endogenous
+variable, followed by a relational operator, followed by a number (not a
+variable, parameter or expression). Note also that the constraint on an
+endogenous variable must be associated to an equation and that the mixed
+complementarity solver may fail or perform poorly if the constraint is
+associated with an equation not directly related to the restricted variable.
+
 @item endogenous_terminal_period
 The  number of  periods is  not constant  across Newton  iterations when
 solving the perfect foresight model. The size of the nonlinear system of
@@ -3577,7 +3641,8 @@ the reported value  of the maximum absolute error).  Only available with
 option @code{stack_solve_algo==0}.
 
 @item linear_approximation
-Solves the linearized version of the perfect foresight model. The model must be stationary. Only available with option @code{stack_solve_algo==0}.
+Solves the linearized version of the perfect foresight model. The model must be
+stationary. Only available with option @code{stack_solve_algo==0}.
 
 @end table
 
@@ -3604,7 +3669,6 @@ Accepts all the options of @code{perfect_foresight_setup} and
 @code{perfect_foresight_solver}.
 
 @end deffn
-
 @anchor{oo_.endo_simul}
 @defvr {MATLAB/Octave variable} oo_.endo_simul
 This variable stores the result of a deterministic simulation (computed by
@@ -3977,6 +4041,12 @@ Default value: @code{1e-6}.
 Saves the contemporaneous correlation between the endogenous variables in @code{oo_.contemporaneous_correlation}.
 Requires the @code{nocorr}-option not to be set.
 
+@item spectral_density 
+@anchor{spectral_density} 
+Triggers the computation and display of the theoretical spectral density of the (filtered) model variables. 
+Results are stored in @code{oo_.SpectralDensity}, defined below.
+Default: do not request spectral density estimates
+
 @end table
 
 @outputhead
@@ -3984,7 +4054,8 @@ Requires the @code{nocorr}-option not to be set.
 This command sets @code{oo_.dr}, @code{oo_.mean}, @code{oo_.var} and
 @code{oo_.autocorr}, which are described below.
 
-If option @code{periods} is present, sets @code{oo_.endo_simul}
+If option @code{periods} is present, sets @code{oo_.skewness}, 
+@code{oo_.kurtosis}, and @code{oo_.endo_simul}
 (@pxref{oo_.endo_simul}), and also saves the simulated variables in
 MATLAB/Octave vectors of the global workspace with the same name as
 the endogenous variables.
@@ -4035,6 +4106,18 @@ the endogenous variables. Contains theoretical variance if the
 @code{periods} option is not present (or an approximation thereof for @code{order=2}), 
 and simulated variance
 otherwise. The variables are arranged in declaration order.
+@end defvr
+
+@defvr {MATLAB/Octave variable} oo_.skewness
+After a run of @code{stoch_simul} contains the skewness (standardized third moment)
+of the simulated variables if the @code{periods} option is present. 
+The variables are arranged in declaration order.
+@end defvr
+
+@defvr {MATLAB/Octave variable} oo_.kurtosis
+After a run of @code{stoch_simul} contains the kurtosis (standardized fourth moment)
+of the simulated variables if the @code{periods} option is present. 
+The variables are arranged in declaration order.
 @end defvr
 
 @anchor{oo_.autocorr}
@@ -4112,6 +4195,13 @@ After a run of @code{stoch_simul} with the
 and simulated contemporaneous correlations otherwise. The variables are arranged in declaration order.
 @end defvr
 
+@anchor{oo_.SpectralDensity}
+@defvr {MATLAB/Octave variable} oo_.SpectralDensity
+After a run of @code{stoch_simul} with option @code{spectral_density} contains the spectral density
+of the model variables. There will be a @code{nvars} by @code{nfrequencies} subfield
+@code{freqs} storing the respective frequency grid points ranging from 0 to 2*pi and a 
+same sized subfield @code{density} storing the corresponding density.
+@end defvr
 
 @defvr {MATLAB/Octave variable} oo_.irfs
 After a run of @code{stoch_simul} with option @code{irf} different
@@ -4467,7 +4557,9 @@ varobs
 @descriptionhead
 
 This block specifies @emph{linear} trends for observed variables as
-functions of model parameters.
+functions of model parameters. In case the @code{loglinear}-option is used,
+this corresponds to a linear trend in the logged observables, i.e. an exponential
+trend in the level of the observables.
 
 Each line inside of the block should be of the form:
 
@@ -4476,7 +4568,7 @@ Each line inside of the block should be of the form:
 @end example
 
 In most cases, variables shouldn't be centered when
-@code{observation_trends} is used.
+@code{observation_trends} is used. 
 
 @examplehead
 
@@ -4722,7 +4814,11 @@ marginal log data density
 posterior mean and highest posterior density interval (shortest credible set) from posterior simulation
 
 @item
-Metropolis-Hastings convergence graphs that still need to be documented
+convergence diagnostic table when only one MCM chain is used or Metropolis-Hastings convergence graphs documented in @cite{Pfeifer (2014)} 
+in case of multiple MCM chains
+
+@item
+table with numerical inefficiency factors of the MCMC
 
 @item
 graphs with prior, posterior, and mode
@@ -4774,7 +4870,7 @@ set_dynare_seed('clock');
 
 @algorithmshead
 
-The Monte  Carlo Markov  Chain (MCMC) diagnostics  are generated  by the
+The Monte  Carlo Markov  Chain (MCMC) diagnostics are generated  by the
 estimation command if @ref{mh_replic} is  larger than 2000 and if option
 @ref{nodiagnostic} is not used. If @ref{mh_nblocks} is equal to one, the
 convergence diagnostics  of @cite{Geweke  (1992,1999)} is  computed.  It
@@ -4796,6 +4892,11 @@ function instead of the individual  parameters.  The posterior kernel is
 used  to  aggregate  the  parameters   into  a  scalar  statistic  whose
 convergence is  then checked using  the @cite{Brooks and  Gelman (1998)}
 univariate convergence diagnostic.
+
+The inefficiency factors are computed as in @cite{Giordano et al. (2011)} based on 
+Parzen windows as in e.g. @cite{Andrews (1991)}.
+
+based on Parzen 
 
 @optionshead
 
@@ -4857,7 +4958,7 @@ first observation of the rolling window.
 @item prefilter = @var{INTEGER}
 @anchor{prefilter}
 A value of @code{1} means that the estimation procedure will demean
-each data series by its empirical mean. Default: @code{0}, @i{i.e.} no prefiltering
+each data series by its empirical mean. If the (@ref{loglinear}) option without the (@ref{logdata}) option is requested, the data will first be logged and then demeaned. Default: @code{0}, @i{i.e.} no prefiltering
 
 @item presample = @var{INTEGER}
 @anchor{presample}
@@ -4917,13 +5018,19 @@ variables
 
 @item 2
 For nonstationary models: a wide prior is used with an initial matrix
-of variance of the error of forecast diagonal with 10 on the diagonal
+of variance of the error of forecast diagonal with 10 on the diagonal 
+(follows the suggestion of @cite{Harvey and Phillips(1979)})
 
 @item 3
 For nonstationary models: use a diffuse filter (use rather the @code{diffuse_filter} option)
 
 @item 4
 The filter is initialized with the fixed point of the Riccati equation
+
+@item 5
+Use i) option 2 for the non-stationary elements by setting their initial variance in the 
+forecast error matrix to 10 on the diagonal and all covariances to 0 and ii) option 1 for the stationary elements.
+
 @end table
 
 @noindent
@@ -4986,8 +5093,12 @@ Metropolis-Hastings chain. Default: 2*@code{mh_scale}
 
 @item mh_recover
 @anchor{mh_recover} Attempts to recover a Metropolis-Hastings
-simulation that crashed prematurely. Shouldn't be used together with
-@code{load_mh_file}
+simulation that crashed prematurely, starting with the last available saved 
+@code{mh}-file. Shouldn't be used together with
+@code{load_mh_file} or a different @code{mh_replic} than in the crashed run. 
+To assure a neat continuation of the chain with the same proposal density, you should 
+provide the @code{mode_file} used in the previous 
+run or the same user-defined @code{mcmc_jumping_covariance} when using this option.
 
 @item mh_mode = @var{INTEGER}
 @dots{}
@@ -5433,7 +5544,18 @@ deprecated and will be removed in a future release of Dynare.
 model. Default: @code{4}.
 
 
-@item use_tarb
+
+@item posterior_sampling_method=@var{NAME}
+@anchor{posterior_sampling_method}
+Selects the sampler used to sample from the posterior distribution during Bayesian 
+estimation. Default: 'random_walk_metropolis_hastings'
+
+@table @code
+@item 'random_walk_metropolis_hastings'
+Instructs Dynare to use the Random-Walk Metropolis-Hastings. In this algorithm, the proposal density is
+recentered to the previous draw in every step.
+
+@item 'tailored_random_block_metropolis_hastings'
 Instructs Dynare to use the Tailored randomized block (TaRB) Metropolis-Hastings algorithm 
 proposed by @cite{Chib and Ramamurthy (2010)} instead of the standard Random-Walk Metropolis-Hastings. 
 In this algorithm, at each iteration the estimated parameters are randomly assigned to different 
@@ -5445,18 +5567,114 @@ the autocorrelation in the MH draws and thus reduces the number of draws require
 representatively sample from the posterior. However, this comes at a computational costs as the 
 algorithm takes more time to run.
 
-@item tarb_new_block_probability = @var{DOUBLE}
+@item 'independent_metropolis_hastings'
+Use the Independent Metropolis-Hastings algorithm where the proposal distribution - in contrast to the
+Random Walk Metropolis-Hastings algorithm - does not depend on the state of the chain.
+
+@item 'slice'
+Instructs Dynare to use the Slice sampler of @cite{Planas, Ratto, and Rossi (2015)}.
+Note that @code{'slice'} is incompatible with
+@code{prior_trunc=0}.
+
+@end table
+
+
+@item posterior_sampler_options = (@var{NAME}, @var{VALUE}, ...)
+@anchor{posterior_sampler_options}
+A list of @var{NAME} and @var{VALUE} pairs. Can be used to set options for the posterior sampling methods.
+The set of available options depends on the selected posterior sampling routine 
+(i.e. on the value of option @ref{posterior_sampling_method}):
+
+@table @code
+
+@item 'random_walk_metropolis_hastings'
+
+Available options are:
+
+@table @code
+
+@item 'proposal_distribution'
+@anchor{proposal_distribution}
+Specifies the statistical distribution used for the proposal density.
+
+@table @code
+@item 'rand_multivariate_normal'
+Use a multivariate normal distribution
+
+@item 'rand_multivariate_student'
+Use a multivariate student distribution
+
+@end table
+
+@item 'student_degrees_of_freedom'
+@anchor{student_degrees_of_freedom}
+Specifies the degrees of freedom to be used with the multivariate student distribution
+
+@item 'use_mh_covariance_matrix'
+@anchor{use_mh_covariance_matrix}
+Indicates to use the covariance matrix of the draws from a previous MCMC run to define the 
+covariance of the proposal distribution. Requires the @ref{load_mh_file}-option to be specified.
+
+@end table
+
+@item 'independent_metropolis_hastings'
+
+Takes the same options as in the case of @code{random_walk_metropolis_hastings}
+
+@item 'slice'
+
+@table @code
+
+@item 'rotated'
+Triggers rotated slice iterations using a covariance matrix from initial burn-in iterations. 
+Requires either  @code{use_mh_covariance_matrix} or @code{slice_initialize_with_mode}. Default: 0
+
+@item 'mode'
+For multimodal posteriors, provide the list of modes as a matrix, ordered by column, i.e. @code{[x1 x2 x3]} for three
+modes x1 x2 x3. This option will automatically trigger the @code{rotated}-option. Default = @code{[]};
+
+@item 'mode_files'
+For multimodal posteriors, provide a list of mode files with one per mode. With this info, 
+the code will automatically trigger the @code{rotated} and @code{mode} options. The mode files need only to
+contain the xparam1 variable. Default: @code{[]}.
+
+@item 'slice_initialize_with_mode'
+The default for slice is to set @code{mode_compute = 0} and start the chain(s) from a random 
+location in the prior space. This option first runs the mode-finder and then starts the
+chain from the mode. Together with @code{rotated}, it will use the inverse Hessian from the 
+mode to perform rotated slice iterations. Default: 0
+
+@item 'initial_step_size'
+Sets the initial size of the interval in the stepping-out procedure as fraction of the prior support
+i.e. the size will be initial_step_size*(UB-LB). @code{initial_step_size} must be a real number in the interval [0, 1]. 
+Default: 0.8
+
+@item 'use_mh_covariance_matrix'
+@xref{use_mh_covariance_matrix}. Must be used with @code{'rotated'}. Default: 0
+
+@end table
+
+@item 'tailored_random_block_metropolis_hastings'
+
+@table @code
+
+@item new_block_probability = @var{DOUBLE}
 Specifies the probability of the next parameter belonging to a new block when the random blocking in the TaRB 
 Metropolis-Hastings algorithm is conducted. The higher this number, the smaller is the average block size and the 
 more random blocks are formed during each parameter sweep. Default: @code{0.25}. 
 
-@item tarb_mode_compute = @var{INTEGER}
+@item mode_compute = @var{INTEGER}
 Specifies the mode-finder run in every iteration for every block of the 
 TaRB Metropolis-Hastings algorithm. @xref{mode_compute}. Default: @code{4}. 
 
-@item tarb_optim = @var{INTEGER}
+@item optim = (@var{NAME}, @var{VALUE}, ...)
 Specifies the options for the mode-finder used in the TaRB 
 Metropolis-Hastings algorithm. @xref{optim}. 
+
+@end table
+
+@end table
+
 
 @item moments_varendo
 @anchor{moments_varendo} Triggers the computation of the posterior
@@ -5560,7 +5778,8 @@ recursions as described by @cite{Herbst, 2015}. This setting is only used with
 
 @item filter_covariance
 @anchor{filter_covariance} Saves the series of one step ahead error of
-forecast covariance matrices.
+forecast covariance matrices in @ref{oo_.Smoother.Variance}. Not available 
+with Metropolis.
 
 @item filter_step_ahead = [@var{INTEGER1}:@var{INTEGER2}]
 See below.
@@ -5595,8 +5814,11 @@ Note that the nonstationary variables in the model must be integrated processes 
 
 @item selected_variables_only
 @anchor{selected_variables_only}
-Only run the smoother on the variables listed just after the
-@code{estimation} command. This options is incompatible with requesting classical frequentist forecasts and will be overridden in this case. Default: run the smoother on all the
+Only run the classical smoother on the variables listed just after the
+@code{estimation} command. This option is incompatible with requesting classical 
+frequentist forecasts and will be overridden in this case. When using Bayesian estimation,
+the smoother is by default only run on the declared endogenous variables.
+Default: run the smoother on all the
 declared endogenous variables.
 
 @item cova_compute = @var{INTEGER}
@@ -5624,8 +5846,7 @@ using a standard Kalman filter.
 @xref{irf}. Only used if @ref{bayesian_irf} is passed.
 
 @item irf_shocks = ( @var{VARIABLE_NAME} [[,] @var{VARIABLE_NAME} @dots{}] )
-@xref{irf_shocks}. Only used if @ref{bayesian_irf} is passed. Cannot be used
-with @ref{dsge_var}.
+@xref{irf_shocks}. Only used if @ref{bayesian_irf} is passed.
 
 @item irf_plot_threshold = @var{DOUBLE}
 @xref{irf_plot_threshold}. Only used if @ref{bayesian_irf} is passed.
@@ -5932,7 +6153,13 @@ non-requested variables will be simply left out in this order.
 
 @defvr {MATLAB/Octave variable} oo_.FilteredVariablesKStepAheadVariances
 Variable set by the @code{estimation} command, if it is used with the
-@code{filter_step_ahead} option. It is a 4 dimensional array where the k-steps are stored along the first dimension, while the fourth dimension of the array provides the observation for which the forecast has been made. The second and third dimension provide the respective variables. For example, if @code{filter_step_ahead=[1 2 4]} and @code{nobs=200}, the element (3,4,5,204) stores the four period ahead forecast error covariance between variable 4 and variable 5, computed at time t=200 for time t=204. Padding with zeros is analogous to @code{oo_.FilteredVariablesKStepAhead}. 
+@code{filter_step_ahead} option. It is a 4 dimensional array where the k-steps 
+are stored along the first dimension, while the fourth dimension of the array 
+provides the observation for which the forecast has been made. The second and third 
+dimension provide the respective variables. 
+For example, if @code{filter_step_ahead=[1 2 4]} and @code{nobs=200}, the element (3,4,5,204) 
+stores the four period ahead forecast error covariance between variable 4 and variable 5, 
+computed at time t=200 for time t=204. Padding with zeros and variable ordering is analogous to @code{oo_.FilteredVariablesKStepAhead}. 
 @end defvr
 
 @defvr {MATLAB/Octave variable} oo_.Filtered_Variables_X_step_ahead
@@ -5943,6 +6170,18 @@ Variable set by the @code{estimation} command, if it is used with the @code{filt
 The nth entry stores the k-step ahead filtered variable computed at time n for time n+k.
 @end defvr
 
+@defvr {MATLAB/Octave variable} oo_.FilteredVariablesShockDecomposition
+Variable set by the @code{estimation} command, if it is used with the
+@code{filter_step_ahead} option. The k-steps are stored along the rows while the columns 
+indicate the respective variables.  The third dimension corresponds to the shocks in declaration order. 
+The fourth dimension of the array provides the
+observation for which the forecast has been made. For example, if @code{filter_step_ahead=[1 2 4]} 
+and @code{nobs=200}, the element (3,5,2,204) stores the contribution of the second shock to the 
+four period ahead filtered value of variable 5 (in deviations from the mean) computed at time t=200 for time t=204. The periods at the beginning 
+and end of the sample for which no forecasts can be made, e.g. entries (1,5,1) and 
+(1,5,204) in the example, are set to zero. Padding with zeros and variable ordering is analogous to 
+@code{oo_.FilteredVariablesKStepAhead}. 
+@end defvr
 
 
 @defvr {MATLAB/Octave variable} oo_.PosteriorIRF.dsge
@@ -6009,6 +6248,61 @@ After an estimation without Metropolis, or if computed by
 After an estimation with Metropolis, fields are of the form:
 @example
 @code{oo_.UpdatedVariables.@var{MOMENT_NAME}.@var{VARIABLE_NAME}}
+@end example
+@end defvr
+
+@defvr {MATLAB/Octave variable} oo_.Smoother.Variance
+@anchor{oo_.Smoother.Variance}
+Three-dimensional array set by the @code{estimation} command (if used with the
+@code{smoother}) without Metropolis, 
+or by the @code{calib_smoother} command, if the @code{filter_covariance} option
+has been requested.
+Contains the series of one-step ahead forecast error covariance matrices
+from the Kalman smoother. The @code{M_.endo_nbr} times @code{M_.endo_nbr} times
+@code{T+1} array contains the variables in declaration order along the first 
+two dimensions. The third dimension of the array provides the
+observation for which the forecast has been made.
+@end defvr
+
+@defvr {MATLAB/Octave variable} oo_.Smoother.SteadyState
+@anchor{oo_.Smoother.SteadyState}
+Variable set by the @code{estimation} command (if used with the
+@code{smoother}) without Metropolis, 
+or by the @code{calib_smoother} command.
+Contains the steady state component of the endogenous variables used in the
+smoother in order of variable declaration.
+@end defvr
+
+@defvr {MATLAB/Octave variable} oo_.Smoother.TrendCoeffs
+@anchor{oo_.Smoother.TrendCoeffs}
+Variable set by the @code{estimation} command (if used with the
+@code{smoother}) without Metropolis, 
+or by the @code{calib_smoother} command.
+Contains the trend coefficients of the observed variables used in the
+smoother in order of declaration of the observed variables.
+@end defvr
+
+@defvr {MATLAB/Octave variable} oo_.Smoother.Trend
+Variable set by the @code{estimation} command (if used with the
+@code{smoother} option), or by the @code{calib_smoother} command.
+Contains the trend component of the observed variables used in the
+smoother.
+
+Fields are of the form:
+@example
+@code{oo_.Smoother.Trend.@var{VARIABLE_NAME}}
+@end example
+@end defvr
+
+@defvr {MATLAB/Octave variable} oo_.Smoother.Constant
+Variable set by the @code{estimation} command (if used with the
+@code{smoother} option), or by the @code{calib_smoother} command.
+Contains the constant part of the endogenous variables used in the
+smoother.
+
+Fields are of the form:
+@example
+@code{oo_.Smoother.Constant.@var{VARIABLE_NAME}}
 @end example
 @end defvr
 
@@ -6286,8 +6580,11 @@ Posterior probability of the respective model
 
 @descriptionhead
 
-This command computes and displays shock decomposition according to
-the model for a given sample.
+This command computes the historical shock decomposition for a given sample based on 
+the Kalman smoother, i.e. it decomposes the historical deviations of the endogenous 
+variables from their respective steady state values into the contribution coming 
+from the various shocks. The @code{variable_names} provided govern for which 
+variables the decomposition is plotted.
 
 Note that this command must come after either @code{estimation} (in case
 of an estimated model) or @code{stoch_simul} (in case of a calibrated
@@ -6309,21 +6606,70 @@ Metropolis has been run, else @code{posterior_mode}.
 @xref{datafile}. Useful when computing the shock decomposition on a
 calibrated model.
 
+@item use_shock_groups [= @var{SHOCK_GROUPS_NAME}]
+@anchor{use_shock_groups}. Uses groups of shocks instead of individual shocks in
+the decomposition. Groups of shocks are defined in @xref{shock_groups} block.
+
+@item colormap = @var{COLORMAP_NAME}
+@anchor{colormap}. Controls the colormap used for the shocks decomposition
+graphs. See @code{colormap} in Matlab/Octave manual.
 @end table
 
 @vindex oo_.shock_decomposition
 The results are stored in the field @code{oo_.shock_decomposition}, which is a three
-dimensional array. The first dimension contains the endogenous variables for
-which the shock decomposition has been requested. The second dimension stores
+dimensional array. The first dimension contains the @code{M_.endo_nbr} endogenous variables. 
+The second dimension stores
 in the first @code{M_.exo_nbr} columns the contribution of the respective shocks.
 Column @code{M_.exo_nbr+1} stores the contribution of the initial conditions,
 while column @code{M_.exo_nbr+2} stores the smoothed value of the respective
-endogenous variable. The third dimension stores the time periods. Both the variables 
+endogenous variable in deviations from their steady state, i.e. the mean and trends are
+subtracted. The third dimension stores the time periods. Both the variables 
 and shocks are stored in the order of declaration, i.e. @code{M_.endo_names} and 
 @code{M_.exo_names}, respectively.
 
 @end deffn
 
+@deffn Block shock_groups;
+@deffnx Block shock_groups(@var{OPTIONS}@dots{});
+
+@anchor{shock_groups} Shocks can be regrouped for the purpose of shock decomposition. The composition
+of the shock groups is written in a block delimited by @code{shock_groups} and
+@code{end}.
+
+Each line defines a group of shock as a list of exogenous variables:
+
+@example
+SHOCK_GROUP_NAME =  VARIABLE_1 [[,] VARIABLE_2 [,]@dots{}];
+@end example
+
+@optionshead
+
+@table @code
+
+@item name = @var{NAME}
+Specifies a name for the following definition of shock groups. It is possible
+to use several @code{shock_groups} blocks in a model file, each grouping being
+identified by a different name. This name must in turn be used in the
+@code{shocks_decomposition} command.
+
+@end table
+
+@examplehead
+
+@example
+varexo e_a, e_b, e_c, e_d;
+
+@dots{}
+
+shock_groups(name=group1);
+supply = e_a, e_b;
+demand = e_c, e_d;
+end;
+
+shocks_decomposition(use_shock_groups=group1);
+@end example
+
+@end deffn
 
 @deffn Command unit_root_vars @var{VARIABLE_NAME}@dots{};
 
@@ -6371,6 +6717,18 @@ more details.
 
 @item filter_step_ahead = [@var{INTEGER1}:@var{INTEGER2}]
 @xref{filter_step_ahead}.
+
+@item prefilter = @var{INTEGER}
+@xref{prefilter}.
+
+@item loglinear
+@xref{loglinear}.
+
+@item first_obs = @var{INTEGER}
+@xref{first_obs}.
+
+@item filter_decomposition
+@xref{filter_decomposition}.
 
 @end table
 
@@ -6602,7 +6960,7 @@ Use @code{plot_conditional_forecast} to graph the results.
 
 @item parameter_set = @code{calibration} | @code{prior_mode} | @code{prior_mean} | @code{posterior_mode} | @code{posterior_mean} | @code{posterior_median}
 Specify the parameter set to use for the forecasting. No default
-value, mandatory option.
+value, mandatory option. Note that in case of estimated models, @code{conditional_forecast} does not support the @code{prefilter}-option.
 
 @item controlled_varexo = (@var{VARIABLE_NAME}@dots{})
 Specify the exogenous variables to use as control variables. No
@@ -6711,6 +7069,8 @@ variables between the first and last specified period. If an intermediate period
 is not specified, a value of 0 is assumed. That is, if you specify only 
 values for periods 1 and 3, the values for period 2 will be 0. Currently, it is not 
 possible to have uncontrolled intermediate periods.
+In case of the presence of @code{observation_trends}, the specified controlled path for 
+these variables needs to include the trend component.
 
 
 @end deffn
@@ -7060,6 +7420,36 @@ osr_params gammax0 gammac0 gamma_y_ gamma_inf_;
 osr y; 
 @end example
 
+
+@anchor{osr_params_bounds}
+@deffn Block osr_params_bounds ;
+
+This block declares lower and upper bounds for parameters in the optimal simple rule. If not specified
+the optimization is unconstrained.
+
+Each line has the following syntax:
+
+@example
+PARAMETER_NAME, LOWER_BOUND, UPPER_BOUND;
+@end example
+
+Note that the use of this block requires the use of a constrained optimizer, i.e. setting @ref{opt_algo} to 
+1,2,5, or 9.
+
+@examplehead
+
+@example
+
+osr_param_bounds;
+gamma_inf_, 0, 2.5;
+end;
+
+osr(solve_algo=9) y; 
+@end example
+
+@end deffn
+
+
 @defvr {MATLAB/Octave variable} oo_.osr.objective_function 
 After an execution of the @code{osr} command, this variable contains the value of
 the objective under optimal policy.
@@ -7097,8 +7487,10 @@ This command accepts the following options:
 
 @table @code
 
+@anchor{planner_discount}
 @item planner_discount = @var{EXPRESSION}
-Declares the discount factor of the central planner. Default: @code{1.0}
+Declares or reassigns the discount factor of the central planner
+@code{optimal_policy_discount_factor}. Default: @code{1.0}
 
 @item instruments = (@var{VARIABLE_NAME},@dots{})
 Declares instrument variables for the computation of the steady state
@@ -7191,7 +7583,7 @@ This command accepts all options of @code{stoch_simul}, plus:
 @table @code
 
 @item planner_discount = @var{EXPRESSION}
-Declares the discount factor of the central planner. Default: @code{1.0}
+@xref{planner_discount}.
 
 @item instruments = (@var{VARIABLE_NAME},@dots{})
 Declares instrument variables for the computation of the steady state
@@ -7317,8 +7709,8 @@ estimation environment is set up.
 
 @menu
 * Performing sensitivity analysis::
-* Performing identification analysis::
 * IRF/Moment calibration::
+* Performing identification analysis::
 * Types of analysis and output files::
 @end menu
 
@@ -7326,6 +7718,7 @@ estimation environment is set up.
 @node Performing sensitivity analysis
 @subsection Performing sensitivity analysis
 
+@anchor{dynare_sensitivity}
 @deffn Command dynare_sensitivity ;
 @deffnx Command dynare_sensitivity (@var{OPTIONS}@dots{});
 
@@ -7640,6 +8033,7 @@ end;
 @node Performing identification analysis
 @subsection Performing identification analysis
 
+@anchor{identification}
 @deffn Command identification ;
 @deffnx Command identification (@var{OPTIONS}@dots{});
 
@@ -12921,10 +13315,10 @@ distribution. Results returned in @var{oo_.posterior_function_results}
 @table @code
 
 @item function = @var{FUNCTION_NAME}
-@xref{prior_function_function}
+@xref{prior_function_function}.
 
 @item sampling_draws = @var{INTEGER}
-@xref{prior_function_sampling_draws}
+@xref{prior_function_sampling_draws}.
 
 @end table
 
@@ -13004,6 +13398,48 @@ A @code{1*Nblck} array of doubles. Current acceptance ratios.
 
 @end deffn
 
+
+@deffn {MATLAB/Octave command line} prior [options[, ...]];
+
+Prints various informations about the prior distribution depending on
+the options. If no options are provided, the command returns the list
+of available options. Following options are available:
+
+@table @code
+
+@item table
+Prints a table describing the marginal prior distributions (mean, mode,
+std., lower and upper bounds, HPD interval).
+
+@item moments
+Computes and displays first and second order moments of the endogenous
+variables at the prior mode (considering the linearized version of the
+model).
+
+@item optimize
+Optimizes the prior density (starting from a random initial guess). The
+parameters such that the steady state does not exist or does not satisfy
+the Blanchard and Kahn conditions are penalized, as they would be when
+maximizing the posterior density. If a significant proportion of the
+prior mass is defined over such regions, the optimization algorithm may
+fail to converge to the true solution (the prior mode). 
+
+@item simulate
+Computes the effective prior mass using a Monte-Carlo. Ideally the
+effective prior mass should be equal to 1, otherwise problems may arise
+when maximising the posterior density and model comparison based
+on marginal densities may be unfair. When comparing models, say @math{A}
+and @math{B}, the marginal densities, @math{m_A} and @math{m_B}, should
+be corrected for the estimated effective prior mass @math{p_A\neq p_B
+\leq 1} so that the prior mass of the compared models are identical.
+
+@item plot
+Plots the marginal prior density.
+
+@end table
+
+@end deffn
+
 @node Bibliography
 @chapter Bibliography
 
@@ -13022,6 +13458,10 @@ Cycles: The Cycle is the Trend,'' @i{NBER Working Paper}, 10734
 
 @item
 Andreasen, Martin M., Jesús Fernández-Villaverde, and Juan Rubio-Ramírez (2013): ``The Pruned State-Space System for Non-Linear DSGE Models: Theory and Empirical Applications,'' @i{NBER Working Paper}, 18983
+
+@item
+Andrews, Donald W.K (1991): ``Heteroskedasticity and autocorrelation consistent covariance matrix estimation'', 
+@i{Econometrica}, 59(3), 817--858
 
 @item
 Backus, David K., Patrick J. Kehoe, and Finn E. Kydland (1992):
@@ -13118,6 +13558,11 @@ International Meeting on Bayesian Statistics, pp. 169--194, Oxford University Pr
 Geweke, John (1999): ``Using simulation methods for Bayesian econometric models:
 Inference, development and communication,'' @i{Econometric Reviews}, 18(1), 1--73
 
+@item
+Giordani, Paolo, Michael Pitt, and Robert Kohn (2011): ``Bayesian Inference for Time Series State Space Models''
+in: @i{The Oxford Handbook of Bayesian Econometrics}, ed. by John Geweke, Gary Koop, and Herman van Dijk,
+Oxford University Press, 61--124
+
 @item 
 Goffe, William L., Gary D. Ferrier, and John Rogers (1994): ``Global Optimization 
 of Statistical Functions with Simulated Annealing,'' @i{Journal of Econometrics}, 60(1/2), 
@@ -13127,6 +13572,11 @@ of Statistical Functions with Simulated Annealing,'' @i{Journal of Econometrics}
 Hansen, Nikolaus and Stefan Kern (2004): ``Evaluating the CMA Evolution Strategy 
 on Multimodal Test Functions''. In: @i{Eighth International Conference on Parallel 
 Problem Solving from Nature PPSN VIII, Proceedings}, Berlin: Springer, 282--291 
+
+@item
+Harvey, Andrew C. and Garry D.A. Phillips (1979): ``Maximum likelihood estimation of 
+regression models with autoregressive-moving average disturbances,''
+@i{Biometrika}, 66(1), 49--58
 
 @item
 Herbst, Edward (2015):
@@ -13199,7 +13649,14 @@ expectations models with partial information,'' @i{Economic
 Modelling}, 3(2), 90--105
 
 @item
+Planas, Christophe, Marco Ratto and Alessandro Rossi (2015): ``Slice sampling in Bayesian estimation
+of DSGE models''
+
+@item
 Pfeifer, Johannes (2013): ``A Guide to Specifying Observation Equations for the Estimation of DSGE Models''
+
+@item
+Pfeifer, Johannes (2014): ``An Introduction to Graphs in Dynare''
 
 @item
 Rabanal, Pau and Juan Rubio-Ramirez (2003): ``Comparing New Keynesian

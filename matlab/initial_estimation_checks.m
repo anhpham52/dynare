@@ -1,5 +1,5 @@
 function DynareResults = initial_estimation_checks(objective_function,xparam1,DynareDataset,DatasetInfo,Model,EstimatedParameters,DynareOptions,BayesInfo,BoundsInfo,DynareResults)
-% function initial_estimation_checks(xparam1,gend,data,data_index,number_of_observations,no_more_missing_observations)
+% function DynareResults = initial_estimation_checks(objective_function,xparam1,DynareDataset,DatasetInfo,Model,EstimatedParameters,DynareOptions,BayesInfo,BoundsInfo,DynareResults)
 % Checks data (complex values, ML evaluation, initial values, BK conditions,..)
 %
 % INPUTS
@@ -11,6 +11,7 @@ function DynareResults = initial_estimation_checks(objective_function,xparam1,Dy
 %   EstimatedParameters [structure] characterizing parameters to be estimated
 %   DynareOptions       [structure] describing the options
 %   BayesInfo           [structure] describing the priors
+%   BoundsInfo          [structure] containing prior bounds
 %   DynareResults       [structure] storing the results
 %
 % OUTPUTS
@@ -19,7 +20,7 @@ function DynareResults = initial_estimation_checks(objective_function,xparam1,Dy
 % SPECIAL REQUIREMENTS
 %    none
 
-% Copyright (C) 2003-2015 Dynare Team
+% Copyright (C) 2003-2016 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -50,20 +51,6 @@ end
 
 if maximum_number_non_missing_observations>length(find(diag(Model.Sigma_e)))+EstimatedParameters.nvn
     error(['initial_estimation_checks:: Estimation can''t take place because too many shocks have been calibrated with a zero variance!'])
-end
-
-if ~(strcmpi(DynareOptions.proposal_distribution, 'rand_multivariate_student') || ...
-     strcmpi(DynareOptions.proposal_distribution, 'rand_multivariate_normal'))
-    error(['initial_estimation_checks:: the proposal_distribution option to estimation takes either ' ...
-        'rand_multivariate_student or rand_multivariate_normal as options']);
-end
-
-if DynareOptions.student_degrees_of_freedom <= 0
-    error('initial_estimation_checks:: the student_degrees_of_freedom takes a positive integer argument');
-end
-
-if DynareOptions.TaRB.use_TaRB && (DynareOptions.TaRB.new_block_probability<0 || DynareOptions.TaRB.new_block_probability>1)
-    error(['initial_estimation_checks:: The tarb_new_block_probability must be between 0 and 1!'])
 end
 
 if (any(BayesInfo.pshape  >0 ) && DynareOptions.mh_replic) && DynareOptions.mh_nblck<1
@@ -106,12 +93,12 @@ if any(BayesInfo.pshape) % if Bayesian estimation
     offset = nvx+nvn;
     ncx=EstimatedParameters.ncx; 
     if ncx && (any(BayesInfo.p3(1+offset:offset+ncx)<-1) || any(BayesInfo.p4(1+offset:offset+ncx)>1)) 
-        warning('Your prior allows for correlations between measurement errors larger than +-1 and will not integrate to 1 due to truncation. Please change your prior')
+        warning('Your prior allows for correlations between structural shocks larger than +-1 and will not integrate to 1 due to truncation. Please change your prior')
     end
     offset = nvx+nvn+ncx;
     ncn=EstimatedParameters.ncn; 
     if ncn && (any(BayesInfo.p3(1+offset:offset+ncn)<-1) || any(BayesInfo.p4(1+offset:offset+ncn)>1)) 
-        warning('Your prior allows for correlations between structural shocks larger than +-1 and will not integrate to 1 due to truncation. Please change your prior')
+        warning('Your prior allows for correlations between measurement errors larger than +-1 and will not integrate to 1 due to truncation. Please change your prior')
     end
 end
 
@@ -161,10 +148,12 @@ if info(1) > 0
     print_info(info, DynareOptions.noprint, DynareOptions)
 end
 
-if any(abs(DynareResults.steady_state(BayesInfo.mfys))>1e-9) && (DynareOptions.prefilter==1)
-    disp(['You are trying to estimate a model with a non zero steady state for the observed endogenous'])
-    disp(['variables using demeaned data!'])
-    error('You should change something in your mod file...')
+if DynareOptions.prefilter==1
+    if (~DynareOptions.loglinear && any(abs(DynareResults.steady_state(BayesInfo.mfys))>1e-9)) || (DynareOptions.loglinear && any(abs(log(DynareResults.steady_state(BayesInfo.mfys)))>1e-9))
+        disp(['You are trying to estimate a model with a non zero steady state for the observed endogenous'])
+        disp(['variables using demeaned data!'])
+        error('You should change something in your mod file...')
+    end
 end
 
 if ~isequal(DynareOptions.mode_compute,11)
