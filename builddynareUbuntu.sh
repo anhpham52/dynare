@@ -16,7 +16,7 @@ git clone http://git.savannah.gnu.org/r/gsl.git
 cd ~/gsl
 git pull
 autoreconf -si
-./configure CFLAGS="-O3" CXXFLAGS="-O3" --host=x86_64-w64-mingw32 --prefix=/usr/local/lib/mingw64/gsl
+./configure CFLAGS="-O3" CXXFLAGS="-O3" --host=x86_64-w64-mingw32 --target=x86_64-w64-mingw32 --prefix=/usr/local/lib/mingw64/gsl
 make clean
 make
 sudo make install
