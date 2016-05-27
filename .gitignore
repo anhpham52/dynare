@@ -199,3 +199,7 @@ tests/reporting/tmpRepDir
 
 # Julia Tests
 tests/julia/rbc/rbc*.jl
+
+/examples/nonlinear-estimation/*.m
+/examples/nonlinear-estimation/*.log
+/examples/nonlinear-estimation/*/*
