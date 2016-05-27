@@ -203,4 +203,6 @@ tests/julia/rbc/rbc*.jl
 /examples/nonlinear-estimation/*.m
 /examples/nonlinear-estimation/*.log
 /examples/nonlinear-estimation/*.jnl
+/examples/nonlinear-estimation/*.eps
+/examples/nonlinear-estimation/NK*.mat
 /examples/nonlinear-estimation/*/*
