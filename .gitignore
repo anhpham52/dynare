@@ -207,3 +207,4 @@ tests/julia/rbc/rbc*.jl
 /examples/nonlinear-estimation/NK*.mat
 /examples/nonlinear-estimation/*/*
 /examples/nonlinear-estimation/*cmaes*.*
+/examples/nonlinear-estimation/dynareOBCTemp*.*
