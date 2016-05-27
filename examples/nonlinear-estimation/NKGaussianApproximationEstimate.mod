@@ -122,8 +122,8 @@ options_.gaussian_approximation = 1;
 options_.underlying_order = 2; 			// make sure estimation uses a 2rd order underlying approximation
 // disable computing the hessian
 options_.cova_compute = 0;
-// estimation( datafile='Observables.xlsx', lik_init = 1, mode_compute = 1, optim = ( 'UseParallel', 'always', 'Display', 'iter', 'MaxFunEvals', 1000000, 'MaxIter', 100000, 'TolCon', 1.49011611938477e-08 ) ) CObs, GObs, PIObs, RObs, LObs, WObs;
-estimation( datafile='Observables.xlsx', lik_init = 1, mode_compute = 9, optim = ( 'MaxFunEvals', 1000000, 'MaxIter', 100000, 'TolFun', 1.49011611938477e-08, 'TolX', 1.49011611938477e-08 ) ) CObs, GObs, PIObs, RObs, LObs, WObs;
+estimation( datafile='Observables.xlsx', lik_init = 1, mode_compute = 1, optim = ( 'UseParallel', 'always', 'Display', 'iter', 'MaxFunEvals', 1000000, 'MaxIter', 100000, 'TolCon', 1.49011611938477e-08 ) ) CObs, GObs, PIObs, RObs, LObs, WObs;
+// estimation( datafile='Observables.xlsx', lik_init = 1, mode_compute = 9, optim = ( 'MaxFunEvals', 1000000, 'MaxIter', 100000, 'TolFun', 1.49011611938477e-08, 'TolX', 1.49011611938477e-08 ) ) CObs, GObs, PIObs, RObs, LObs, WObs;
 M_.params = cell2mat( struct2cell( oo_.mle_mode.parameters ) );
 EstimatedParameters = M_.params;
 EstimatedParameters( 4 ) = 1 + EstimatedParameters( 4 ) * ( EstimatedParameters( 6 ) ^ ( - 1 / EstimatedParameters( 5 ) ) - 1 );
