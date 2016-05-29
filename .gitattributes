@@ -12,3 +12,5 @@
 *.gz binary
 *.tgz binary
 *.dat binary
+*.xls binary
+*.xlsx binary
