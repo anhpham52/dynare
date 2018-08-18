@@ -129,6 +129,13 @@ persistent init_flag
 persistent restrict_variables_idx observed_variables_idx state_variables_idx mf0 mf1
 persistent sample_size number_of_state_variables number_of_observed_variables number_of_structural_innovations
 
+global options_
+options_ = DynareOptions;
+
+if isstruct( DynareDataset )
+    DynareDataset = dseries( DynareDataset );
+end
+
 % Initialization of the returned arguments.
 fval            = [];
 ys              = [];
@@ -331,7 +338,11 @@ ReducedForm.StateVectorVariance = StateVectorVariance;
 %------------------------------------------------------------------------------
 DynareOptions.warning_for_steadystate = 0;
 [s1,s2] = get_dynare_random_generator_state();
-LIK = feval(DynareOptions.particle.algorithm,ReducedForm,Y,start,DynareOptions.particle,DynareOptions.threads);
+try
+    LIK = feval(DynareOptions.particle.algorithm,ReducedForm,Y,start,DynareOptions.particle,DynareOptions.threads);
+catch
+    LIK = NaN;
+end
 set_dynare_random_generator_state(s1,s2);
 if imag(LIK)
     likelihood = Inf;
@@ -375,4 +386,18 @@ if isinf(LIK)~=0
     info(4) = 0.1;
     exit_flag = 0;
     return
+end
+
+
+global best_fval best_M_params best_xparam1 WorkerNumber
+if isempty( best_fval )
+    best_fval = Inf;
+end
+if fval < best_fval
+    best_fval = fval;
+    best_M_params = Model.params;
+    best_xparam1 = xparam1;
+    save( [ 'CurrentBest' num2str( WorkerNumber ) '.mat' ], 'best_fval', 'best_M_params', 'best_xparam1' );
+    disp( 'New best ever fval:' );
+    disp( fval );
 end

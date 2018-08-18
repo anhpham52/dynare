@@ -100,9 +100,9 @@ if options.solve_algo == 0
     options4fsolve.MaxIter = maxit;
     options4fsolve.TolFun = tolf;
     if options.debug==1
-        options4fsolve.Display = 'final';
+        options4fsolve.Display = 'iter';
     else
-        options4fsolve.Display = 'off';
+        options4fsolve.Display = 'iter';
     end
     if jacobian_flag
         options4fsolve.Jacobian = 'on';

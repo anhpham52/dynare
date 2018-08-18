@@ -27,6 +27,8 @@ function disp_dr(dr,order,var_list)
 
 global M_ options_
 
+clear subst_auxvar
+
 if M_.hessian_eq_zero && order~=1
     order = 1;
     warning('disp_dr: using order = 1 because Hessian is equal to zero');
@@ -228,6 +230,10 @@ end
 % name, and compute the lead/lag accordingly.
 function str = subst_auxvar(aux_index, aux_lead_lag)
 global M_
+persistent unknown_index
+if isempty( unknown_index )
+    unknown_index = 0;
+end
 
 if aux_index <= M_.orig_endo_nbr
     str = sprintf('%s(%d)', deblank(M_.endo_names(aux_index,:)), aux_lead_lag);
@@ -257,7 +263,8 @@ for i = 1:length(M_.aux_vars)
         return
     end
 end
-error(sprintf('Could not find aux var: %s', M_.endo_names(aux_index, :)))
+str = sprintf( 'UnknownAuxEndoVar%d(%d)', unknown_index, aux_lead_lag );
+unknown_index = unknown_index + 1;
 end
 
 function [str,flag]=get_print_string(str,x,value_format_zero,value_format_float,flag,options_)

@@ -80,7 +80,12 @@ if info(1) > 0
     return
 end
 
-switch nargin
+Cnargin = nargin;
+if isempty( DynareResults.dr.restrict_var_list ) || isempty( DynareResults.dr.restrict_columns )
+    Cnargin = 3;
+end
+
+switch Cnargin
   case 3
     endo_nbr = Model.endo_nbr;
     nstatic = Model.nstatic;

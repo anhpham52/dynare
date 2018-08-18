@@ -30,7 +30,17 @@ function h = dyn_figure(nodisplay, varargin)
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
 if nodisplay
-    h = figure(varargin{:},'visible','off');
+    if ~ischar( varargin{1} )
+        h = figure( varargin{1} );
+        set( h, varargin{2:end},'visible','off' );
+    else
+        h = figure(varargin{:},'visible','off');
+    end
 else
-    h = figure(varargin{:});
+    if ~ischar( varargin{1} )
+        h = figure( varargin{1} );
+        set( h, varargin{2:end},'visible','on' );
+    else
+        h = figure(varargin{:},'visible','on');
+    end
 end

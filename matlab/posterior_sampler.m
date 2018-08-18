@@ -118,8 +118,21 @@ end
 % single chain compute sequentially.
 
 if isnumeric(options_.parallel) || (nblck-fblck)==0
-    fout = posterior_sampler_core(localVars, fblck, nblck, 0);
-    record = fout.record;
+    ParallelInitializationInternal( );
+    fout( nblck ) = struct( );
+    parfor idx = fblck : nblck
+        fout( idx ) = posterior_sampler_core( localVars, idx, idx, 0 ); % GetGlobalWorkerNumber( ), []
+        tLastLogPost( idx ) = fout( idx ).record.LastLogPost;
+        tLastParameters( idx ) = fout( idx ).record.LastParameters;
+        tAcceptanceRatio( idx ) = fout( idx ).record.AcceptanceRatio;
+        tFunctionEvalPerIteration( idx ) = fout( idx ).record.FunctionEvalPerIteration;
+        tLastSeeds( idx ) = fout( idx ).record.LastSeeds;
+    end
+    record.LastLogPost = tLastLogPost;
+    record.LastParameters = tLastParameters;
+    record.AcceptanceRatio = tAcceptanceRatio;
+    record.FunctionEvalPerIteration = tFunctionEvalPerIteration;
+    record.LastSeeds = tLastSeeds;
     % Parallel in Local or remote machine.
 else
     % Global variables for parallel routines.

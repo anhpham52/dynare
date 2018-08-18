@@ -259,11 +259,21 @@ if options_.irf
                 if nbplt == 0
                 elseif nbplt == 1
                     if options_.relative_irf
-                        hh = dyn_figure(options_.nodisplay,'Name',['Relative response to' ...
-                                            ' orthogonalized shock to ' tit(i,:)]);
+                        if isfield( options_, 'new_figures' ) && options_.new_figures
+                            hh = dyn_figure(options_.nodisplay,'Name',['Relative response to' ...
+                                                ' orthogonalized shock to ' tit(i,:)]);
+                        else
+                            hh = dyn_figure(options_.nodisplay,i+1,'Name',['Relative response to' ...
+                                                ' orthogonalized shock to ' tit(i,:)]);
+                        end
                     else
-                        hh = dyn_figure(options_.nodisplay,'Name',['Orthogonalized shock to' ...
-                                            ' ' tit(i,:)]);
+                        if isfield( options_, 'new_figures' ) && options_.new_figures
+                            hh = dyn_figure(options_.nodisplay,'Name',['Orthogonalized shock to' ...
+                                                ' ' tit(i,:)]);
+                        else
+                            hh = dyn_figure(options_.nodisplay,i+1,'Name',['Orthogonalized shock to' ...
+                                                ' ' tit(i,:)]);
+                        end
                     end
                     for j = 1:number_of_plots_to_draw
                         subplot(nr,nc,j);
@@ -291,11 +301,21 @@ if options_.irf
                 else
                     for fig = 1:nbplt-1
                         if options_.relative_irf
-                            hh = dyn_figure(options_.nodisplay,'Name',['Relative response to orthogonalized shock' ...
-                                                ' to ' tit(i,:) ' figure ' int2str(fig)]);
+                            if isfield( options_, 'new_figures' ) && options_.new_figures
+                                hh = dyn_figure(options_.nodisplay,'Name',['Relative response to orthogonalized shock' ...
+                                                    ' to ' tit(i,:) ' figure ' int2str(fig)]);
+                            else
+                                hh = dyn_figure(options_.nodisplay,i+1,'Name',['Relative response to orthogonalized shock' ...
+                                                    ' to ' tit(i,:) ' figure ' int2str(fig)]);
+                            end
                         else
-                            hh = dyn_figure(options_.nodisplay,'Name',['Orthogonalized shock to ' tit(i,:) ...
-                                                ' figure ' int2str(fig)]);
+                            if isfield( options_, 'new_figures' ) && options_.new_figures
+                                hh = dyn_figure(options_.nodisplay,'Name',['Orthogonalized shock to ' tit(i,:) ...
+                                                    ' figure ' int2str(fig)]);
+                            else
+                                hh = dyn_figure(options_.nodisplay,i+1,'Name',['Orthogonalized shock to ' tit(i,:) ...
+                                                    ' figure ' int2str(fig)]);
+                            end
                         end
                         for plt = 1:nstar
                             subplot(nr,nc,plt);
@@ -327,7 +347,11 @@ if options_.irf
                             fprintf(fidTeX,' \n');
                         end
                     end
-                    hh = dyn_figure(options_.nodisplay,'Name',['Orthogonalized shock to ' tit(i,:) ' figure ' int2str(nbplt) '.']);
+                    if isfield( options_, 'new_figures' ) && options_.new_figures
+                        hh = dyn_figure(options_.nodisplay,'Name',['Orthogonalized shock to ' tit(i,:) ' figure ' int2str(nbplt) '.']);
+                    else
+                        hh = dyn_figure(options_.nodisplay,i+1,'Name',['Orthogonalized shock to ' tit(i,:) ' figure ' int2str(nbplt) '.']);
+                    end
                     m = 0;
                     for plt = 1:number_of_plots_to_draw-(nbplt-1)*nstar
                         m = m+1;

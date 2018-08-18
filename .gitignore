@@ -14,6 +14,12 @@ TAGS
 *.xls
 *.xlsx
 
+#kdiff3 junk
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*
+
 # Build system rules
 .deps
 Makefile
@@ -173,6 +179,8 @@ mex/build/matlab/run_m2html.m
 
 # Windows
 /windows/dynare-version.nsi
+*.asv
+/mex/build/matlab/*/*.mex*
 
 # Estimation DLL tests
 /mex/sources/estimation/tests/test-dr
@@ -208,11 +216,26 @@ mex/build/matlab/run_m2html.m
 *synctex.gz
 tests/reporting/tmpRepDir
 
+# From KDiff3
+*.orig
+
 # Julia Tests
 tests/julia/rbc/rbc*.jl
+
+# Non-Linear estimation gumph
+/examples/nonlinear-estimation/*.m
+/examples/nonlinear-estimation/*.log
+/examples/nonlinear-estimation/*.jnl
+/examples/nonlinear-estimation/*.eps
+/examples/nonlinear-estimation/NK*.mat
+/examples/nonlinear-estimation/*/*
+/examples/nonlinear-estimation/*cmaes*.*
+/examples/nonlinear-estimation/dynareOBCTemp*.*
 
 # Octave variables saved when Octave crashes
 octave-workspace
 
+
+*.lineno
 # VERSION generated file
 VERSION
