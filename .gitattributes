@@ -1,0 +1,18 @@
+* text eol=lf
+*.bat text eol=crlf
+*.mod text eol=lf
+*.m text eol=lf
+*.mex* binary
+*.dll binary
+*.oct binary
+*.exe binary
+*.mat binary
+*.png binary
+*.jpg binary
+*.mht binary
+*.pdf binary
+*.gz binary
+*.tgz binary
+*.dat binary
+*.xls binary
+*.xlsx binary

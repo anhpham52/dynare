@@ -135,6 +135,7 @@ function [fval,info,exit_flag,DLIK,Hess,SteadyState,trend_coeff,Model,DynareOpti
 % AUTHOR(S) stephane DOT adjemian AT univ DASH lemans DOT FR
 
 % Initialization of the returned variables and others...
+
 fval        = [];
 SteadyState = [];
 trend_coeff = [];
@@ -143,10 +144,21 @@ info        = zeros(4,1);
 DLIK        = [];
 Hess        = [];
 
+if isstruct( DynareDataset ) 
+    DynareDataset = dseries( DynareDataset ); 
+end 
+
 % Ensure that xparam1 is a column vector.
 xparam1 = xparam1(:);
 
-if DynareOptions.estimation_dll
+if ~isfield( DynareOptions, 'non_central_approximation' )
+    DynareOptions.non_central_approximation = 0;
+end
+if ~isfield( DynareOptions, 'gaussian_approximation' )
+    DynareOptions.gaussian_approximation = 0;
+end
+
+if DynareOptions.estimation_dll && ( DynareOptions.non_central_approximation == 0 ) && ( DynareOptions.gaussian_approximation == 0 )
     [fval,exit_flag,SteadyState,trend_coeff,info,params,H,Q] ...
         = logposterior(xparam1,DynareDataset, DynareOptions,Model, ...
                        EstimatedParameters,BayesInfo,DynareResults);
@@ -288,6 +300,11 @@ if info(1)
         return
     end
 end
+
+if DynareOptions.gaussian_approximation
+    Q = Model.Sigma_e;
+end
+
 
 % check endogenous prior restrictions
 info=endogenous_prior_restrictions(T,R,Model,DynareOptions,DynareResults);
@@ -880,4 +897,17 @@ end
 if analytic_derivation==0 && nargout>3
     lik=lik(start:end,:);
     DLIK=[-lnprior; lik(:)];
+end
+
+global best_fval best_M_params best_xparam1 WorkerNumber
+if isempty( best_fval )
+    best_fval = Inf;
+end
+if fval < best_fval
+    best_fval = fval;
+    best_M_params = Model.params;
+    best_xparam1 = xparam1;
+    save( [ 'CurrentBest' num2str( WorkerNumber ) '.mat' ], 'best_fval', 'best_M_params', 'best_xparam1' );
+    disp( 'New best ever fval:' );
+    disp( fval );
 end

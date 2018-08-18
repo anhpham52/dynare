@@ -15,18 +15,21 @@
 	url = https://github.com/DynareTeam/m-unit-tests.git
 [submodule "matlab/particles"]
 	path = matlab/particles
-	url = https://git.dynare.org/Dynare/particles.git
+	url = https://github.com/tholden/particles.git
 [submodule "matlab/modules/dates"]
 	path = matlab/modules/dates
-	url = https://github.com/DynareTeam/dates.git
+	url = https://github.com/tholden/dates.git
 	branch = old-oop-style
 [submodule "matlab/modules/dseries"]
 	path = matlab/modules/dseries
-	url = https://github.com/DynareTeam/dseries.git
+	url = https://github.com/tholden/dseries.git
 	branch = old-oop-style
 [submodule "matlab/modules/reporting"]
 	path = matlab/modules/reporting
 	url = https://github.com/DynareTeam/reporting.git
+[submodule "matlab/modules/nlma"]
+	path = matlab/modules/nlma
+	url = https://github.com/tholden/nlma.git
 [submodule "contrib/jsonlab"]
 	path = contrib/jsonlab
 	url = https://github.com/fangq/jsonlab.git

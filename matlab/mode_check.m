@@ -153,20 +153,24 @@ for plt = 1:nbplt
             y = zeros(length(z),2);
             dy = priordens(xx,BayesInfo.pshape,BayesInfo.p6,BayesInfo.p7,BayesInfo.p3,BayesInfo.p4);
         end
-        for i=1:length(z)
-            xx(kk) = z(i);
-            [fval, info, exit_flag] = feval(fun,xx,DynareDataset,DatasetInfo,DynareOptions,Model,EstimatedParameters,BayesInfo,BoundsInfo,DynareResults);
+        ParallelInitializationInternal( );
+        parfor i=1:length(z)
+            xxn = xx;
+            xxn(kk) = z(i);
+            [fval, info, exit_flag] = feval(fun,xxn,DynareDataset,DatasetInfo,DynareOptions,Model,EstimatedParameters,BayesInfo,BoundsInfo,DynareResults);
             if exit_flag
-                y(i,1) = fval;
+                yi1 = fval;
             else
-                y(i,1) = NaN;
+                yi1 = NaN;
                 if DynareOptions.debug
                     fprintf('mode_check:: could not solve model for parameter %s at value %4.3f, error code: %u\n',name,z(i),info(1))
                 end
             end
             if DynareOptions.mode_check.nolik==0
-                lnprior = priordens(xx,BayesInfo.pshape,BayesInfo.p6,BayesInfo.p7,BayesInfo.p3,BayesInfo.p4);
-                y(i,2)  = (y(i,1)+lnprior-dy);
+                lnprior = priordens(xxn,BayesInfo.pshape,BayesInfo.p6,BayesInfo.p7,BayesInfo.p3,BayesInfo.p4);
+                y(i,:)  = [yi1, (yi1+lnprior-dy)];
+            else
+                y(i,:) = [yi1, 0];
             end
         end
         mcheck.cross = setfield(mcheck.cross, name, [transpose(z), -y]);

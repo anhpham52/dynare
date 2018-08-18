@@ -65,7 +65,7 @@ old_steady_params=Model.params; %save initial parameters for check if steady sta
 if isfield(EstimatedParameters,'param_vals') && ~isempty(EstimatedParameters.param_vals)
     %check whether steady state file changes estimated parameters
     Model_par_varied=Model; %store Model structure
-    Model_par_varied.params(EstimatedParameters.param_vals(:,1))=Model_par_varied.params(EstimatedParameters.param_vals(:,1))*1.01; %vary parameters
+    Model_par_varied.params(EstimatedParameters.param_vals(:,1))=Model_par_varied.params(EstimatedParameters.param_vals(:,1))*1.0001; %vary parameters
     [junk, new_steady_params_2] = evaluate_steady_state(DynareResults.steady_state,Model_par_varied,DynareOptions,DynareResults,DynareOptions.diffuse_filter==0);
 
     changed_par_indices=find((old_steady_params(EstimatedParameters.param_vals(:,1))-new_steady_params(EstimatedParameters.param_vals(:,1))) ...

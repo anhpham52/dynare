@@ -18,7 +18,7 @@ function [nbplt,nr,nc,lr,lc,nstar] = pltorg(number)
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
 nrstar = 3;
-ncstar = 3;
+ncstar = 6;
 nstar  = nrstar*ncstar;
 nbplt  = 0;
 nr     = 0;
@@ -61,6 +61,42 @@ elseif number == 9
     nbplt = 1;
     nr    = 3;
     nc    = 3;
+elseif number == 10
+    nbplt = 1;
+    nr    = 3;
+    nc    = 4;
+elseif number == 11
+    nbplt = 1;
+    nr    = 3;
+    nc    = 4;
+elseif number == 12
+    nbplt = 1;
+    nr    = 3;
+    nc    = 4;
+elseif number == 13
+    nbplt = 1;
+    nr    = 3;
+    nc    = 5;
+elseif number == 14
+    nbplt = 1;
+    nr    = 3;
+    nc    = 5;
+elseif number == 15
+    nbplt = 1;
+    nr    = 3;
+    nc    = 5;
+elseif number == 16
+    nbplt = 1;
+    nr    = 3;
+    nc    = 6;
+elseif number == 17
+    nbplt = 1;
+    nr    = 3;
+    nc    = 6;
+elseif number == 18
+    nbplt = 1;
+    nr    = 3;
+    nc    = 6;
 else
     if number/nstar == round(number/nstar)
         nbplt = number/nstar;
@@ -97,6 +133,33 @@ else
         elseif reste == 8
             lr    = 3;
             lc    = 3;
+        elseif reste == 9
+            lr    = 3;
+            lc    = 3;
+        elseif reste == 10
+            lr    = 3;
+            lc    = 4;
+        elseif reste == 11
+            lr    = 3;
+            lc    = 4;
+        elseif reste == 12
+            lr    = 3;
+            lc    = 4;
+        elseif reste == 13
+            lr    = 3;
+            lc    = 5;
+        elseif reste == 14
+            lr    = 3;
+            lc    = 5;
+        elseif reste == 15
+            lr    = 3;
+            lc    = 5;
+        elseif reste == 16
+            lr    = 3;
+            lc    = 6;
+        elseif reste == 17
+            lr    = 3;
+            lc    = 6;
         end
     end
 end

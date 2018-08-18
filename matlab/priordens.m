@@ -37,7 +37,15 @@ persistent tt1 tt2 tt3 tt4 tt5 tt6 tt8
 
 info=0;
 
-if nargin > 6  && initialization
+if nargin < 7
+    initialization = false;
+end
+
+if ( ~initialization ) && ( ~isempty( pshape ) ) && ( isempty( tt1 ) || isempty( tt2 ) || isempty( tt3 ) || isempty( tt4 ) || isempty( tt5 ) || isempty( tt6 ) || isempty( tt8 ) )
+    initialization = true;
+end
+
+if initialization
     % Beta indices.
     tt1 = true;
     id1 = find(pshape==1);

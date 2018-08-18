@@ -62,6 +62,31 @@ fval=NaN;
 opt_par_values=NaN(size(start_par_value));
 new_rat_hess_info=[];
 
+ParallelFlag = false;
+
+if ~isempty(options_.optim_opt)
+    options_list = read_key_value_string(options_.optim_opt);
+    UseParallelOptionIndex = find( strcmpi( options_list(:,1), 'UseParallel' ), 1 );
+    ParallelFlag = ~isempty( UseParallelOptionIndex ) && ( all( options_list{UseParallelOptionIndex,2}==1 ) || strcmpi( options_list{UseParallelOptionIndex,2}, 'always' ) );
+    if ParallelFlag
+        disp( 'Performing parallel initialization.' );
+        for i = 1 : numel( varargin )
+            if isa( varargin{i}, 'dates' )
+                varargin{i} = struct( varargin{i} );
+            end
+            if isa( varargin{i}, 'dseries' )
+                varargin{i} = struct( varargin{i} );
+                if isfield( varargin{i}, 'dates' )
+                    varargin{i}.dates = struct( varargin{i}.dates );
+                end
+            end
+        end
+
+        ParallelInitializationInternal( );
+    end
+end
+
+
 switch minimizer_algorithm
   case 1
     if isoctave
@@ -80,6 +105,7 @@ switch minimizer_algorithm
     if options_.analytic_derivation
         optim_options = optimset(optim_options,'GradObj','on','TolX',1e-7);
     end
+
     [opt_par_values,fval,exitflag,output,lamdba,grad,hessian_mat] = ...
         fmincon(objective_function,start_par_value,[],[],[],[],bounds(:,1),bounds(:,2),[],optim_options,varargin{:});
   case 2
@@ -307,14 +333,17 @@ switch minimizer_algorithm
     [opt_par_values,fval,exitflag] = simplex_optimization_routine(objective_function,start_par_value,simplexOptions,parameter_names,varargin{:});
   case 9
     % Set defaults
-    H0 = (bounds(:,2)-bounds(:,1))*0.2;
-    H0(~isfinite(H0)) = 0.01;
+    H0 = prior_information.p2;
+    H0(~isfinite(H0)) = (bounds(~isfinite(H0),2)-bounds(~isfinite(H0),1))*0.2;
+    H0(~isfinite(H0)) = 0.2;
     while max(H0)/min(H0)>1e6 %make sure initial search volume (SIGMA) is not badly conditioned
         H0(H0==max(H0))=0.9*H0(H0==max(H0));
     end
     cmaesOptions = options_.cmaes;
     cmaesOptions.LBounds = bounds(:,1);
     cmaesOptions.UBounds = bounds(:,2);
+    
+    MinSigma = sqrt( eps );
     % Modify defaults
     if ~isempty(options_.optim_opt)
         options_list = read_key_value_string(options_.optim_opt);
@@ -322,12 +351,18 @@ switch minimizer_algorithm
             switch options_list{i,1}
               case 'MaxIter'
                 cmaesOptions.MaxIter = options_list{i,2};
+              case 'SigmaScale'
+                H0 = options_list{i,2} .* H0;
+              case 'MinSigma'
+                MinSigma = options_list{i,2};
               case 'TolFun'
                 cmaesOptions.TolFun = options_list{i,2};
               case 'TolX'
                 cmaesOptions.TolX = options_list{i,2};
               case 'MaxFunEvals'
                 cmaesOptions.MaxFunEvals = options_list{i,2};
+              case 'DiagonalOnly'
+                cmaesOptions.DiagonalOnly = options_list{i,2};
               case 'verbosity'
                 if options_list{i,2}==0
                     cmaesOptions.DispFinal  = 'off';   % display messages like initial and final message';
@@ -341,23 +376,59 @@ switch minimizer_algorithm
                 end
               case 'CMAESResume'
                 if options_list{i,2}==1
-                    cmaesOptions.Resume = 'yes';
+                    cmaesOptions.Resume = true;
+                end
+              case 'UseParallel' 
+                if all( options_list{i,2}==1 ) || strcmpi( options_list{i,2}, 'always' ) 
+                    cmaesOptions.EvalParallel = true; 
                 end
               otherwise
                 warning(['cmaes: Unknown option (' options_list{i,1}  ')!'])
             end
         end
     end
+    H0 = max( H0, MinSigma );
     if options_.silent_optimizer
         cmaesOptions.DispFinal  = 'off';   % display messages like initial and final message';
         cmaesOptions.DispModulo = '0';   % [0:Inf], disp messages after every i-th iteration';
         cmaesOptions.SaveVariables='off';
-        cmaesOptions.LogModulo = '0';    % [0:Inf] if >1 record data less frequently after gen=100';
+        cmaesOptions.LogModulo = 'Inf';    % [0:Inf] if >1 record data less frequently after gen=100';
         cmaesOptions.LogTime   = '0';    % [0:100] max. percentage of time for recording data';
+    else
+        cmaesOptions.DispFinal  = 'on';   % display messages like initial and final message';
+        cmaesOptions.DispModulo = '1';   % [0:Inf], disp messages after every i-th iteration';
+        cmaesOptions.SaveVariables='on';
+        cmaesOptions.LogModulo = '0';    % [0:Inf] if >1 record data less frequently after gen=100';
+        cmaesOptions.LogTime   = '100';    % [0:100] max. percentage of time for recording data';
     end
     warning('off','CMAES:NonfinitenessRange');
     warning('off','CMAES:InitialSigma');
-    [x, fval, COUNTEVAL, STOPFLAG, OUT, BESTEVER] = cmaes(func2str(objective_function),start_par_value,H0,cmaesOptions,varargin{:});
+    if cmaesOptions.EvalParallel
+        try
+            pool = gcp;
+            nw = pool.NumWorkers;
+        catch
+            nw = 1;
+        end
+        cmaesOptions.PopSize = [ 'ceil( (4 + floor(3*log(N))) / ' int2str( nw ) ' ) * ' int2str( nw ) ];
+        cmaesOptions.CMA.active = 1;
+        cmaesOptions.StopOnStagnation = false;
+        ErrorCaught=true;
+        while ErrorCaught
+            try
+                [~, ~, ~, ~, ~, BESTEVER] = cmaes(@(XV) parallel_wrapper(objective_function,XV,varargin{:}),start_par_value,H0,cmaesOptions);
+                ErrorCaught = false;
+            catch Error
+                disp( Error.identifier );
+                disp( Error.message );
+                disp( Error.stack( 1 ) );
+                cmaesOptions.Resume = true;
+                ParallelInitializationInternal( );
+            end
+        end
+    else
+        [~, ~, ~, ~, ~, BESTEVER] = cmaes(objective_function,start_par_value,H0,cmaesOptions,varargin{:});
+    end
     opt_par_values=BESTEVER.x;
     fval=BESTEVER.f;
   case 10

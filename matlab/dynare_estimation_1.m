@@ -51,7 +51,14 @@ else
 end
 
 % Set particle filter flag.
-if options_.order > 1
+
+if ~isfield( options_, 'non_central_approximation' )
+    options_.non_central_approximation = 0;
+end
+if ~isfield( options_, 'gaussian_approximation' )
+    options_.gaussian_approximation = 0;
+end
+if options_.order > 1 && ( options_.non_central_approximation == 0 ) && ( options_.gaussian_approximation == 0 )
     if options_.particle.status && options_.order==2
         skipline()
         disp('Estimation using a non linear filter!')
@@ -88,7 +95,7 @@ if options_.order > 1
 end
 
 if ~options_.dsge_var
-    if options_.particle.status
+    if options_.particle.status && ~( options_.non_central_approximation || options_.gaussian_approximation )
         objective_function = str2func('non_linear_dsge_likelihood');
         if strcmpi(options_.particle.filter_algorithm, 'sis')
             options_.particle.algorithm = 'sequential_importance_particle_filter';
@@ -340,6 +347,9 @@ if ~options_.mh_posterior_mode_estimation
     if options_.cova_compute
         hsd = sqrt(diag(hh));
         invhess = inv(hh./(hsd*hsd'))./(hsd*hsd');
+        ScaleInverseHessian = sqrt( min( 1, bayestopt_.p2 ./ diag( invhess ) ) );
+        ScaleInverseHessian( ~isfinite( ScaleInverseHessian ) ) = 1;
+        invhess = diag( ScaleInverseHessian ) * invhess * diag( ScaleInverseHessian );
         stdh = sqrt(diag(invhess));
         oo_.posterior.optimization.Variance = invhess;
     end
@@ -550,7 +560,7 @@ if options_.particle.status
 end
 
 if (~((any(bayestopt_.pshape > 0) && options_.mh_replic) || (any(bayestopt_.pshape> 0) && options_.load_mh_file)) ...
-    || ~options_.smoother ) && options_.partial_information == 0  % to be fixed
+    || ~options_.smoother ) && ( options_.partial_information == 0 ) && ( options_.gaussian_approximation == 0 )% to be fixed
     %% ML estimation, or posterior mode without Metropolis-Hastings or Metropolis without Bayesian smoothes variables
     [atT,innov,measurement_error,updated_variables,ys,trend_coeff,aK,T,R,P,PK,decomp,Trend,state_uncertainty,M_,oo_,options_,bayestopt_] = DsgeSmoother(xparam1,dataset_.nobs,transpose(dataset_.data),dataset_info.missing.aindex,dataset_info.missing.state,M_,oo_,options_,bayestopt_,estim_params_);
     [oo_,yf]=store_smoother_results(M_,oo_,options_,bayestopt_,dataset_,dataset_info,atT,innov,measurement_error,updated_variables,ys,trend_coeff,aK,P,PK,decomp,Trend,state_uncertainty);

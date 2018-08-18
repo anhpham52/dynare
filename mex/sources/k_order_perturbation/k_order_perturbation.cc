@@ -347,6 +347,10 @@ extern "C" {
         strstrm << "dynare:k_order_perturbation: Caught general exception: " << e.message();
         DYN_MEX_FUNC_ERR_MSG_TXT(strstrm.str().c_str());
       }
+    catch (...)
+      {
+        DYN_MEX_FUNC_ERR_MSG_TXT("dynare:k_order_perturbation: Caught undefined exception.");
+      }
     plhs[0] = mxCreateDoubleScalar(0);
   } // end of mexFunction()
 } // end of extern C
