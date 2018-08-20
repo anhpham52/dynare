@@ -14,6 +14,12 @@ TAGS
 *.xls
 *.xlsx
 
+#kdiff3 junk
+*_BACKUP_*
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*
+
 # Build system rules
 .deps
 Makefile
