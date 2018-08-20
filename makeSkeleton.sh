@@ -1,5 +1,6 @@
 #!/bin/bash
-version='4.5.6';
+releaseFolder='4.5.6';
+gitFolder='dynareMaster';
 
 cd ..
 
@@ -7,11 +8,11 @@ rm releaseListing.txt
 rm gitListing.txt
 rm diffListings.txt
 
-cd "$version"
+cd "$releaseFolder"
 find . -type f 1> ../releaseListing.txt
 cd ..
 
-cd dynare
+cd "$gitFolder"
 find . -type f 1> ../gitListing.txt
 cd ..
 
@@ -19,7 +20,7 @@ diff --new-line-format="" --unchanged-line-format="" <(sort releaseListing.txt) 
 
 rm dynareReleaseSkeleton.tar
 
-cd "$version"
+cd "$releaseFolder"
 tar -cf ../dynareReleaseSkeleton.tar -T ../diffListings.txt
 cd ..
 
@@ -29,4 +30,4 @@ cd dynareReleaseSkeleton
 
 tar -xf ../dynareReleaseSkeleton.tar
 
-cd ../dynare
+cd "../$gitFolder"
