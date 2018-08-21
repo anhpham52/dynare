@@ -13,12 +13,14 @@ TAGS
 *.mat
 *.xls
 *.xlsx
+*.exe
 
 #kdiff3 junk
 *_BACKUP_*
 *_BASE_*
 *_LOCAL_*
 *_REMOTE_*
+*.orig
 
 # Build system rules
 .deps
@@ -215,9 +217,6 @@ mex/build/matlab/run_m2html.m
 # Reporting
 *synctex.gz
 tests/reporting/tmpRepDir
-
-# From KDiff3
-*.orig
 
 # Julia Tests
 tests/julia/rbc/rbc*.jl
