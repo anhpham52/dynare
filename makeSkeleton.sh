@@ -1,6 +1,6 @@
 #!/bin/bash
 releaseFolder='4.5.6';
-gitFolder='dynare45';
+gitFolder=${PWD##*/};
 
 cd ..
 
