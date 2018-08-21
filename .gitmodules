@@ -13,6 +13,7 @@
 [submodule "matlab/particles"]
 	path = matlab/particles
 	url = https://github.com/tholden/particles.git
+	branch = stable-4.5
 [submodule "matlab/modules/dates"]
 	path = matlab/modules/dates
 	url = https://github.com/tholden/dates.git
