@@ -14,6 +14,7 @@ TAGS
 *.xls
 *.xlsx
 *.exe
+*.lineno
 
 #kdiff3 junk
 *_BACKUP_*
@@ -234,7 +235,12 @@ tests/julia/rbc/rbc*.jl
 # Octave variables saved when Octave crashes
 octave-workspace
 
-
-*.lineno
 # VERSION generated file
 VERSION
+
+#Files from release
+/dynare++/dynare_simul.m
+/matlab/supported_octave_version.m
+/mexopts-win32.bat
+/mexopts-win64.bat
+/README.txt
