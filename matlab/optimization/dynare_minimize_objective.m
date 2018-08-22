@@ -391,15 +391,9 @@ switch minimizer_algorithm
     if options_.silent_optimizer
         cmaesOptions.DispFinal  = 'off';   % display messages like initial and final message';
         cmaesOptions.DispModulo = '0';   % [0:Inf], disp messages after every i-th iteration';
-        cmaesOptions.SaveVariables='off';
-        cmaesOptions.LogModulo = 'Inf';    % [0:Inf] if >1 record data less frequently after gen=100';
-        cmaesOptions.LogTime   = '0';    % [0:100] max. percentage of time for recording data';
     else
         cmaesOptions.DispFinal  = 'on';   % display messages like initial and final message';
         cmaesOptions.DispModulo = '1';   % [0:Inf], disp messages after every i-th iteration';
-        cmaesOptions.SaveVariables='on';
-        cmaesOptions.LogModulo = '0';    % [0:Inf] if >1 record data less frequently after gen=100';
-        cmaesOptions.LogTime   = '100';    % [0:100] max. percentage of time for recording data';
     end
     warning('off','CMAES:NonfinitenessRange');
     warning('off','CMAES:InitialSigma');
