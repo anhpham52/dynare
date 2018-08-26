@@ -158,20 +158,6 @@ if ~isfield( DynareOptions, 'gaussian_approximation' )
     DynareOptions.gaussian_approximation = 0;
 end
 
-if DynareOptions.estimation_dll && ( DynareOptions.non_central_approximation == 0 ) && ( DynareOptions.gaussian_approximation == 0 )
-    [fval,exit_flag,SteadyState,trend_coeff,info,params,H,Q] ...
-        = logposterior(xparam1,DynareDataset, DynareOptions,Model, ...
-                       EstimatedParameters,BayesInfo,DynareResults);
-    mexErrCheck('logposterior', exit_flag);
-    Model.params = params;
-    if ~isequal(Model.H,0)
-        Model.H = H;
-    end
-    Model.Sigma_e = Q;
-    DynareResults.dr.ys = SteadyState;
-    return
-end
-
 % Set flag related to analytical derivatives.
 analytic_derivation = DynareOptions.analytic_derivation;
 
