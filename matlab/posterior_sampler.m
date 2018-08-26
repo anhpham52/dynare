@@ -118,21 +118,31 @@ end
 % single chain compute sequentially.
 
 if isnumeric(options_.parallel) || (nblck-fblck)==0
-    ParallelInitializationInternal( );
-    fout( nblck ) = struct( );
+    ParallelInitializationInternal( options_ );
+    
+    fout = cell( nblck, 1 );
+    tLastLogPost = record.LastLogPost;
+    tLastParameters = record.LastParameters;
+    tAcceptanceRatio = record.AcceptanceRatio;
+    tFunctionEvalPerIteration = record.FunctionEvalPerIteration;
+    tLastSeeds( nblck ) = struct( 'Unifor', [], 'Normal', [] );
+    
     parfor idx = fblck : nblck
-        fout( idx ) = posterior_sampler_core( localVars, idx, idx, 0 ); % GetGlobalWorkerNumber( ), []
-        tLastLogPost( idx ) = fout( idx ).record.LastLogPost;
-        tLastParameters( idx ) = fout( idx ).record.LastParameters;
-        tAcceptanceRatio( idx ) = fout( idx ).record.AcceptanceRatio;
-        tFunctionEvalPerIteration( idx ) = fout( idx ).record.FunctionEvalPerIteration;
-        tLastSeeds( idx ) = fout( idx ).record.LastSeeds;
+        fout{ idx } = posterior_sampler_core( localVars, idx, idx, 0 );
+        tLastLogPost( idx ) = fout{ idx }.record.LastLogPost( idx );
+        tLastParameters( idx, : ) = fout{ idx }.record.LastParameters( idx, : );
+        tAcceptanceRatio( idx ) = fout{ idx }.record.AcceptanceRatio( idx );
+        tFunctionEvalPerIteration( idx ) = fout{ idx }.record.FunctionEvalPerIteration( idx );
+        tLastSeeds( idx ) = fout{ idx }.record.LastSeeds( idx );
     end
-    record.LastLogPost = tLastLogPost;
-    record.LastParameters = tLastParameters;
-    record.AcceptanceRatio = tAcceptanceRatio;
-    record.FunctionEvalPerIteration = tFunctionEvalPerIteration;
-    record.LastSeeds = tLastSeeds;
+    
+    record.LastLogPost( fblck : nblck ) = tLastLogPost( fblck : nblck );
+    record.LastParameters( fblck : nblck, : ) = tLastParameters( fblck : nblck, : );
+    record.AcceptanceRatio( fblck : nblck ) = tAcceptanceRatio( fblck : nblck );
+    record.FunctionEvalPerIteration( fblck : nblck ) = tFunctionEvalPerIteration( fblck : nblck );
+    record.LastSeeds( fblck : nblck ) = tLastSeeds( fblck : nblck );
+    
+    fout = fout{ fblck };
     % Parallel in Local or remote machine.
 else
     % Global variables for parallel routines.
