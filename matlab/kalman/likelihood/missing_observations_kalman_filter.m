@@ -124,10 +124,10 @@ while notsteady && t<=last
         else
             F_singular = false;
             if rescale_prediction_error_covariance
-                log_dF = log(det(F./(sig*sig')))+2*sum(log(sig));
+                log_dF = logdet(F./(sig*sig'))+2*sum(log(max(realmin,sig)));
                 iF = inv(F./(sig*sig'))./(sig*sig');
             else
-                log_dF = log(det(F));
+                log_dF = logdet(F);
                 iF = inv(F);
             end
             lik(s) = log_dF + transpose(v)*iF*v + length(d_index)*log(2*pi);

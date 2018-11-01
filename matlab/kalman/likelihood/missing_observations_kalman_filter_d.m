@@ -105,16 +105,14 @@ while rank(Pinf,diffuse_kalman_tol) && (t<=last)
                     end
                 else
                     iFstar = inv(Fstar);
-                    dFstar = det(Fstar);
-                    Kstar  = Pstar*ZZ'*iFstar;                              %(5.15) of DK (2012) with Kstar=T^{-1}*K^(0)
-                    dlik(s) = log(dFstar) + v'*iFstar*v + length(d_index)*log(2*pi);    %set w_t to bottom case in bottom equation page 172, DK (2012)
+                    dlik(s) = logdet(Fstar) + v'*iFstar*v + length(d_index)*log(2*pi);    %set w_t to bottom case in bottom equation page 172, DK (2012)
                     Pinf   = T*Pinf*transpose(T);                           % (5.16) DK (2012)
                     Pstar  = T*(Pstar-Pstar*ZZ'*Kstar')*T'+QQ;              % (5.17) DK (2012) with L_0 plugged in
                     a      = T*(a+Kstar*v);                                 % (5.13) DK (2012)
                 end
             end
         else
-            dlik(s) = log(det(Finf))+length(d_index)*log(2*pi);             %set w_t to top case in bottom equation page 172, DK (2012)
+            dlik(s) = logdet(Finf)+length(d_index)*log(2*pi);             %set w_t to top case in bottom equation page 172, DK (2012)
             iFinf  = inv(Finf);
             Kinf   = Pinf*ZZ'*iFinf;
             %see notes in kalman_filter_d.m for details of computations
