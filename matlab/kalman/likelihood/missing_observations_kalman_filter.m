@@ -77,6 +77,7 @@ smpl = last-start+1;
 % Initialize some variables.
 dF   = 1;
 QQ   = R*Q*transpose(R);   % Variance of R times the vector of structural innovations.
+QQ   = 0.5 * ( QQ + QQ.' );
 t    = start;              % Initialization of the time index.
 lik  = zeros(smpl,1);      % Initialization of the vector gathering the densities.
 LIK  = Inf;                % Default value of the log likelihood.
@@ -139,6 +140,7 @@ while notsteady && t<=last
                 K = P(:,z)*iF;
                 P = T*(P-K*P(z,:))*transpose(T)+QQ;
             end
+            P = 0.5 * ( P + P.' );
             a = T*(a+K*v);
             if t>=no_more_missing_observations
                 notsteady = max(abs(K(:)-oldK))>riccati_tol;

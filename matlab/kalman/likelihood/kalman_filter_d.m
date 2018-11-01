@@ -59,6 +59,7 @@ smpl = last-start+1;
 % Initialize some variables.
 dF   = 1;
 QQ   = R*Q*transpose(R);   % Variance of R times the vector of structural innovations.
+QQ   = 0.5 * ( QQ + QQ.' );
 t    = start;              % Initialization of the time index.
 dlik = zeros(smpl,1);      % Initialization of the vector gathering the densities.
 dLIK = Inf;                % Default value of the log likelihood.
@@ -90,8 +91,10 @@ while rank(Z*Pinf*Z',diffuse_kalman_tol) && (t<=last)
                 iFstar = inv(Fstar);
                 Kstar  = Pstar*Z'*iFstar;                               %(5.15) of DK (2012) with Kstar=T^{-1}*K^(0)
                 dlik(s)= logdet(Fstar) + v'*iFstar*v;                     %set w_t to bottom case in bottom equation page 172, DK (2012)
-                Pinf   = T*Pinf*transpose(T);                           % (5.16) DK (2012)
                 Pstar  = T*(Pstar-Pstar*Z'*Kstar')*T'+QQ;               % (5.17) DK (2012)
+                Pinf   = T*Pinf*transpose(T);                           % (5.16) DK (2012)
+                Pstar = 0.5 * ( Pstar + Pstar.' );
+                Pinf  = 0.5 * ( Pinf + Pinf.' );
                 a      = T*(a+Kstar*v);                                 % (5.13) DK (2012)
             end
         end
@@ -109,9 +112,12 @@ while rank(Z*Pinf*Z',diffuse_kalman_tol) && (t<=last)
         iFinf  = inv(Finf);
         Kinf   = Pinf*Z'*iFinf;                                         %define Kinf=T^{-1}*K_0 with M_{\infty}=Pinf*Z'
         Fstar  = Z*Pstar*Z' + H;                                        %(5.7) DK(2012)
+        Fstar  = 0.5 * ( Fstar + Fstar.' );
         Kstar  = (Pstar*Z'-Kinf*Fstar)*iFinf;                           %(5.12) DK(2012); note that there is a typo in DK (2003) with "+ Kinf" instead of "- Kinf", but it is correct in their appendix
         Pstar  = T*(Pstar-Pstar*Z'*Kinf'-Pinf*Z'*Kstar')*T'+QQ;         %(5.14) DK(2012)
         Pinf   = T*(Pinf-Pinf*Z'*Kinf')*T';                             %(5.14) DK(2012)
+        Pstar  = 0.5 * ( Pstar + Pstar.' );
+        Pinf   = 0.5 * ( Pinf + Pinf.' );
         a      = T*(a+Kinf*v);                                          %(5.13) DK(2012)
     end
     t = t+1;

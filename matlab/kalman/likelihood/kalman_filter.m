@@ -115,6 +115,7 @@ smpl = last-start+1;
 % Initialize some variables.
 dF   = 1;
 QQ   = R*Q*transpose(R);   % Variance of R times the vector of structural innovations.
+QQ   = 0.5 * ( QQ + QQ.' );
 t    = start;              % Initialization of the time index.
 likk = zeros(smpl,1);      % Initialization of the vector gathering the densities.
 LIK  = Inf;                % Default value of the log likelihood.
@@ -204,6 +205,7 @@ while notsteady && t<=last
             K = P(:,Z)*iF;
             Ptmp = T*(P-K*P(Z,:))*transpose(T)+QQ;
         end
+        Ptmp = 0.5 * ( Ptmp + Ptmp.' );
         tmp = (a+K*v);
         if analytic_derivation
             if analytic_derivation==2
