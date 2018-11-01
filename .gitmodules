@@ -12,7 +12,7 @@
 	url = http://www.dynare.org/git/dmm.git
 [submodule "matlab/utilities/tests"]
 	path = matlab/utilities/tests
-	url = https://github.com/DynareTeam/m-unit-tests.git
+	url = https://git.dynare.org/Dynare/m-unit-tests.git
 [submodule "matlab/particles"]
 	path = matlab/particles
 	url = https://github.com/tholden/particles.git
@@ -26,7 +26,7 @@
 	branch = old-oop-style
 [submodule "matlab/modules/reporting"]
 	path = matlab/modules/reporting
-	url = https://github.com/DynareTeam/reporting.git
+	url = https://git.dynare.org/Dynare/reporting.git
 [submodule "matlab/modules/nlma"]
 	path = matlab/modules/nlma
 	url = https://github.com/tholden/nlma.git
@@ -35,4 +35,4 @@
 	url = https://github.com/fangq/jsonlab.git
 [submodule "preprocessor"]
 	path = preprocessor
-	url = https://github.com/DynareTeam/dynare-preprocessor.git
+	url = https://git.dynare.org/Dynare/preprocessor.git
