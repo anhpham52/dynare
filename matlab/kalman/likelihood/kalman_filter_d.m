@@ -69,6 +69,7 @@ while rank(Z*Pinf*Z',diffuse_kalman_tol) && (t<=last)
     s = t-start+1;
     v = Y(:,t)-Z*a;                                                     %get prediction error v^(0) in (5.13) DK (2012)
     Finf  = Z*Pinf*Z';                                                  % (5.7) in DK (2012)
+    Finf = 0.5 * ( Finf + Finf.' );
                                                                         %do case distinction based on whether F_{\infty,t} has full rank or 0 rank
     if rcond(Finf) < diffuse_kalman_tol                                 %F_{\infty,t} = 0
         if ~all(abs(Finf(:)) < diffuse_kalman_tol)                      %rank-deficient but not rank 0
@@ -76,6 +77,7 @@ while rank(Z*Pinf*Z',diffuse_kalman_tol) && (t<=last)
             return
         else                                                            %rank of F_{\infty,t} is 0
             Fstar  = Z*Pstar*Z' + H;                                    % (5.7) in DK (2012)
+            Fstar = 0.5 * ( Fstar + Fstar.' );
             if rcond(Fstar) < kalman_tol                                %F_{*} is singular
                 if ~all(abs(Fstar(:))<kalman_tol)
                     % The univariate diffuse kalman filter should be used.

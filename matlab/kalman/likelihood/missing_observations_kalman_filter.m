@@ -102,6 +102,7 @@ while notsteady && t<=last
             v = Y(d_index,t) - a(z);
             F = P(z,z) + H(d_index,d_index);
         end
+        F = 0.5 * ( F + F.' );
         badly_conditioned_F = false;
         if rescale_prediction_error_covariance
             sig=sqrt(diag(F));

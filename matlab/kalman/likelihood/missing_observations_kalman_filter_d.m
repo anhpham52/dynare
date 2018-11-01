@@ -89,12 +89,14 @@ while rank(Pinf,diffuse_kalman_tol) && (t<=last)
         ZZ = Z(d_index,:);                                                  %span selector matrix
         v  = Y(d_index,t)-ZZ*a;                                             %get prediction error v^(0) in (5.13) DK (2012)
         Finf  = ZZ*Pinf*ZZ';                                                % (5.7) in DK (2012)
+        Finf = 0.5 * ( Finf + Finf.' );
         if rcond(Finf) < diffuse_kalman_tol                                 %F_{\infty,t} = 0
             if ~all(abs(Finf(:)) < diffuse_kalman_tol)                      %rank-deficient but not rank 0
                                                                             % The univariate diffuse kalman filter should be used.
                 return
             else                                                            %rank of F_{\infty,t} is 0
                 Fstar = ZZ*Pstar*ZZ' + H(d_index,d_index);                  % (5.7) in DK (2012)
+                Fstar = 0.5 * ( Fstar + Fstar.' );
                 if rcond(Fstar) < kalman_tol                                %F_{*} is singular
                     if ~all(abs(Fstar(:))<kalman_tol)
                         % The univariate diffuse kalman filter should be used.
