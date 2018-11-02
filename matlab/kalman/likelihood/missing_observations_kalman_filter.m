@@ -135,7 +135,7 @@ while notsteady && t<=last
         K = M( 1 : length( d_index ), ( size( M, 2 ) - length( d_index ) ) ).' / rootF;
 
         F_singular = false;
-        log_dF = 2 * log( svd( rootF ) );
+        log_dF = 2 * sum( log( svd( rootF ) ) );
         irootFv = rootF \ v;
         lik(s) = log_dF + irootFv.' * irootFv + length(d_index)*log(2*pi);
 
