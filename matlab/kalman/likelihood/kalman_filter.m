@@ -171,7 +171,7 @@ while notsteady && t<=last
     s = t-start+1;
     if Zflag
         v  = Y(:,t)-Z*a;
-        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
+        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ], 0 );
         % [ G, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
         % M.' * M = M .' * G .' * G * M 
         % = [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ].' * [ rootH.', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
@@ -186,7 +186,7 @@ while notsteady && t<=last
         % M22.' * M22 = P - K * F * K.' = P - P * Z.' * iF * F * iF.' * Z * P.' = P - P * Z.' * iF * Z * P
     else
         v  = Y(:,t)-a(Z);
-        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ] );
+        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ], 0 );
     end
     rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
     rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
@@ -197,7 +197,7 @@ while notsteady && t<=last
     irootFv = rootF \ v;
     likk(s) = log_dF + irootFv.' * irootFv;
     
-    [ ~, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );
+    [ ~, M ] = qr( [ rootPme.' * T.'; rootQQ.' ], 0 );
     % [ G, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );
     % M.' * M = M .' * G .' * G * M 
     % = [ rootPme.' * T.'; rootQQ .' ].' * [ rootPme.' * T.'; rootQQ .' ]
