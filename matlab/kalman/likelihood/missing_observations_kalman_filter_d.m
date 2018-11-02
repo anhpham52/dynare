@@ -59,6 +59,11 @@ function [dLIK,dlik,a,Pstar] = missing_observations_kalman_filter_d(data_index,n
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
+persistent WarningIssued
+if isempty( WarningIssued )
+    warning( 'This function does not yet use the square root form.' );
+    WarningIssued = true;
+end
 
 % Get sample size.
 smpl = last-start+1;
