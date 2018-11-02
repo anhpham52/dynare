@@ -131,8 +131,8 @@ while notsteady && t<=last
             [ ~, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(z,:).', rootP.' ] );
         end
         rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
-        rootPme = M( ( size( M, 1 ) - length( d_index ) ) : end, ( size( M, 2 ) - length( d_index ) ) : end ).';
-        K = M( 1 : length( d_index ), ( size( M, 2 ) - length( d_index ) ) : end ).' / rootF;
+        rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
+        K = M( 1 : length( d_index ), ( length( d_index ) + 1 ) : end ).' / rootF;
 
         F_singular = false;
         log_dF = 2 * sum( log( svd( rootF ) ) );
