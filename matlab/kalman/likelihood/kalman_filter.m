@@ -189,7 +189,7 @@ while notsteady && t<=last
         [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ] );
     end
     rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
-    rootPme = M( ( size( M, 1 ) - length( d_index ) ) : end, ( size( M, 2 ) - length( d_index ) ) ).';
+    rootPme = M( ( size( M, 1 ) - length( d_index ) ) : end, ( size( M, 2 ) - length( d_index ) ) : end ).';
     K = M( 1 : length( d_index ), ( size( M, 2 ) - length( d_index ) ) ).' / rootF;
 
     F_singular = false;
