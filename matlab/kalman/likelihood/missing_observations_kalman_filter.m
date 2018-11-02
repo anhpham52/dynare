@@ -132,7 +132,7 @@ while notsteady && t<=last
         end
         rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
         rootPme = M( ( size( M, 1 ) - length( d_index ) ) : end, ( size( M, 2 ) - length( d_index ) ) : end ).';
-        K = M( 1 : length( d_index ), ( size( M, 2 ) - length( d_index ) ) ).' / rootF;
+        K = M( 1 : length( d_index ), ( size( M, 2 ) - length( d_index ) ) : end ).' / rootF;
 
         F_singular = false;
         log_dF = 2 * sum( log( svd( rootF ) ) );
