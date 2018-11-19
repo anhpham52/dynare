@@ -87,7 +87,7 @@ F_singular  = true;
 s = 0;
 
 rootP = chol( P, 'lower' );
-rootH = chol( H, 'lower' );
+rootH = chol( H + diag( eps( diag( H ) ) ), 'lower' );
 clear P Q H;
 
 if rescale_prediction_error_covariance

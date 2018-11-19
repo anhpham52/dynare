@@ -125,7 +125,7 @@ F_singular  = true;
 asy_hess=0;
 
 rootP = chol( P, 'lower' );
-rootH = chol( H, 'lower' );
+rootH = chol( H + diag( eps( diag( H ) ) ), 'lower' );
 clear Q H;
 
 if rescale_prediction_error_covariance
