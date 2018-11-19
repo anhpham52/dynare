@@ -988,7 +988,7 @@ while isempty(stopflag)
       if isfinite( TmpBestFitness )
           TmpXBest = arx(:,TmpBestIndex);
       end
-      StdScale = StdScale * 0.5;
+      StdScale = max( 1e-8, StdScale * 0.5 );
       
   end
 
