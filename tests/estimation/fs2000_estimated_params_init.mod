@@ -1,4 +1,23 @@
-// Tests the analytic_derivation option
+// Test that the presence of a non estimated parameter in the estimated_params_init block does not lead to a crash.
+
+/*
+ * Copyright (C) 2004-2017 Dynare Team
+ *
+ * This file is part of Dynare.
+ *
+ * Dynare is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * Dynare is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 var m P c e W R k d n l gy_obs gp_obs y dA;
 varexo e_a e_m;
@@ -30,6 +49,11 @@ gy_obs = dA*y/y(-1);
 gp_obs = (P/P(-1))*m(-1)/dA;
 end;
 
+shocks;
+var e_a; stderr 0.014;
+var e_m; stderr 0.005;
+end;
+
 steady_state_model;
   dA = exp(gam);
   gst = 1/dA;
@@ -56,11 +80,6 @@ steady_state_model;
   gy_obs = dA;
 end;
 
-shocks;
-var e_a; stderr 0.014;
-var e_m; stderr 0.005;
-end;
-
 steady;
 
 check;
@@ -70,20 +89,17 @@ alp, beta_pdf, 0.356, 0.02;
 bet, beta_pdf, 0.993, 0.002;
 gam, normal_pdf, 0.0085, 0.003;
 mst, normal_pdf, 1.0002, 0.007;
-rho, beta_pdf, 0.129, 0.1;
+rho, beta_pdf, 0.129, 0.100;
 psi, beta_pdf, 0.65, 0.05;
-del, beta_pdf, 0.01, 0.005;
-stderr e_a, inv_gamma_pdf, 0.035449, inf;
+% del, beta_pdf, 0.01, 0.005;
+% stderr e_a, inv_gamma_pdf, 0.035449, inf;
 stderr e_m, inv_gamma_pdf, 0.008862, inf;
 end;
 
+estimated_params_init;
+del,0.02;
+stderr e_a, 0.01;
+corr e_a,e_m, 0.5;
+end;
+
 varobs gp_obs gy_obs;
-
-options_.solve_tolf = 1e-12;
-
-estimation(order=1,mode_compute=9,analytic_derivation,kalman_algo=1,datafile=fsdat_simul,nobs=192,mh_replic=0,mh_nblocks=2,mh_jscale=0.8);
-estimation(order=1,mode_compute=5,mode_file=fs2000_analytic_derivation_mode,analytic_derivation,kalman_algo=2,datafile=fsdat_simul,nobs=192,mh_replic=0,mh_nblocks=2,mh_jscale=0.8);
-estimation(order=1,mode_compute=4,mode_file=fs2000_analytic_derivation_mode,analytic_derivation,kalman_algo=1,datafile=fsdat_simul,nobs=192,mh_replic=0,mh_nblocks=2,mh_jscale=0.8);
-estimation(order=1,mode_compute=4,mode_file=fs2000_analytic_derivation_mode,analytic_derivation,kalman_algo=2,datafile=fsdat_simul,nobs=192,mh_replic=0,mh_nblocks=2,mh_jscale=0.8);
-//estimation(order=1,mode_compute=5,analytic_derivation,kalman_algo=3,datafile=fsdat_simul,nobs=192,mh_replic=0,mh_nblocks=2,mh_jscale=0.8);
-//estimation(order=1,mode_compute=5,analytic_derivation,kalman_algo=4,datafile=fsdat_simul,nobs=192,mh_replic=0,mh_nblocks=2,mh_jscale=0.8);

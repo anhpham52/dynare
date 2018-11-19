@@ -1,0 +1,82 @@
+variables:
+  GIT_SUBMODULE_STRATEGY: normal
+  TERM: linux
+
+build_binaries:
+  stage: build
+  script:
+    - autoreconf -si
+    - './configure --with-matlab=$(dirname $(dirname $(readlink -f `which matlab`))) MATLAB_VERSION=$(echo version | matlab -nodesktop -nodisplay -nosplash 2>/dev/null | sed -En "/ans\ =/!d;n;n;s/^[^0-9]*([0-9]+\.[0-9]+).*$/\1/;p")'
+    - make -j $(nproc) LN_S="cp -p"
+  artifacts:
+    paths:
+      - matlab/preprocessor*/*
+      - mex/octave/
+      - mex/matlab/
+      - dynare++/src/dynare++
+    expire_in: 1 week
+
+build_doc:
+  stage: build
+  script:
+    - autoreconf -si
+    - ./configure --disable-matlab --disable-octave
+    - make -j $(nproc) info pdf html
+  artifacts:
+    paths:
+      - doc/dynare.info*
+      - doc/dynare.html
+      - doc/dynare.pdf
+
+testsuite_matlab:
+  stage: test
+  script:
+    - autoreconf -si
+    - './configure --disable-octave --with-matlab=$(dirname $(dirname $(readlink -f `which matlab`))) MATLAB_VERSION=$(echo version | matlab -nodesktop -nodisplay -nosplash 2>/dev/null | sed -En "/ans\ =/!d;n;n;s/^[^0-9]*([0-9]+\.[0-9]+).*$/\1/;p")'
+    - make -j $(($(nproc) * 3 / 4)) -C tests check-matlab
+  artifacts:
+    paths:
+      - tests/*.m.log
+      - tests/*.m.trs
+      - tests/*/*.m.log
+      - tests/*/*.m.trs
+      - tests/*/*/*.m.log
+      - tests/*/*/*.m.trs
+      - tests/run_test_matlab_output.txt
+    when: always
+  dependencies:
+    - build_binaries
+
+.testsuite_octave_template:
+  stage: test
+  variables:
+    OPENBLAS_NUM_THREADS: 1
+  script:
+    - autoreconf -si
+    - ./configure --disable-matlab
+    - make -j $(nproc) -C tests check-octave
+  artifacts:
+    paths:
+      - tests/*.o.log
+      - tests/*.o.trs
+      - tests/*/*.o.log
+      - tests/*/*.o.trs
+      - tests/*/*/*.o.log
+      - tests/*/*/*.o.trs
+      - tests/run_test_octave_output.txt
+    when: always
+  dependencies:
+    - build_binaries
+
+testsuite_octave_auto:
+  extends: .testsuite_octave_template
+  only:
+    - tags
+    - schedules
+
+testsuite_octave_manual:
+  extends: .testsuite_octave_template
+  except:
+    - tags
+    - schedules
+  when: manual
