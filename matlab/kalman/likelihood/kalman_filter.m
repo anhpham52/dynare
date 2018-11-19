@@ -114,7 +114,8 @@ smpl = last-start+1;
 
 % Initialize some variables.
 dF   = 1;
-QQ   = R*Q*transpose(R);   % Variance of R times the vector of structural innovations.
+rootQ  = chol( Q, 'lower' );
+rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
 likk = zeros(smpl,1);      % Initialization of the vector gathering the densities.
 LIK  = Inf;                % Default value of the log likelihood.
@@ -122,6 +123,14 @@ oldK = Inf;
 notsteady   = 1;
 F_singular  = true;
 asy_hess=0;
+
+rootP = chol( P, 'lower' );
+rootH = chol( H, 'lower' );
+clear Q H;
+
+if rescale_prediction_error_covariance
+    error( 'rescale_prediction_error_covariance is not implemented due to use of square root form.' );
+end
 
 if  analytic_derivation == 0
     DLIK=[];
@@ -162,67 +171,62 @@ while notsteady && t<=last
     s = t-start+1;
     if Zflag
         v  = Y(:,t)-Z*a;
-        F  = Z*P*Z' + H;
+        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ], 0 );
+        % [ G, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
+        % M.' * M = M .' * G .' * G * M 
+        % = [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ].' * [ rootH.', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
+        % = [ rootH, Z * rootP; zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP ] * [ rootH.', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
+        % = [ rootH * rootH.' + Z * rootP * rootP.' * Z.', Z * rootP * rootP.'; rootP * rootP.' * Z.', rootP * rootP.' ]
+        % = [ F, F.' * K.'; K * F, P ]
+        % = [ M11.', 0; M12.', M22.' ] * [ M11, M12; 0, M22 ] = [ M11.' * M11, M11.' * M12; M12.' * M11, M12.' * M12 + M22.' * M22 ]
+        % rootF = M11.'
+        % K * rootF * rootF.' = M12.' * M11 = M12.' * rootF.'
+        % K * rootF = M12.'
+        % P = M12.' * M12 + M22.' * M22 = K * F * K.' + M22.' * M22
+        % M22.' * M22 = P - K * F * K.' = P - P * Z.' * iF * F * iF.' * Z * P.' = P - P * Z.' * iF * Z * P
     else
         v  = Y(:,t)-a(Z);
-        F  = P(Z,Z) + H;
+        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ], 0 );
     end
-    badly_conditioned_F = false;
-    if rescale_prediction_error_covariance
-        sig=sqrt(diag(F));
-        if any(diag(F)<kalman_tol) || rcond(F./(sig*sig'))<kalman_tol
-            badly_conditioned_F = true;
-        end
-    else
-        if rcond(F)<kalman_tol
-            badly_conditioned_F = true;
-        end
-    end
-    if badly_conditioned_F
-        if ~all(abs(F(:))<kalman_tol)
-            % Use univariate filter (will remove observations with zero variance prediction error)
-            return
+    rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
+    rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
+    K = M( 1 : length( d_index ), ( length( d_index ) + 1 ) : end ).' / rootF;
+
+    F_singular = false;
+    log_dF = 2 * sum( log( svd( rootF ) ) );
+    irootFv = rootF \ v;
+    likk(s) = log_dF + irootFv.' * irootFv;
+    
+    [ ~, M ] = qr( [ rootPme.' * T.'; rootQQ.' ], 0 );
+    % [ G, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );
+    % M.' * M = M .' * G .' * G * M 
+    % = [ rootPme.' * T.'; rootQQ .' ].' * [ rootPme.' * T.'; rootQQ .' ]
+    % = [ T * rootPme, rootQQ ] * [ rootPme.' * T.'; rootQQ .' ] 
+    % = T * rootPme * rootPme.' * T.' + rootQQ * rootQQ.' 
+    % = T * Pme * T.' + QQ
+    % = T * ( P - P * Z.' * iF * Z * P ) * T.' + QQ
+    rootP = M( 1 : size( M, 2 ), : ).';
+    
+    Ptmp = rootP * rootP.';
+    tmp = (a+K*v);
+    if analytic_derivation
+        if analytic_derivation==2
+            [Da,DP,DLIKt,D2a,D2P, Hesst] = computeDLIK(k,tmp,Z,Zflag,v,T,K,P,iF,Da,DYss,DT,DOm,DP,DH,notsteady,D2a,D2Yss,D2T,D2Om,D2P);
         else
-            % Pathological case, discard draw.
-            return
+            [Da,DP,DLIKt,Hesst] = computeDLIK(k,tmp,Z,Zflag,v,T,K,P,iF,Da,DYss,DT,DOm,DP,DH,notsteady);
         end
-    else
-        F_singular = false;
-        if rescale_prediction_error_covariance
-            log_dF = log(det(F./(sig*sig')))+2*sum(log(sig));
-            iF = inv(F./(sig*sig'))./(sig*sig');
-        else
-            log_dF = log(det(F));
-            iF = inv(F);
-        end
-        likk(s) = log_dF+transpose(v)*iF*v;
-        if Zflag
-            K = P*Z'*iF;
-            Ptmp = T*(P-K*Z*P)*transpose(T)+QQ;
-        else
-            K = P(:,Z)*iF;
-            Ptmp = T*(P-K*P(Z,:))*transpose(T)+QQ;
-        end
-        tmp = (a+K*v);
-        if analytic_derivation
-            if analytic_derivation==2
-                [Da,DP,DLIKt,D2a,D2P, Hesst] = computeDLIK(k,tmp,Z,Zflag,v,T,K,P,iF,Da,DYss,DT,DOm,DP,DH,notsteady,D2a,D2Yss,D2T,D2Om,D2P);
-            else
-                [Da,DP,DLIKt,Hesst] = computeDLIK(k,tmp,Z,Zflag,v,T,K,P,iF,Da,DYss,DT,DOm,DP,DH,notsteady);
+        if t>presample
+            DLIK = DLIK + DLIKt;
+            if analytic_derivation==2 || asy_hess
+                Hess = Hess + Hesst;
             end
-            if t>presample
-                DLIK = DLIK + DLIKt;
-                if analytic_derivation==2 || asy_hess
-                    Hess = Hess + Hesst;
-                end
-            end
-            dlikk(s,:)=DLIKt;
         end
-        a = T*tmp;
-        P = Ptmp;
-        notsteady = max(abs(K(:)-oldK))>riccati_tol;
-        oldK = K(:);
+        dlikk(s,:)=DLIKt;
     end
+    a = T*tmp;
+    P = Ptmp;
+    notsteady = max(abs(K(:)-oldK))>riccati_tol;
+    oldK = K(:);
     t = t+1;
 end
 

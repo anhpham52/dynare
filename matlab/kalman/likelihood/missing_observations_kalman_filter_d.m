@@ -59,6 +59,11 @@ function [dLIK,dlik,a,Pstar] = missing_observations_kalman_filter_d(data_index,n
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
+persistent WarningIssued
+if isempty( WarningIssued )
+    warning( 'This function does not yet use the square root form.' );
+    WarningIssued = true;
+end
 
 % Get sample size.
 smpl = last-start+1;
@@ -66,6 +71,7 @@ smpl = last-start+1;
 % Initialize some variables.
 dF   = 1;
 QQ   = R*Q*transpose(R);   % Variance of R times the vector of structural innovations.
+QQ   = 0.5 * ( QQ + QQ.' );
 t    = start;              % Initialization of the time index.
 dlik = zeros(smpl,1);      % Initialization of the vector gathering the densities.
 dLIK = Inf;                % Default value of the log likelihood.
@@ -85,16 +91,20 @@ while rank(Pinf,diffuse_kalman_tol) && (t<=last)
         a = T*a;
         Pstar = T*Pstar*transpose(T)+QQ;
         Pinf  = T*Pinf*transpose(T);
+        Pstar = 0.5 * ( Pstar + Pstar.' );
+        Pinf  = 0.5 * ( Pinf + Pinf.' );
     else
         ZZ = Z(d_index,:);                                                  %span selector matrix
         v  = Y(d_index,t)-ZZ*a;                                             %get prediction error v^(0) in (5.13) DK (2012)
         Finf  = ZZ*Pinf*ZZ';                                                % (5.7) in DK (2012)
+        Finf = 0.5 * ( Finf + Finf.' );
         if rcond(Finf) < diffuse_kalman_tol                                 %F_{\infty,t} = 0
             if ~all(abs(Finf(:)) < diffuse_kalman_tol)                      %rank-deficient but not rank 0
                                                                             % The univariate diffuse kalman filter should be used.
                 return
             else                                                            %rank of F_{\infty,t} is 0
                 Fstar = ZZ*Pstar*ZZ' + H(d_index,d_index);                  % (5.7) in DK (2012)
+                Fstar = 0.5 * ( Fstar + Fstar.' );
                 if rcond(Fstar) < kalman_tol                                %F_{*} is singular
                     if ~all(abs(Fstar(:))<kalman_tol)
                         % The univariate diffuse kalman filter should be used.
@@ -105,23 +115,26 @@ while rank(Pinf,diffuse_kalman_tol) && (t<=last)
                     end
                 else
                     iFstar = inv(Fstar);
-                    dFstar = det(Fstar);
-                    Kstar  = Pstar*ZZ'*iFstar;                              %(5.15) of DK (2012) with Kstar=T^{-1}*K^(0)
-                    dlik(s) = log(dFstar) + v'*iFstar*v + length(d_index)*log(2*pi);    %set w_t to bottom case in bottom equation page 172, DK (2012)
-                    Pinf   = T*Pinf*transpose(T);                           % (5.16) DK (2012)
+                    dlik(s) = logdet(Fstar) + v'*iFstar*v + length(d_index)*log(2*pi);    %set w_t to bottom case in bottom equation page 172, DK (2012)
                     Pstar  = T*(Pstar-Pstar*ZZ'*Kstar')*T'+QQ;              % (5.17) DK (2012) with L_0 plugged in
+                    Pinf   = T*Pinf*transpose(T);                           % (5.16) DK (2012)
+                    Pstar  = 0.5 * ( Pstar + Pstar.' );
+                    Pinf   = 0.5 * ( Pinf + Pinf.' );
                     a      = T*(a+Kstar*v);                                 % (5.13) DK (2012)
                 end
             end
         else
-            dlik(s) = log(det(Finf))+length(d_index)*log(2*pi);             %set w_t to top case in bottom equation page 172, DK (2012)
+            dlik(s) = logdet(Finf)+length(d_index)*log(2*pi);             %set w_t to top case in bottom equation page 172, DK (2012)
             iFinf  = inv(Finf);
             Kinf   = Pinf*ZZ'*iFinf;
             %see notes in kalman_filter_d.m for details of computations
             Fstar  = ZZ*Pstar*ZZ' + H(d_index,d_index);                     %(5.7) DK(2012)
+            Fstar  = 0.5 * ( Fstar + Fstar.' );
             Kstar  = (Pstar*ZZ'-Kinf*Fstar)*iFinf;                          %(5.12) DK(2012); note that there is a typo in DK (2003) with "+ Kinf" instead of "- Kinf", but it is correct in their appendix
             Pstar  = T*(Pstar-Pstar*ZZ'*Kinf'-Pinf*ZZ'*Kstar')*T'+QQ;       %(5.14) DK(2012)
             Pinf   = T*(Pinf-Pinf*ZZ'*Kinf')*T';                            %(5.14) DK(2012)
+            Pstar  = 0.5 * ( Pstar + Pstar.' );
+            Pinf   = 0.5 * ( Pinf + Pinf.' );
             a      = T*(a+Kinf*v);                                          %(5.13) DK(2012)
         end
     end

@@ -75,78 +75,90 @@ end
 smpl = last-start+1;
 
 % Initialize some variables.
-dF   = 1;
-QQ   = R*Q*transpose(R);   % Variance of R times the vector of structural innovations.
+%dF   = 1;
+rootQ  = chol( Q, 'lower' );
+rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
 lik  = zeros(smpl,1);      % Initialization of the vector gathering the densities.
-LIK  = Inf;                % Default value of the log likelihood.
+%LIK  = Inf;                % Default value of the log likelihood.
 oldK = Inf;
 notsteady   = 1;
 F_singular  = true;
 s = 0;
+
+rootP = chol( P, 'lower' );
+rootH = chol( H, 'lower' );
+clear P Q H;
+
+if rescale_prediction_error_covariance
+    error( 'rescale_prediction_error_covariance is not implemented due to use of square root form.' );
+end
 
 while notsteady && t<=last
     s  = t-start+1;
     d_index = data_index{t};
     if isempty(d_index)
         a = T*a;
-        P = T*P*transpose(T)+QQ;
+        [ ~, M ] = qr( [ rootP.' * T.'; rootQQ.' ] );
+        % [ G, M ] = qr( [ rootP.' * T.'; rootQQ.' ] );
+        % M.' * M = M .' * G .' * G * M 
+        % = [ rootP.' * T.'; rootQQ .' ].' * [ rootP.' * T.'; rootQQ .' ]
+        % = [ T * rootP, rootQQ ] * [ rootP.' * T.'; rootQQ .' ] 
+        % = T * rootP * rootP.' * T.' + rootQQ * rootQQ.' 
+        % = T * P * T.' + QQ
+        rootP = M( 1 : size( M, 2 ), : ).';
     else
         % Compute the prediction error and its variance
         if Zflag
             z = Z(d_index,:);
             v = Y(d_index,t)-z*a;
-            F = z*P*z' + H(d_index,d_index);
+            [ ~, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ], 0 );
+            % [ G, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ] );
+            % M.' * M = M .' * G .' * G * M 
+            % = [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ].' * [ rootH( d_index, : ).', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * z.', rootP.' ]
+            % = [ rootH( d_index, : ), z * rootP; zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP ] * [ rootH( d_index, : ).', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * z.', rootP.' ]
+            % = [ rootH( d_index, : ) * rootH( d_index, : ).' + z * rootP * rootP.' * z.', z * rootP * rootP.'; rootP * rootP.' * z.', rootP * rootP.' ]
+            % = [ F, F.' * K.'; K * F, P ]
+            % = [ M11.', 0; M12.', M22.' ] * [ M11, M12; 0, M22 ] = [ M11.' * M11, M11.' * M12; M12.' * M11, M12.' * M12 + M22.' * M22 ]
+            % rootF = M11.'
+            % K * rootF * rootF.' = M12.' * M11 = M12.' * rootF.'
+            % K * rootF = M12.'
+            % P = M12.' * M12 + M22.' * M22 = K * F * K.' + M22.' * M22
+            % M22.' * M22 = P - K * F * K.' = P - P * z.' * iF * F * iF.' * z * P.' = P - P * z.' * iF * z * P
         else
             z = Z(d_index);
             v = Y(d_index,t) - a(z);
-            F = P(z,z) + H(d_index,d_index);
+            [ ~, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(z,:).', rootP.' ], 0 );
         end
-        badly_conditioned_F = false;
-        if rescale_prediction_error_covariance
-            sig=sqrt(diag(F));
-            if any(diag(F)<kalman_tol) || rcond(F./(sig*sig'))<kalman_tol
-                badly_conditioned_F = true;
-            end
-        else
-            if rcond(F)<kalman_tol
-                badly_conditioned_F = true;
-            end
-        end
-        if badly_conditioned_F
-            if ~all(abs(F(:))<kalman_tol)
-                % Use univariate filter.
-                return
-            else
-                % Pathological case, discard draw
-                return
-            end
-        else
-            F_singular = false;
-            if rescale_prediction_error_covariance
-                log_dF = log(det(F./(sig*sig')))+2*sum(log(sig));
-                iF = inv(F./(sig*sig'))./(sig*sig');
-            else
-                log_dF = log(det(F));
-                iF = inv(F);
-            end
-            lik(s) = log_dF + transpose(v)*iF*v + length(d_index)*log(2*pi);
-            if Zflag
-                K = P*z'*iF;
-                P = T*(P-K*z*P)*transpose(T)+QQ;
-            else
-                K = P(:,z)*iF;
-                P = T*(P-K*P(z,:))*transpose(T)+QQ;
-            end
-            a = T*(a+K*v);
-            if t>=no_more_missing_observations
-                notsteady = max(abs(K(:)-oldK))>riccati_tol;
-                oldK = K(:);
-            end
+        rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
+        rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
+        K = M( 1 : length( d_index ), ( length( d_index ) + 1 ) : end ).' / rootF;
+
+        F_singular = false;
+        log_dF = 2 * sum( log( svd( rootF ) ) );
+        irootFv = rootF \ v;
+        lik(s) = log_dF + irootFv.' * irootFv + length(d_index)*log(2*pi);
+
+        [ ~, M ] = qr( [ rootPme.' * T.'; rootQQ.' ], 0 );
+        % [ G, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );
+        % M.' * M = M .' * G .' * G * M 
+        % = [ rootPme.' * T.'; rootQQ .' ].' * [ rootPme.' * T.'; rootQQ .' ]
+        % = [ T * rootPme, rootQQ ] * [ rootPme.' * T.'; rootQQ .' ] 
+        % = T * rootPme * rootPme.' * T.' + rootQQ * rootQQ.' 
+        % = T * Pme * T.' + QQ
+        % = T * ( P - P * z.' * iF * z * P ) * T.' + QQ
+        rootP = M( 1 : size( M, 2 ), : ).';
+
+        a = T*(a+K*v);
+        if t>=no_more_missing_observations
+            notsteady = max(abs(K(:)-oldK))>riccati_tol;
+            oldK = K(:);
         end
     end
     t = t+1;
 end
+
+P = rootP * rootP.';
 
 if F_singular
     error('The variance of the forecast error remains singular until the end of the sample')
@@ -157,7 +169,7 @@ lik(1:s) = .5*lik(1:s);
 
 % Call steady state Kalman filter if needed.
 if t<=last
-    [tmp, lik(s+1:end)] = kalman_filter_ss(Y, t, last, a, T, K, iF, log_dF, Z, pp, Zflag);
+    [~, lik(s+1:end)] = kalman_filter_ss(Y, t, last, a, T, K, iF, log_dF, Z, pp, Zflag);
 end
 
 % Compute minus the log-likelihood.
