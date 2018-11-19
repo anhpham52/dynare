@@ -263,7 +263,7 @@ if flg_future_setting
   defopts.CMA.active = '1  % active CMA 1: neg. updates with pos. def. check, 2: neg. updates'; 
 end
   
-defopts.Resume   = 'no   % resume former run from SaveFile'; 
+defopts.ResumeRun   = 'no   % resume former run from SaveFile'; 
 defopts.Science  = 'on  % off==do some additional (minor) problem capturing, NOT IN USE'; 
 defopts.ReadSignals = 'on  % from file signals.par for termination, yet a stumb';
 defopts.Seed = 'sum(100*clock)  % evaluated if it is a string';
@@ -372,7 +372,7 @@ while irun <= myeval(opts.Restarts) % for-loop does not work with resume
 % ------------------------ Initialization -------------------------------
 
 % Handle resuming of old run
-flgresume = myevalbool(opts.Resume);
+flgresume = myevalbool(opts.ResumeRun);
 xmean = myeval(xstart); 
 if all(size(xmean) > 1)
    xmean = mean(xmean, 2); % in case if xstart is a population

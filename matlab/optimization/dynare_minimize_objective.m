@@ -376,11 +376,11 @@ switch minimizer_algorithm
                 end
               case 'CMAESResume'                     % Silly name. Left for backwards compatibility.
                 if options_list{i,2}==1
-                    cmaesOptions.Resume = true;
+                    cmaesOptions.ResumeRun = true;
                 end
               case 'Resume'
                 if options_list{i,2}==1
-                    cmaesOptions.Resume = true;
+                    cmaesOptions.ResumeRun = true;
                 end
               case 'ResumeFromBest'
                 if options_list{i,2}==1
