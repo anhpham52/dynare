@@ -212,6 +212,9 @@ defopts.PopSize      = '(4 + floor(3*log(N)))  % population size, lambda';
 defopts.ParentNumber = 'floor(popsize/2)       % AKA mu, popsize equals lambda';
 defopts.RecombinationWeights = 'superlinear decrease % or linear, or equal';
 defopts.DiagonalOnly = '1*(1+100*N/sqrt(popsize))+(N>=1000)  % C is diagonal for given iterations, 1==always'; 
+
+defopts.ResumeFromBest = 'false   % resume from bestever?';
+
 defopts.Noise.on = '0  % uncertainty handling is off by default'; 
 defopts.Noise.reevals  = '1*ceil(0.05*lambda)  % nb. of re-evaluated for uncertainty measurement';
 defopts.Noise.theta = '0.5  % threshold to invoke uncertainty treatment'; % smaller: more likely to diverge
@@ -419,6 +422,7 @@ else % flgresume is true, do resume former run
   opts.SaveVariables = local.opts.SaveVariables;
   opts.LogModulo = local.opts.LogModulo;
   opts.LogTime = local.opts.LogTime;
+  opts.ResumeFromBest = local.opts.ResumeFromBest;
   clear local; % otherwise local would be overwritten during load
 end
   
@@ -429,6 +433,7 @@ stopMaxFunEvals = myeval(opts.MaxFunEvals);
 stopMaxIter = myeval(opts.MaxIter);  
 stopFunEvals = myeval(opts.StopFunEvals);  
 stopIter = myeval(opts.StopIter); 
+ResumeFromBest = myevalbool(opts.ResumeFromBest);
 if flgresume
     stopIter = stopIter + countiter
 end
@@ -502,6 +507,9 @@ if flgresume % resume is on
     error(['MaxIter exceeded, use StopIter as stopping criterion ' ...
 	  'before resume']);
   end
+  if ResumeFromBest
+      xmean = bestever.x;
+  end  
   
 else % flgresume
   % xmean = mean(myeval(xstart), 2); % evaluate xstart again, because of irun

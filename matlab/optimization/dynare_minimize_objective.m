@@ -365,7 +365,7 @@ switch minimizer_algorithm
                 cmaesOptions.DiagonalOnly = options_list{i,2};
               case 'verbosity'
                 if options_list{i,2}==0
-                    cmaesOptions.DispFinal  = 'off';   % display messages like initial and final message';
+                    cmaesOptions.DispFinal  = 'off'; % display messages like initial and final message';
                     cmaesOptions.DispModulo = '0';   % [0:Inf], disp messages after every i-th iteration';
                 end
               case 'SaveFiles'
@@ -374,9 +374,17 @@ switch minimizer_algorithm
                     cmaesOptions.LogModulo = '0';    % [0:Inf] if >1 record data less frequently after gen=100';
                     cmaesOptions.LogTime   = '0';    % [0:100] max. percentage of time for recording data';
                 end
-              case 'CMAESResume'
+              case 'CMAESResume'                     % Silly name. Left for backwards compatibility.
                 if options_list{i,2}==1
                     cmaesOptions.Resume = true;
+                end
+              case 'Resume'
+                if options_list{i,2}==1
+                    cmaesOptions.Resume = true;
+                end
+              case 'ResumeFromBest'
+                if options_list{i,2}==1
+                    cmaesOptions.ResumeFromBest = true;
                 end
               case 'UseParallel' 
                 if all( options_list{i,2}==1 ) || strcmpi( options_list{i,2}, 'always' ) 
