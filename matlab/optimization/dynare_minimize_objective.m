@@ -378,7 +378,7 @@ switch minimizer_algorithm
                 if options_list{i,2}==1
                     cmaesOptions.ResumeRun = true;
                 end
-              case 'Resume'
+              case 'ResumeRun'
                 if options_list{i,2}==1
                     cmaesOptions.ResumeRun = true;
                 end
