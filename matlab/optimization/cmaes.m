@@ -1716,9 +1716,17 @@ while isempty(stopflag)
       clear idx; % prevents error under octave
       % -v6 : non-compressed non-unicode for version 6 and earlier
       if ~isempty(strsaving) && ~isoctave
-	save('-mat', strsaving, opts.SaveFilename); % for inspection and possible restart	
+          try
+            save('-mat', strsaving, opts.SaveFilename); % for inspection and possible restart	
+          catch
+              warning( 'Problem saving %s.', opts.SaveFilename );
+          end
       else 
-	save('-mat', opts.SaveFilename); % for inspection and possible restart
+          try
+            save('-mat', opts.SaveFilename); % for inspection and possible restart
+          catch
+              warning( 'Problem saving %s.', opts.SaveFilename );
+          end
       end
       time.saving = time.saving + time.c * max(0,etime(clock, time.t3)); 
     end
