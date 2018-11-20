@@ -424,7 +424,8 @@ switch minimizer_algorithm
                 disp( Error.identifier );
                 disp( Error.message );
                 disp( Error.stack( 1 ) );
-                cmaesOptions.Resume = true;
+                cmaesOptions.ResumeRun = true;
+                cmaesOptions.ResumeFromBest = true;
                 ParallelInitializationInternal( );
             end
         end
