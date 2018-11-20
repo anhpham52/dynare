@@ -76,7 +76,7 @@ smpl = last-start+1;
 
 % Initialize some variables.
 %dF   = 1;
-rootQ  = chol( Q, 'lower' );
+rootQ  = chol( Q + diag( eps( diag( Q ) ) ), 'lower' );
 rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
 lik  = zeros(smpl,1);      % Initialization of the vector gathering the densities.
@@ -86,7 +86,7 @@ notsteady   = 1;
 F_singular  = true;
 s = 0;
 
-rootP = chol( P, 'lower' );
+rootP = chol( P + diag( eps( diag( P ) ) ), 'lower' );
 rootH = chol( H + diag( eps( diag( H ) ) ), 'lower' );
 clear P Q H;
 
