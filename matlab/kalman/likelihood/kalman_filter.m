@@ -114,7 +114,7 @@ smpl = last-start+1;
 
 % Initialize some variables.
 dF   = 1;
-rootQ  = chol( Q + diag( eps( diag( Q ) ) ), 'lower' );
+rootQ  = robust_root( Q );
 rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
 likk = zeros(smpl,1);      % Initialization of the vector gathering the densities.
@@ -124,8 +124,8 @@ notsteady   = 1;
 F_singular  = true;
 asy_hess=0;
 
-rootP = chol( P + diag( eps( diag( P ) ) ), 'lower' );
-rootH = chol( H + diag( eps( diag( H ) ) ), 'lower' );
+rootP = robust_root( P );
+rootH = robust_root( H );
 clear Q H;
 
 if rescale_prediction_error_covariance

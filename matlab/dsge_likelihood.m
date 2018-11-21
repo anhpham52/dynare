@@ -491,6 +491,31 @@ switch DynareOptions.lik_init
     Pinf  = [];
     a = zeros(mm,1);
     Zflag = 0;
+  case 6
+    if kalman_algo ~= 2
+        % Use standard kalman filter except if the univariate filter is explicitely choosen.
+        kalman_algo = 1;
+    end
+    rootQ  = chol( Q + diag( eps( diag( Q ) ) ), 'lower' );
+    rootPstar = R*rootQ;
+    Pstar = rootPstar * rootPstar.';
+    Pinf  = [];
+    ys_dr = SteadyState( DynareResults.dr.order_var );
+    InitialFull = ys_dr;
+    StateIndices = ( Model.nstatic + 1 ) : ( Model.nstatic + Model.nspred );
+    StateVariableNames = cellstr( Model.endo_names( DynareResults.dr.order_var( StateIndices ), : ) );
+    for i = 1 : length( StateVariableNames )
+        StateVariableName = StateVariableNames{ i };
+        ParamName = [ 'Initial_' StateVariableName ];
+        BayesParamIndex = find( ismember( BayesInfo.name, ParamName ), 1 );
+        if isempty( BayesParamIndex )
+            error( 'Dynare was expecting an estimated parameter named %s.', ParamName );
+        end
+        InitialFull( StateIndices( i ) ) = xparam1( BayesParamIndex );
+    end
+    InitialFull = InitialFull - ys_dr;
+    a     = T * InitialFull( DynareResults.dr.restrict_var_list );
+    Zflag = 0;
   otherwise
     error('dsge_likelihood:: Unknown initialization approach for the Kalman filter!')
 end
