@@ -157,6 +157,9 @@ end
 if ~isfield( DynareOptions, 'gaussian_approximation' )
     DynareOptions.gaussian_approximation = 0;
 end
+if ~isfield( DynareOptions, 'non_bgp_estimation' )
+    DynareOptions.non_bgp_estimation = 0;
+end
 
 % Set flag related to analytical derivatives.
 analytic_derivation = DynareOptions.analytic_derivation;
