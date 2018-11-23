@@ -205,7 +205,7 @@ while notsteady && t<=last
     % = T * rootPme * rootPme.' * T.' + rootQQ * rootQQ.' 
     % = T * Pme * T.' + QQ
     % = T * ( P - P * Z.' * iF * Z * P ) * T.' + QQ
-    rootP = M( 1 : size( M, 2 ), : ).';
+    rootP = M.';
     
     Ptmp = rootP * rootP.';
     tmp = (a+K*v);

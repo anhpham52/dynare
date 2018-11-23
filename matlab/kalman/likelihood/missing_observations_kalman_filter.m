@@ -106,7 +106,7 @@ while notsteady && t<=last
         % = [ T * rootP, rootQQ ] * [ rootP.' * T.'; rootQQ .' ] 
         % = T * rootP * rootP.' * T.' + rootQQ * rootQQ.' 
         % = T * P * T.' + QQ
-        rootP = M( 1 : size( M, 2 ), : ).';
+        rootP = M.';
     else
         % Compute the prediction error and its variance
         if Zflag
@@ -147,7 +147,7 @@ while notsteady && t<=last
         % = T * rootPme * rootPme.' * T.' + rootQQ * rootQQ.' 
         % = T * Pme * T.' + QQ
         % = T * ( P - P * z.' * iF * z * P ) * T.' + QQ
-        rootP = M( 1 : size( M, 2 ), : ).';
+        rootP = M.';
 
         a = T*(a+K*v);
         if t>=no_more_missing_observations
