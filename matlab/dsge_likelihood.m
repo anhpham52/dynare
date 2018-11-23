@@ -511,7 +511,7 @@ switch DynareOptions.lik_init
         % Use standard kalman filter except if the univariate filter is explicitely choosen.
         kalman_algo = 1;
     end
-    rootQ  = chol( Q + diag( eps( diag( Q ) ) ), 'lower' );
+    rootQ  = robust_root( Q );
     rootPstar = R*rootQ;
     Pstar = rootPstar * rootPstar.';
     Pinf  = [];
