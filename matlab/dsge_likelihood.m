@@ -263,6 +263,8 @@ end
 % 2. call model setup & reduction program
 %------------------------------------------------------------------------------
 
+if ~DynareOptions.non_bgp_estimation
+    
 % Linearize the model around the deterministic steady state and extract the matrices of the state equation (T and R).
 [T,R,SteadyState,info,Model,DynareOptions,DynareResults] = dynare_resolve(Model,DynareOptions,DynareResults,'restrict');
 
@@ -330,11 +332,22 @@ else
     trend = repmat(constant,1,DynareDataset.nobs);
 end
 
+else
+    
+    DynareOptions.lik_init = 6;
+    DynareOptions.kalman_algo = 1;
+
+end
+
 % Get needed informations for kalman filter routines.
 start = DynareOptions.presample+1;
 Z = BayesInfo.mf;           %selector for observed variables
 no_missing_data_flag = ~DatasetInfo.missing.state;
+if ~DynareOptions.non_bgp_estimation
 mm = length(T);             %number of states
+else
+    mm = Model.endo_nbr;
+end
 pp = DynareDataset.vobs;    %number of observables
 rr = length(Q);             %number of shocks
 kalman_tol = DynareOptions.kalman_tol;
@@ -346,7 +359,6 @@ Y = transpose(DynareDataset.data)-trend;
 % 3. Initial condition of the Kalman filter
 %------------------------------------------------------------------------------
 kalman_algo = DynareOptions.kalman_algo;
-
 
 diffuse_periods = 0;
 expanded_state_vector_for_univariate_filter=0;
