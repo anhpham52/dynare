@@ -670,12 +670,12 @@ end
 %------------------------------------------------------------------------------
 
 if DynareOptions.sparse_kalman
-    a = sparse( a );
-    Pstar = sparse( Pstar );
-    T = sparse( T );
-    Q = sparse( Q );
-    R = sparse( R );
-    H = sparse( H );
+    a     = spsparse( a );
+    Pstar = spsparse( Pstar );
+    T     = spsparse( T );
+    Q     = spsparse( Q );
+    R     = spsparse( R );
+    H     = spsparse( H );
 end
 
 singularity_has_been_detected = false;

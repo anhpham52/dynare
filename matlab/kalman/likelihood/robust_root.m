@@ -15,7 +15,7 @@ function RootV = robust_root( V )
     RootV = U( :, Select ) * diag( sqrt( d( Select ) ) );
     
     if SparseFlag
-        RootV = sparse( RootV );
+        RootV = spsparse( RootV );
     end
 
 end
