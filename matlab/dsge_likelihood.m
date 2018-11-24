@@ -164,7 +164,7 @@ end
 % Set flag related to analytical derivatives.
 analytic_derivation = DynareOptions.analytic_derivation;
 
-if DynareOptions.analytic_derivation
+if DynareOptions.non_bgp_estimation
     analytic_derivation = false;
 end
 
