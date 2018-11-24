@@ -160,6 +160,9 @@ end
 if ~isfield( DynareOptions, 'non_bgp_estimation' )
     DynareOptions.non_bgp_estimation = 0;
 end
+if ~isfield( DynareOptions, 'sparse_kalman' )
+    DynareOptions.sparse_kalman = 0;
+end
 
 % Set flag related to analytical derivatives.
 analytic_derivation = DynareOptions.analytic_derivation;
@@ -665,6 +668,15 @@ end
 %------------------------------------------------------------------------------
 % 4. Likelihood evaluation
 %------------------------------------------------------------------------------
+
+if DynareOptions.sparse_kalman
+    a = sparse( a );
+    Pstar = sparse( Pstar );
+    T = sparse( T );
+    Q = sparse( Q );
+    R = sparse( R );
+    H = sparse( H );
+end
 
 singularity_has_been_detected = false;
 % First test multivariate filter if specified; potentially abort and use univariate filter instead
