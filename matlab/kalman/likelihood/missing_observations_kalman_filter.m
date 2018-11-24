@@ -1,4 +1,4 @@
-function  [LIK, lik, a, P] = missing_observations_kalman_filter(data_index,number_of_observations,no_more_missing_observations,Y,start,last,a,P,kalman_tol,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods)
+function  [LIK, lik, a, P] = missing_observations_kalman_filter(data_index,~,no_more_missing_observations,Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,~,pp,~,Zflag,diffuse_periods)
 % Computes the likelihood of a state space model in the case with missing observations.
 %
 % INPUTS
@@ -99,7 +99,7 @@ while notsteady && t<=last
     d_index = data_index{t};
     if isempty(d_index)
         a = T*a;
-        [ ~, M ] = qr( [ rootP.' * T.'; rootQQ.' ] );
+        M = qr0( [ rootP.' * T.'; rootQQ.' ] );
         % [ G, M ] = qr( [ rootP.' * T.'; rootQQ.' ] );
         % M.' * M = M .' * G .' * G * M 
         % = [ rootP.' * T.'; rootQQ .' ].' * [ rootP.' * T.'; rootQQ .' ]
@@ -112,7 +112,7 @@ while notsteady && t<=last
         if Zflag
             z = Z(d_index,:);
             v = Y(d_index,t)-z*a;
-            [ ~, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ], 0 );
+            M = qr0( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ] );
             % [ G, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ] );
             % M.' * M = M .' * G .' * G * M 
             % = [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ].' * [ rootH( d_index, : ).', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * z.', rootP.' ]
@@ -128,7 +128,7 @@ while notsteady && t<=last
         else
             z = Z(d_index);
             v = Y(d_index,t) - a(z);
-            [ ~, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(z,:).', rootP.' ], 0 );
+            M = qr0( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(z,:).', rootP.' ] );
         end
         rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
         rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
@@ -139,7 +139,7 @@ while notsteady && t<=last
         irootFv = rootF \ v;
         lik(s) = log_dF + irootFv.' * irootFv + length(d_index)*log(2*pi);
 
-        [ ~, M ] = qr( [ rootPme.' * T.'; rootQQ.' ], 0 );
+        M = qr0( [ rootPme.' * T.'; rootQQ.' ] );
         % [ G, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );
         % M.' * M = M .' * G .' * G * M 
         % = [ rootPme.' * T.'; rootQQ .' ].' * [ rootPme.' * T.'; rootQQ .' ]

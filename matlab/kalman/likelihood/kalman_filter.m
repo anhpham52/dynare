@@ -1,4 +1,4 @@
-function [LIK, LIKK, a, P] = kalman_filter(Y,start,last,a,P,kalman_tol,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,D2H,D2P)
+function [LIK, LIKK, a, P] = kalman_filter(Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,mm,pp,~,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,~,D2P)
 % Computes the likelihood of a stationary state space model.
 
 %@info:
@@ -118,7 +118,7 @@ rootQ  = robust_root( Q );
 rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
 likk = zeros(smpl,1);      % Initialization of the vector gathering the densities.
-LIK  = Inf;                % Default value of the log likelihood.
+% LIK  = Inf;                % Default value of the log likelihood.
 oldK = Inf;
 notsteady   = 1;
 F_singular  = true;
@@ -135,24 +135,24 @@ end
 if  analytic_derivation == 0
     DLIK=[];
     Hess=[];
-    LIKK=[];
+    % LIKK=[];
 else
     k = size(DT,3);                                 % number of structural parameters
     DLIK  = zeros(k,1);                             % Initialization of the score.
     Da    = zeros(mm,k);                            % Derivative State vector.
     dlikk = zeros(smpl,k);
 
-    if Zflag==0
-        C = zeros(pp,mm);
-        for ii=1:pp, C(ii,Z(ii))=1; end         % SELECTION MATRIX IN MEASUREMENT EQ. (FOR WHEN IT IS NOT CONSTANT)
-    else
-        C=Z;
-    end
-    dC = zeros(pp,mm,k);   % either selection matrix or schur have zero derivatives
+    % if Zflag==0
+    %     C = zeros(pp,mm);
+    %     for ii=1:pp, C(ii,Z(ii))=1; end         % SELECTION MATRIX IN MEASUREMENT EQ. (FOR WHEN IT IS NOT CONSTANT)
+    % else
+    %     C=Z;
+    % end
+    % dC = zeros(pp,mm,k);   % either selection matrix or schur have zero derivatives
     if analytic_derivation==2
         Hess  = zeros(k,k);                             % Initialization of the Hessian
         D2a    = zeros(mm,k,k);                             % State vector.
-        d2C = zeros(pp,mm,k,k);
+        % d2C = zeros(pp,mm,k,k);
     else
         asy_hess=D2T;
         Hess=[];
@@ -163,15 +163,15 @@ else
     if asy_hess
         Hess  = zeros(k,k);                             % Initialization of the Hessian
     end
-    LIK={inf,DLIK,Hess};
-    LIKK={likk,dlikk};
+    % LIK={inf,DLIK,Hess};
+    % LIKK={likk,dlikk};
 end
 
 while notsteady && t<=last
     s = t-start+1;
     if Zflag
         v  = Y(:,t)-Z*a;
-        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ], 0 );
+        M = qr0( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
         % [ G, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
         % M.' * M = M .' * G .' * G * M 
         % = [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ].' * [ rootH.', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
@@ -186,7 +186,7 @@ while notsteady && t<=last
         % M22.' * M22 = P - K * F * K.' = P - P * Z.' * iF * F * iF.' * Z * P.' = P - P * Z.' * iF * Z * P
     else
         v  = Y(:,t)-a(Z);
-        [ ~, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ], 0 );
+        M = qr0( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ] );
     end
     rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
     rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
@@ -197,7 +197,7 @@ while notsteady && t<=last
     irootFv = rootF \ v;
     likk(s) = log_dF + irootFv.' * irootFv;
     
-    [ ~, M ] = qr( [ rootPme.' * T.'; rootQQ.' ], 0 );
+    M = qr0( [ rootPme.' * T.'; rootQQ.' ] );
     % [ G, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );
     % M.' * M = M .' * G .' * G * M 
     % = [ rootPme.' * T.'; rootQQ .' ].' * [ rootPme.' * T.'; rootQQ .' ]
@@ -262,7 +262,7 @@ if t <= last
             Hess = Hess + tmp{3};
         end
     else
-        [tmp, likk(s+1:end)] = kalman_filter_ss(Y, t, last, a, T, K, iF, log_dF, Z, pp, Zflag);
+        [~, likk(s+1:end)] = kalman_filter_ss(Y, t, last, a, T, K, iF, log_dF, Z, pp, Zflag);
     end
 end
 
