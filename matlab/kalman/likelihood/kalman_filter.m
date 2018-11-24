@@ -199,7 +199,8 @@ while notsteady && t<=last
     K = M( 1 : length( d_index ), ( length( d_index ) + 1 ) : end ).' / rootF;
 
     F_singular = false;
-    log_dF = sum( log( eig( rootF * rootF.' ) ) );
+    full_rootF = full( rootF );
+    log_dF = sum( log( eig( full_rootF * full_rootF.' ) ) );
     irootFv = rootF \ v;
     likk(s) = log_dF + irootFv.' * irootFv;
     
@@ -213,7 +214,8 @@ while notsteady && t<=last
     % = T * ( P - P * Z.' * iF * Z * P ) * T.' + QQ
     rootP = M.';
     
-    Ptmp = rootP * rootP.';
+    full_rootP = full( rootP );
+    P = full_rootP * full_rootP.';
     tmp = (a+K*v);
     if analytic_derivation
         if analytic_derivation==2
@@ -235,6 +237,8 @@ while notsteady && t<=last
     oldK = K(:);
     t = t+1;
 end
+
+a = full( a );
 
 if F_singular
     error('The variance of the forecast error remains singular until the end of the sample')
