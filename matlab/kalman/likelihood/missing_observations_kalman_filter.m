@@ -49,6 +49,12 @@ function  [LIK, lik, a, P] = missing_observations_kalman_filter(data_index,~,no_
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
+if issparse( a ) || issparse( P ) || issparse( T ) || issparse( Q ) || issparse( R ) || issparse( H )
+    zerosInternal = @sparse;
+else
+    zerosInternal = @zeros;
+end
+
 % Set defaults
 if nargin<20
     Zflag = 0;
@@ -68,7 +74,7 @@ if isempty(diffuse_periods)
 end
 
 if isequal(H,0)
-    H = zeros(pp,pp);
+    H = zerosInternal(pp,pp);
 end
 
 % Get sample size.
@@ -79,7 +85,7 @@ smpl = last-start+1;
 rootQ  = robust_root( Q );
 rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
-lik  = zeros(smpl,1);      % Initialization of the vector gathering the densities.
+lik  = zerosInternal(smpl,1);      % Initialization of the vector gathering the densities.
 %LIK  = Inf;                % Default value of the log likelihood.
 oldK = Inf;
 notsteady   = 1;
@@ -112,11 +118,11 @@ while notsteady && t<=last
         if Zflag
             z = Z(d_index,:);
             v = Y(d_index,t)-z*a;
-            M = qr0( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ] );
-            % [ G, M ] = qr( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ] );
+            M = qr0( [ rootH( d_index, : ).', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ] );
+            % [ G, M ] = qr( [ rootH( d_index, : ).', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ] );
             % M.' * M = M .' * G .' * G * M 
-            % = [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ].' * [ rootH( d_index, : ).', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * z.', rootP.' ]
-            % = [ rootH( d_index, : ), z * rootP; zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP ] * [ rootH( d_index, : ).', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * z.', rootP.' ]
+            % = [ rootH( d_index, : ).', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * z.', rootP.' ].' * [ rootH( d_index, : ).', zerosInternal( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * z.', rootP.' ]
+            % = [ rootH( d_index, : ), z * rootP; zerosInternal( size( rootP, 1 ), size( rootH, 2 ) ); rootP ] * [ rootH( d_index, : ).', zerosInternal( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * z.', rootP.' ]
             % = [ rootH( d_index, : ) * rootH( d_index, : ).' + z * rootP * rootP.' * z.', z * rootP * rootP.'; rootP * rootP.' * z.', rootP * rootP.' ]
             % = [ F, F.' * K.'; K * F, P ]
             % = [ M11.', 0; M12.', M22.' ] * [ M11, M12; 0, M22 ] = [ M11.' * M11, M11.' * M12; M12.' * M11, M12.' * M12 + M22.' * M22 ]
@@ -128,14 +134,14 @@ while notsteady && t<=last
         else
             z = Z(d_index);
             v = Y(d_index,t) - a(z);
-            M = qr0( [ rootH( d_index, : ).', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(z,:).', rootP.' ] );
+            M = qr0( [ rootH( d_index, : ).', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP(z,:).', rootP.' ] );
         end
         rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
         rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
         K = M( 1 : length( d_index ), ( length( d_index ) + 1 ) : end ).' / rootF;
 
         F_singular = false;
-        log_dF = 2 * sum( log( svd( rootF ) ) );
+        log_dF = sum( log( eig( rootF * rootF.' ) ) );
         irootFv = rootF \ v;
         lik(s) = log_dF + irootFv.' * irootFv + length(d_index)*log(2*pi);
 

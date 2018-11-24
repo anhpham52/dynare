@@ -88,6 +88,12 @@ function [LIK, LIKK, a, P] = kalman_filter(Y,start,last,a,P,~,riccati_tol,rescal
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
+if issparse( a ) || issparse( P ) || issparse( T ) || issparse( Q ) || issparse( R ) || issparse( H )
+    zerosInternal = @sparse;
+else
+    zerosInternal = @zeros;
+end
+
 % Set defaults.
 if nargin<17
     Zflag = 0;
@@ -117,7 +123,7 @@ dF   = 1;
 rootQ  = robust_root( Q );
 rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
-likk = zeros(smpl,1);      % Initialization of the vector gathering the densities.
+likk = zerosInternal(smpl,1);      % Initialization of the vector gathering the densities.
 % LIK  = Inf;                % Default value of the log likelihood.
 oldK = Inf;
 notsteady   = 1;
@@ -138,21 +144,21 @@ if  analytic_derivation == 0
     % LIKK=[];
 else
     k = size(DT,3);                                 % number of structural parameters
-    DLIK  = zeros(k,1);                             % Initialization of the score.
-    Da    = zeros(mm,k);                            % Derivative State vector.
-    dlikk = zeros(smpl,k);
+    DLIK  = zerosInternal(k,1);                             % Initialization of the score.
+    Da    = zerosInternal(mm,k);                            % Derivative State vector.
+    dlikk = zerosInternal(smpl,k);
 
     % if Zflag==0
-    %     C = zeros(pp,mm);
+    %     C = zerosInternal(pp,mm);
     %     for ii=1:pp, C(ii,Z(ii))=1; end         % SELECTION MATRIX IN MEASUREMENT EQ. (FOR WHEN IT IS NOT CONSTANT)
     % else
     %     C=Z;
     % end
-    % dC = zeros(pp,mm,k);   % either selection matrix or schur have zero derivatives
+    % dC = zerosInternal(pp,mm,k);   % either selection matrix or schur have zero derivatives
     if analytic_derivation==2
-        Hess  = zeros(k,k);                             % Initialization of the Hessian
-        D2a    = zeros(mm,k,k);                             % State vector.
-        % d2C = zeros(pp,mm,k,k);
+        Hess  = zerosInternal(k,k);                             % Initialization of the Hessian
+        D2a    = zerosInternal(mm,k,k);                             % State vector.
+        % d2C = zerosInternal(pp,mm,k,k);
     else
         asy_hess=D2T;
         Hess=[];
@@ -161,7 +167,7 @@ else
         D2Yss=[];
     end
     if asy_hess
-        Hess  = zeros(k,k);                             % Initialization of the Hessian
+        Hess  = zerosInternal(k,k);                             % Initialization of the Hessian
     end
     % LIK={inf,DLIK,Hess};
     % LIKK={likk,dlikk};
@@ -171,11 +177,11 @@ while notsteady && t<=last
     s = t-start+1;
     if Zflag
         v  = Y(:,t)-Z*a;
-        M = qr0( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
-        % [ G, M ] = qr( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
+        M = qr0( [ rootH.', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
+        % [ G, M ] = qr( [ rootH.', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ] );
         % M.' * M = M .' * G .' * G * M 
-        % = [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ].' * [ rootH.', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
-        % = [ rootH, Z * rootP; zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP ] * [ rootH.', zeros( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
+        % = [ rootH.', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP.' * Z.', rootP.' ].' * [ rootH.', zerosInternal( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
+        % = [ rootH, Z * rootP; zerosInternal( size( rootP, 1 ), size( rootH, 2 ) ); rootP ] * [ rootH.', zerosInternal( size( rootP, 1 ), size( rootH, 2 ) ); rootP.' * Z.', rootP.' ]
         % = [ rootH * rootH.' + Z * rootP * rootP.' * Z.', Z * rootP * rootP.'; rootP * rootP.' * Z.', rootP * rootP.' ]
         % = [ F, F.' * K.'; K * F, P ]
         % = [ M11.', 0; M12.', M22.' ] * [ M11, M12; 0, M22 ] = [ M11.' * M11, M11.' * M12; M12.' * M11, M12.' * M12 + M22.' * M22 ]
@@ -186,14 +192,14 @@ while notsteady && t<=last
         % M22.' * M22 = P - K * F * K.' = P - P * Z.' * iF * F * iF.' * Z * P.' = P - P * Z.' * iF * Z * P
     else
         v  = Y(:,t)-a(Z);
-        M = qr0( [ rootH.', zeros( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ] );
+        M = qr0( [ rootH.', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ] );
     end
     rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
     rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
     K = M( 1 : length( d_index ), ( length( d_index ) + 1 ) : end ).' / rootF;
 
     F_singular = false;
-    log_dF = 2 * sum( log( svd( rootF ) ) );
+    log_dF = sum( log( eig( rootF * rootF.' ) ) );
     irootFv = rootF \ v;
     likk(s) = log_dF + irootFv.' * irootFv;
     
