@@ -58,7 +58,7 @@ end
 hessian_mat=[];
 Scale=[];
 exitflag=1;
-fval=NaN;
+fval=Inf;
 opt_par_values=NaN(size(start_par_value));
 new_rat_hess_info=[];
 
@@ -86,6 +86,54 @@ if ~isempty(options_.optim_opt)
     end
 end
 
+if ParallelFlag
+    try
+        pool = gcp;
+        nw = pool.NumWorkers;
+    catch
+        nw = 1;
+    end
+else
+    nw = 1;
+end
+
+if ~isfield( options_, 'sequential_optimization_repeats' )
+    options_.sequential_optimization_repeats = 1;
+end
+if ~isfield( options_, 'sequential_optimization_block_size' )
+    if options_.sequential_optimization_repeats > 1
+        options_.sequential_optimization_block_size = nw;
+    else
+        options_.sequential_optimization_block_size = length( start_par_value );
+    end
+end
+if ~isfield( options_, 'sequential_optimization_adjacent_block' )
+    options_.sequential_optimization_adjacent_block = true;
+end
+
+original_bounds = bounds;
+original_start_par_value = start_par_value;
+original_objective_function = objective_function;
+original_prior_information_p2 = prior_information.p2;
+
+for seq_opt_rep = 1 : options_.sequential_optimization_repeats
+
+if options_.sequential_optimization_adjacent_block
+    FirstIndex = randi( n_params, 1, 1 );
+    Indices = FirstIndex + ( 0 : ( options_.sequential_optimization_block_size - 1 ) );
+    Indices( Indices > n_params ) = Indices( Indices > n_params ) - n_params;
+else
+    Indices = randi( n_params, options_.sequential_optimization_block_size, 1 );
+end
+
+bounds = original_bounds( Indices, : );
+start_par_value = original_start_par_value( Indices );
+objective_function = @( xx, varargin ) original_objective_function( SubIn( xx, original_start_par_value, Indices ), varargin{:} );
+prior_information_p2 = original_prior_information_p2( Indices );
+
+old_fval = fval;
+
+try
 
 switch minimizer_algorithm
   case 1
@@ -278,7 +326,7 @@ switch minimizer_algorithm
     %hessian_mat is the plain outer product gradient Hessian
   case 6
     [opt_par_values, hessian_mat, Scale, fval] = gmhmaxlik(objective_function, start_par_value, ...
-                                                      Initial_Hessian, options_.mh_jscale, bounds, prior_information.p2, options_.gmhmaxlik, options_.optim_opt, varargin{:});
+                                                      Initial_Hessian, options_.mh_jscale, bounds, prior_information_p2, options_.gmhmaxlik, options_.optim_opt, varargin{:});
   case 7
     % Matlab's simplex (Optimization toolbox needed).
     if isoctave && ~user_has_octave_forge_package('optim')
@@ -333,7 +381,7 @@ switch minimizer_algorithm
     [opt_par_values,fval,exitflag] = simplex_optimization_routine(objective_function,start_par_value,simplexOptions,parameter_names,varargin{:});
   case 9
     % Set defaults
-    H0 = prior_information.p2;
+    H0 = prior_information_p2;
     H0(~isfinite(H0)) = (bounds(~isfinite(H0),2)-bounds(~isfinite(H0),1))*0.2;
     H0(~isfinite(H0)) = 0.2;
     while max(H0)/min(H0)>1e6 %make sure initial search volume (SIGMA) is not badly conditioned
@@ -406,19 +454,19 @@ switch minimizer_algorithm
     warning('off','CMAES:NonfinitenessRange');
     warning('off','CMAES:InitialSigma');
     if cmaesOptions.EvalParallel
-        try
-            pool = gcp;
-            nw = pool.NumWorkers;
-        catch
-            nw = 1;
-        end
         cmaesOptions.PopSize = [ 'ceil( (4 + floor(3*log(N))) / ' int2str( nw ) ' ) * ' int2str( nw ) ];
         cmaesOptions.CMA.active = 1;
         cmaesOptions.StopOnStagnation = false;
+    end
+    if options_.sequential_optimization_repeats > 1
+        cmaesOptions.DiagonalOnly = options_.sequential_optimization_block_size;
+    end
+
+    if cmaesOptions.EvalParallel
         ErrorCaught=true;
         while ErrorCaught
             try
-                [~, ~, ~, ~, ~, BESTEVER] = cmaes(@(XV) parallel_wrapper(objective_function,XV,varargin{:}),start_par_value,H0,cmaesOptions);
+                [~, ~, ~, ~, ~, BESTEVER] = cmaes(@(XV) parallel_wrapper(objective_function, XV,varargin{:}),start_par_value,H0,cmaesOptions);
                 ErrorCaught = false;
             catch Error
                 disp( Error.identifier );
@@ -432,8 +480,8 @@ switch minimizer_algorithm
     else
         [~, ~, ~, ~, ~, BESTEVER] = cmaes(objective_function,start_par_value,H0,cmaesOptions,varargin{:});
     end
-    opt_par_values=BESTEVER.x;
-    fval=BESTEVER.f;
+    opt_par_values = BESTEVER.x;
+    fval = BESTEVER.f;
   case 10
     simpsaOptions = options_.simpsa;
     if ~isempty(options_.optim_opt)
@@ -581,6 +629,20 @@ switch minimizer_algorithm
     end
 end
 
+if fval < old_fval
+    original_start_par_value( Indices ) = opt_par_values;
+end
+
+catch Error
+
+    disp( Error );
+
+end
+
+end
+
+opt_par_values = original_start_par_value;
+
 end
 
 function [LB, UB]=set_bounds_to_finite_values(bounds, huge_number)
@@ -588,4 +650,8 @@ LB=bounds(:,1);
 LB(isinf(LB))=-huge_number;
 UB=bounds(:,2);
 UB(isinf(UB))=huge_number;
+end
+
+function x = SubIn( xx, x, Indices )
+    x( Indices ) = xx;
 end
