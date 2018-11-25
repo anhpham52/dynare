@@ -101,3 +101,5 @@ if nargout == 2
     JJacobian = sparse(iJacobian(:,1),iJacobian(:,2),iJacobian(:,3),T* ...
                        ny,T*ny);
 end
+
+residuals( imag( residuals ) ~= 0 ) = NaN;
