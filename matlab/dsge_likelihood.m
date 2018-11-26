@@ -157,8 +157,8 @@ end
 if ~isfield( DynareOptions, 'gaussian_approximation' )
     DynareOptions.gaussian_approximation = 0;
 end
-if ~isfield( DynareOptions, 'non_bgp_estimation' )
-    DynareOptions.non_bgp_estimation = 0;
+if ~isfield( DynareOptions, 'non_bgp_horizon' )
+    DynareOptions.non_bgp_horizon = 0;
 end
 if ~isfield( DynareOptions, 'sparse_kalman' )
     DynareOptions.sparse_kalman = 0;
@@ -167,7 +167,7 @@ end
 % Set flag related to analytical derivatives.
 analytic_derivation = DynareOptions.analytic_derivation;
 
-if DynareOptions.non_bgp_estimation
+if DynareOptions.non_bgp_horizon > 0
     analytic_derivation = false;
 end
 
@@ -271,7 +271,14 @@ end
 %------------------------------------------------------------------------------
    
 % Linearize the model around the deterministic steady state and extract the matrices of the state equation (T and R).
+try
+
 [T,R,SteadyState,info,Model,DynareOptions,DynareResults] = dynare_resolve(Model,DynareOptions,DynareResults,'restrict');
+
+catch Error
+    disp( Error.message );
+    info( 1 ) = 1234;
+end
 
 % Return, with endogenous penalty when possible, if dynare_resolve issues an error code (defined in resol).
 if info(1)
@@ -337,7 +344,7 @@ else
     trend = repmat(constant,1,DynareDataset.nobs);
 end
 
-if DynareOptions.non_bgp_estimation
+if DynareOptions.non_bgp_horizon > 0
     
     DynareOptions.lik_init = 6;
     DynareOptions.kalman_algo = 1;
@@ -512,26 +519,117 @@ switch DynareOptions.lik_init
         % Use standard kalman filter except if the univariate filter is explicitely choosen.
         kalman_algo = 1;
     end
-    rootQ  = robust_root( Q );
-    rootPstar = R*rootQ;
-    Pstar = rootPstar * rootPstar.';
-    Pinf  = [];
     ys_dr = SteadyState( DynareResults.dr.order_var );
     InitialFull = ys_dr;
+    
     StateIndices = ( Model.nstatic + 1 ) : ( Model.nstatic + Model.nspred );
     StateVariableNames = cellstr( Model.endo_names( DynareResults.dr.order_var( StateIndices ), : ) );
-    for i = 1 : length( StateVariableNames )
+    ParamNames = cellstr( Model.param_names );
+
+    NState = length( StateVariableNames );
+    
+    ParamIndices = zeros( NState, 1 );
+    
+    for i = 1 : NState
         StateVariableName = StateVariableNames{ i };
         ParamName = [ 'Initial_' StateVariableName ];
+        ParamIndex = find( ismember( ParamNames, ParamName ), 1 );
+        if isempty( ParamIndex )
+            error( 'Dynare was expecting a parameter named %s.', ParamName );
+        end
         BayesParamIndex = find( ismember( BayesInfo.name, ParamName ), 1 );
         if isempty( BayesParamIndex )
-            error( 'Dynare was expecting an estimated parameter named %s.', ParamName );
+            error( 'Dynare was expecting the parameter named %s to be estimated.', ParamName );
         end
         InitialFull( StateIndices( i ) ) = xparam1( BayesParamIndex );
+        ParamIndices( i ) = ParamIndex;
+        % fprintf( '%s = %.32g;\n', ParamName, InitialFull( StateIndices( i ) ) );
     end
-    InitialFull = InitialFull - ys_dr;
-    a     = T * InitialFull( DynareResults.dr.restrict_var_list );
-    Zflag = 0;
+    if DynareOptions.non_bgp_horizon > 0
+        Pstar = [];
+        Pinf  = [];
+        a     = [];
+        Zflag = 0;
+        
+        TerminalModel = Model;
+        
+        InitialFull = InitialFull( DynareResults.dr.inv_order_var );
+        assert( Model.maximum_lag == 1 );
+        assert( Model.maximum_lead == 1 );
+        % T*q matrix of innovations
+        GrowthSwitchIndex = find( ismember( cellstr( Model.exo_names ), 'GrowthSwitch' ), 1 );
+        Periods = DynareOptions.non_bgp_horizon * 4;
+        Shocks = zeros( Periods + 1, Model.exo_nbr );
+        GrowthSwitchPath = [ max( 0, min( 1, linspace( 3, -1, Periods + 1 ) ) ), 0 ];
+        
+        DynareOptions.periods = Periods;
+        
+        HomotopyPoint = linspace( 0, 1, DynareOptions.homotopy_steps );
+        
+        LinearPathOffset  = zeros( length( InitialFull ), Periods + 2 );
+        InitialPathOffset = zeros( length( InitialFull ), Periods + 2 );
+        
+        for j = 1 : DynareOptions.homotopy_steps
+            
+            Shocks( :, GrowthSwitchIndex ) = GrowthSwitchPath( 1 : ( end - 1 ) ).' .* HomotopyPoint( j );
+            InitialPoint = InitialFull .* HomotopyPoint( j ) + SteadyState .* ( 1 - HomotopyPoint( j ) );
+            
+            SimultPath = simult_( InitialPoint, DynareResults.dr, Shocks( 2 : end, : ), 1 );
+            
+            TerminalPoint = SimultPath( DynareResults.dr.order_var, end );
+            TerminalModel.params( ParamIndices ) = TerminalPoint( StateIndices );
+            [ TerminalSteadyState, ~, SteadyInfo ] = evaluate_steady_state( SteadyState, TerminalModel, DynareOptions, DynareResults, true );
+            
+            if SteadyInfo( 1 )
+                fval = Inf;
+                info(1) = 131;
+                info(4) = SteadyInfo( 2 );
+                exit_flag = 0;
+                return
+            end
+            
+            LinearPathGuess = [ SimultPath, SimultPath( :, end ) ];
+            LinearPathGuess = LinearPathGuess + LinearPathOffset;
+            
+            [ LinearPath, PFInfo ] = solve_stacked_linear_problem( LinearPathGuess, Shocks, SteadyState, zeros( Model.exo_nbr, 1 ), Model, DynareOptions );
+            
+%             if ~PFInfo.status
+%                 fval = Inf;
+%                 info(1) = 132;
+%                 info(4) = 0.1;
+%                 exit_flag = 0;
+%                 return
+%             end
+            
+            LinearPathOffset = LinearPath - LinearPathGuess;
+            
+            InitialPathGuess = LinearPath .* GrowthSwitchPath + TerminalSteadyState .* ( 1 - GrowthSwitchPath );
+            InitialPathGuess = InitialPathGuess + InitialPathOffset;
+
+            [ InitialPath, PFInfo ] = solve_stacked_problem( InitialPathGuess, Shocks, SteadyState, Model, DynareOptions );
+            % [ InitialPath, PFInfo ] = sim1( InitialPathGuess, Shocks, SteadyState, Model, DynareOptions );
+            
+%             if ~PFInfo.status
+%                 fval = Inf;
+%                 info(1) = 132;
+%                 info(4) = 0.1;
+%                 exit_flag = 0;
+%                 return
+%             end
+            
+            InitialPathOffset = InitialPath - InitialPathGuess;
+            
+        end
+        
+    else
+        rootQ  = robust_root( Q );
+        rootPstar = R*rootQ;
+        Pstar = rootPstar * rootPstar.';
+        Pinf  = [];
+        InitialFull = InitialFull - ys_dr;
+        a     = T * InitialFull( DynareResults.dr.restrict_var_list );
+        Zflag = 0;
+    end
   otherwise
     error('dsge_likelihood:: Unknown initialization approach for the Kalman filter!')
 end
@@ -937,7 +1035,11 @@ end
 
 global best_fval best_M_params best_xparam1 WorkerNumber
 if isempty( best_fval )
-    best_fval = Inf;
+    try
+        load( [ 'CurrentBest' num2str( WorkerNumber ) '.mat' ], 'best_fval', 'best_M_params', 'best_xparam1' );
+    catch
+        best_fval = Inf;
+    end
 end
 if fval < best_fval
     best_fval = fval;
