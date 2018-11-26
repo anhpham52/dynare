@@ -131,7 +131,7 @@ F_singular  = true;
 asy_hess=0;
 
 rootP = robust_root( P );
-rootH = robust_root( H );
+rootH = robust_root( H .* ones( size( Y, 1 ) ) );
 clear Q H;
 
 if rescale_prediction_error_covariance
@@ -194,9 +194,9 @@ while notsteady && t<=last
         v  = Y(:,t)-a(Z);
         M = qr0( [ rootH.', zerosInternal( size( rootH, 2 ), size( rootP, 1 ) ); rootP(Z,:).', rootP.' ] );
     end
-    rootF = M( 1 : length( d_index ), 1 : length( d_index ) ).';
-    rootPme = M( ( length( d_index ) + 1 ) : end, ( length( d_index ) + 1 ) : end ).';
-    K = M( 1 : length( d_index ), ( length( d_index ) + 1 ) : end ).' / rootF;
+    rootF = M( 1 : length( v ), 1 : length( v ) ).';
+    rootPme = M( ( length( v ) + 1 ) : end, ( length( v ) + 1 ) : end ).';
+    K = M( 1 : length( v ), ( length( v ) + 1 ) : end ).' / rootF;
 
     F_singular = false;
     full_rootF = full( rootF );

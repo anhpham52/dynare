@@ -93,7 +93,7 @@ F_singular  = true;
 s = 0;
 
 rootP = robust_root( P );
-rootH = robust_root( H );
+rootH = robust_root( H .* ones( size( Y, 1 ) ) );
 clear P Q H;
 
 if rescale_prediction_error_covariance
