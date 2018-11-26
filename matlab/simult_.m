@@ -34,6 +34,17 @@ function y_=simult_(y0,dr,ex_,iorder)
 
 global M_ options_
 
+if isfield( options_, 'non_bgp' ) && options_.non_bgp
+    StateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred );
+    StateVariableNames = cellstr( M_.endo_names( dr.order_var( StateIndices ), : ) );
+
+    GrowthSwitchIndex = find( ismember( StateVariableNames, 'GrowthSwitch' ), 1 );
+    if isempty( GrowthSwitchIndex )
+        error( 'Dynare was expecting a state variable named GrowthSwitch.' );
+    end
+    y0( dr.order_var( StateIndices( GrowthSwitchIndex ) ) ) = 1;
+end
+
 iter = size(ex_,1);
 endo_nbr = M_.endo_nbr;
 exo_nbr = M_.exo_nbr;
