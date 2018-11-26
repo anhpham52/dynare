@@ -215,7 +215,7 @@ while notsteady && t<=last
     rootP = M.';
     
     full_rootP = full( rootP );
-    P = full_rootP * full_rootP.';
+    Ptmp = full_rootP * full_rootP.';
     tmp = (a+K*v);
     if analytic_derivation
         if analytic_derivation==2
