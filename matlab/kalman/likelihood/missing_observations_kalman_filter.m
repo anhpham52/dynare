@@ -1,4 +1,4 @@
-function  [LIK, lik, a, P] = missing_observations_kalman_filter(data_index,~,no_more_missing_observations,Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,~,pp,~,Zflag,diffuse_periods)
+function  [LIK, lik, a, P, rootP] = missing_observations_kalman_filter(data_index,~,no_more_missing_observations,Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,~,pp,~,Zflag,diffuse_periods)
 % Computes the likelihood of a state space model in the case with missing observations.
 %
 % INPUTS
@@ -92,7 +92,11 @@ notsteady   = 1;
 F_singular  = true;
 s = 0;
 
-rootP = robust_root( P );
+if nargout < 5
+    rootP = robust_root( P );
+else
+    rootP = P;
+end
 rootH = robust_root( H .* ones( size( Y, 1 ) ) );
 clear P Q H;
 

@@ -1,4 +1,4 @@
-function [LIK, LIKK, a, P] = kalman_filter(Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,mm,pp,~,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,~,D2P)
+function [LIK, LIKK, a, P, rootP] = kalman_filter(Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,mm,pp,~,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,~,D2P)
 % Computes the likelihood of a stationary state space model.
 
 %@info:
@@ -130,7 +130,11 @@ notsteady   = 1;
 F_singular  = true;
 asy_hess=0;
 
-rootP = robust_root( P );
+if nargout < 5
+    rootP = robust_root( P );
+else
+    rootP = P;
+end
 rootH = robust_root( H .* ones( size( Y, 1 ) ) );
 clear Q H;
 
