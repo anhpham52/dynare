@@ -32,24 +32,75 @@ function y_=simult_(y0,dr,ex_,iorder)
 % You should have received a copy of the GNU General Public License
 % along with Dynare.  If not, see <http://www.gnu.org/licenses/>.
 
-global M_ options_
+global M_ options_ oo_
 
-if isfield( options_, 'non_bgp' ) && options_.non_bgp
-    StateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred );
-    StateVariableNames = cellstr( M_.endo_names( dr.order_var( StateIndices ), : ) );
+iter = size(ex_,1);
 
-    GrowthSwitchIndex = find( ismember( StateVariableNames, 'GrowthSwitch' ), 1 );
+non_bgp = isfield( options_, 'non_bgp' ) && options_.non_bgp;
+accurate_nonstationarity = isfield( options_, 'accurate_nonstationarity' ) && options_.accurate_nonstationarity && ( iter > 1 );
+
+if non_bgp || accurate_nonstationarity
+    TrueStateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred );
+    TrueStateVariableNames = cellstr( M_.endo_names( dr.order_var( TrueStateIndices ), : ) );
+end
+
+if non_bgp
+    GrowthSwitchIndex = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
     if isempty( GrowthSwitchIndex )
         error( 'Dynare was expecting a state variable named GrowthSwitch.' );
     end
-    y0( dr.order_var( StateIndices( GrowthSwitchIndex ) ) ) = 1;
+    y0( dr.order_var( TrueStateIndices( GrowthSwitchIndex ) ) ) = 1;
+    
+    TrueStateIndices( GrowthSwitchIndex ) = [];
+    TrueStateVariableNames( GrowthSwitchIndex ) = [];
 end
 
-iter = size(ex_,1);
+y_ = zeros(size(y0,1),iter+M_.maximum_lag);
+
+if accurate_nonstationarity
+
+    ParamNames = cellstr( M_.param_names );
+
+    NTrueState = length( TrueStateVariableNames );
+    InitialParamIndices = zeros( NTrueState, 1 );
+
+    for i = 1 : NTrueState
+
+        StateVariableName = TrueStateVariableNames{ i };
+        ParamName = [ 'Initial_' StateVariableName ];
+
+        ParamIndex = find( ismember( ParamNames, ParamName ), 1 );
+        if isempty( ParamIndex )
+            error( 'Dynare was expecting a parameter named %s.', ParamName );
+        else
+            InitialParamIndices( i ) = ParamIndex;
+        end
+        
+    end
+    
+    yc_ = simult_( y0, dr, ex_( 1, : ), iorder );
+    y_( :, 1 : ( 1 + M_.maximum_lag ) ) = yc_;
+    yc_ = yc_( :, end );
+    
+    M = M_;
+    
+    for t = 2 : iter
+        M.params( InitialParamIndices ) = yc_( dr.order_var( TrueStateIndices ) );
+        [ dr, info ] = resol( 0, M, options_, oo_ );
+        if info
+            error( 'Error re-solving in the accurate_nonstationarity iteration.' );
+        end
+        yc_ = simult_( yc_, dr, ex_( t, : ), iorder );
+        yc_ = yc_( :, end );
+        y_( :, t + M_.maximum_lag ) = yc_;
+    end
+    return
+
+end
+
 endo_nbr = M_.endo_nbr;
 exo_nbr = M_.exo_nbr;
 
-y_ = zeros(size(y0,1),iter+M_.maximum_lag);
 y_(:,1) = y0;
 
 if options_.loglinear && ~options_.logged_steady_state
