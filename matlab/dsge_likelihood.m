@@ -163,8 +163,8 @@ end
 if ~isfield( DynareOptions, 'non_bgp' )
     DynareOptions.non_bgp = 0;
 end
-if ~isfield( DynareOptions, 'accurate_nonstationary' )
-    DynareOptions.accurate_nonstationary = 0;
+if ~isfield( DynareOptions, 'accurate_nonstationarity' )
+    DynareOptions.accurate_nonstationarity = 0;
 end
 if ~isfield( DynareOptions, 'extended_kalman_filter' )
     DynareOptions.extended_kalman_filter = 0;
@@ -173,12 +173,8 @@ if ~isfield( DynareOptions, 'sparse_kalman' )
     DynareOptions.sparse_kalman = 0;
 end
 
-if DynareOptions.non_central_approximation || DynareOptions.gaussian_approximation || DynareOptions.non_bgp || DynareOptions.accurate_nonstationary || DynareOptions.extended_kalman_filter
+if DynareOptions.non_central_approximation || DynareOptions.gaussian_approximation || DynareOptions.non_bgp || DynareOptions.accurate_nonstationarity || DynareOptions.extended_kalman_filter
     analytic_derivation = false;
-end
-
-if DynareOptions.extended_kalman_filter
-    DynareOptions.order = 2;
 end
 
 if analytic_derivation && DynareOptions.loglinear
@@ -191,6 +187,19 @@ end
 
 if analytic_derivation
     kron_flag=DynareOptions.analytic_derivation_mode;
+end
+
+if DynareOptions.extended_kalman_filter
+    DynareOptions.order = 2;
+end
+
+if DynareOptions.accurate_nonstationarity
+    DynareOptions.diffuse_filter = 0;
+    if DynareOptions.kalman_algo > 2
+        DynareOptions.kalman_algo = DynareOptions.kalman_algo - 2;
+    elseif DynareOptions.kalman_algo == 0
+        DynareOptions.kalman_algo = 1;
+    end
 end
 
 %------------------------------------------------------------------------------
@@ -275,6 +284,91 @@ if ~issquare(H) || EstimatedParameters.ncn || isfield(EstimatedParameters,'calib
     end
 end
 
+TrueStateIndices = ( Model.nstatic + 1 ) : ( Model.nstatic + Model.nspred ); % will have GrowthSwitch removed
+TrueStateVariableNames = cellstr( Model.endo_names( DynareResults.dr.order_var( TrueStateIndices ), : ) );
+ParamNames = cellstr( Model.param_names );
+
+if DynareOptions.non_bgp
+
+    GrowthSwitchIndex0 = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
+    
+    if isempty( GrowthSwitchIndex0 )
+        error( 'Dynare was expecting a state variable named GrowthSwitch.' );
+    end
+    
+    GrowthSwitchIndex1 = TrueStateIndices( GrowthSwitchIndex0 );
+
+    TrueStateIndices( GrowthSwitchIndex0 ) = [];
+    TrueStateVariableNames( GrowthSwitchIndex0 ) = [];
+    
+end
+
+NTrueState = length( TrueStateVariableNames );
+InitialParamIndices = zeros( NTrueState, 1 );
+InitialBayesParamIndices = zeros( NTrueState, 1 );
+
+if ( DynareOptions.lik_init == 6 ) || DynareOptions.accurate_nonstationarity
+
+    for i = 1 : NTrueState
+
+        StateVariableName = TrueStateVariableNames{ i };
+        ParamName = [ 'Initial_' StateVariableName ];
+
+        ParamIndex = find( ismember( ParamNames, ParamName ), 1 );
+        if isempty( ParamIndex )
+            error( 'Dynare was expecting a parameter named %s.', ParamName );
+        else
+            InitialParamIndices( i ) = ParamIndex;
+        end
+        
+        BayesParamIndex = find( ismember( BayesInfo.name, ParamName ), 1 );
+        if isempty( BayesParamIndex )
+            if DynareOptions.lik_init == 6
+                error( 'Dynare was expecting the parameter named %s to be estimated.', ParamName );
+            end
+        else
+            InitialBayesParamIndices( i ) = BayesParamIndex;
+        end
+        
+    end
+        
+end
+
+if DynareOptions.accurate_nonstationarity
+    AccurateNonstationarityLoopLength = nobs( DynareDataset );
+    OriginalDatasetInfoMissing = DatasetInfo.missing;
+    OriginalDynareDataset = DynareDataset;
+else
+    AccurateNonstationarityLoopLength = 1;
+end
+
+a_full_dr = [];
+
+likelihood = 0;
+lik_store  = zeros( 0, 1 );
+
+for AccurateNonstationarityLoopIndex = 1 : AccurateNonstationarityLoopLength  %#ok<*AGROW>
+
+if DynareOptions.accurate_nonstationarity
+    
+    DynareDataset = OriginalDynareDataset( OriginalDynareDataset.dates( AccurateNonstationarityLoopIndex ) );
+    
+    % Derived from "makedatset.m"    
+    % Fill DatasetInfo.missing if some observations are missing
+    DatasetInfo.missing.state = isanynan(DynareDataset.data);
+    if DatasetInfo.missing.state
+        [DatasetInfo.missing.aindex, DatasetInfo.missing.number_of_observations, DatasetInfo.missing.no_more_missing_observations, DatasetInfo.missing.vindex] = ...
+            describe_missing_data(DynareDataset.data);
+    else
+        DatasetInfo.missing.aindex = num2cell(transpose(repmat(1:DynareDataset.vobs,DynareDataset.nobs,1)),1);
+        DatasetInfo.missing.no_more_missing_observations = 1;
+    end
+
+    if AccurateNonstationarityLoopIndex > 1
+        Model.params( InitialParamIndices ) = max( Model.params( InitialParamIndices ) - 0.002, min( Model.params( InitialParamIndices ) + 0.002, a_full_dr( TrueStateIndices ) ) ); % a_full_dr( TrueStateIndices ); % 
+    end
+    
+end
 
 %------------------------------------------------------------------------------
 % 2. call model setup & reduction program
@@ -371,13 +465,16 @@ Y = transpose(DynareDataset.data)-trend;
 %------------------------------------------------------------------------------
 kalman_algo = DynareOptions.kalman_algo;
 
-StateIndices = ( Model.nstatic + 1 ) : ( Model.nstatic + Model.nspred );
-StateVariableNames = cellstr( Model.endo_names( DynareResults.dr.order_var( StateIndices ), : ) );
-NState = length( StateVariableNames );
-
 diffuse_periods = 0;
 expanded_state_vector_for_univariate_filter=0;
 singular_diffuse_filter = 0;
+
+ys_dr = SteadyState( DynareResults.dr.order_var );
+
+if isempty( a_full_dr )
+
+rootPstar = [];
+    
 switch DynareOptions.lik_init
   case 1% Standard initialization with the steady state of the state equation.
     if kalman_algo~=2
@@ -526,31 +623,9 @@ switch DynareOptions.lik_init
         % Use standard kalman filter except if the univariate filter is explicitely choosen.
         kalman_algo = 1;
     end
-    ys_dr = SteadyState( DynareResults.dr.order_var );
-    InitialFull = ys_dr;
-    
-    ParamNames = cellstr( Model.param_names );
-    
-    InitialParamIndices = zeros( NState, 1 );
-    
-    for i = 1 : NState
-        StateVariableName = StateVariableNames{ i };
-        if DynareOptions.non_bgp && strcmp( StateVariableName, 'GrowthSwitch' )
-            continue
-        end
-        ParamName = [ 'Initial_' StateVariableName ];
-        ParamIndex = find( ismember( ParamNames, ParamName ), 1 );
-        if isempty( ParamIndex )
-            error( 'Dynare was expecting a parameter named %s.', ParamName );
-        end
-        BayesParamIndex = find( ismember( BayesInfo.name, ParamName ), 1 );
-        if isempty( BayesParamIndex )
-            error( 'Dynare was expecting the parameter named %s to be estimated.', ParamName );
-        end
-        InitialFull( StateIndices( i ) ) = xparam1( BayesParamIndex );
-        InitialParamIndices( i ) = ParamIndex;
-        % fprintf( '%s = %.32g;\n', ParamName, InitialFull( StateIndices( i ) ) );
-    end
+    InitialFull = ys_dr;    
+    InitialFull( TrueStateIndices ) = xparam1( InitialBayesParamIndices );
+    InitialFull = InitialFull - ys_dr;
     if DynareOptions.extended_kalman_filter
         Pstar = zeros( size( R, 1 ) );
         Pinf  = [];
@@ -561,7 +636,6 @@ switch DynareOptions.lik_init
         rootPstar = R*rootQ;
         Pstar = rootPstar * rootPstar.';
         Pinf  = [];
-        InitialFull = InitialFull - ys_dr;
         a     = T * InitialFull( DynareResults.dr.restrict_var_list );
         Zflag = 0;
     end
@@ -569,18 +643,28 @@ switch DynareOptions.lik_init
     error('dsge_likelihood:: Unknown initialization approach for the Kalman filter!')
 end
 
+if isempty( rootPstar )
+    rootPstar = robust_root( Pstar );
+end
+
+rootPstar = [ rootPstar eye( size( rootPstar, 1 ) ) ];
+
+else
+    
+    a_dr = a_full_dr - ys_dr;
+    a = a_dr( DynareResults.dr.restrict_var_list );
+
+end
+
 if DynareOptions.non_bgp
-    GrowthSwitchIndex1 = find( ismember( StateVariableNames, 'GrowthSwitch' ), 1 );
-    if isempty( GrowthSwitchIndex1 )
-        error( 'Dynare was expecting a state variable named GrowthSwitch.' );
-    end
-    GrowthSwitchIndex2 = find( ismember( DynareResults.dr.restrict_var_list, StateIndices( GrowthSwitchIndex1 ) ), 1 );
+    GrowthSwitchIndex2 = find( ismember( DynareResults.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
     if isempty( GrowthSwitchIndex2 )
         error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
     end
     a( GrowthSwitchIndex2 ) = 1;
     Pstar( GrowthSwitchIndex2, : ) = 0;
     Pstar( :, GrowthSwitchIndex2 ) = 0;
+    rootPstar( GrowthSwitchIndex2, : ) = 0;
     if ~isempty( Pinf )
         Pinf( GrowthSwitchIndex2, : ) = 0;
         Pinf( :, GrowthSwitchIndex2 ) = 0;
@@ -734,7 +818,7 @@ singularity_has_been_detected = false;
 if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
     if no_missing_data_flag
         if DynareOptions.block
-            [err, LIK] = block_kalman_filter(T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
+            [err, LIK,a,Pstar] = block_kalman_filter(T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
             mexErrCheck('block_kalman_filter', err);
         elseif DynareOptions.fast_kalman_filter
             if diffuse_periods
@@ -747,15 +831,15 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
                 exit_flag = 0;
                 return
             end
-            [LIK,lik] = kalman_filter_fast(Y,diffuse_periods+1,size(Y,2), ...
+            [LIK,lik,a,Pstar] = kalman_filter_fast(Y,diffuse_periods+1,size(Y,2), ...
                                            a,Pstar, ...
                                            kalman_tol, riccati_tol, ...
                                            DynareOptions.presample, ...
                                            T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
                                            analytic_deriv_info{:});
         else
-            [LIK,lik] = kalman_filter(Y,diffuse_periods+1,size(Y,2), ...
-                                      a,Pstar, ...
+            [LIK,lik,a,Pstar,rootPstar] = kalman_filter(Y,diffuse_periods+1,size(Y,2), ...
+                                      a,rootPstar, ...
                                       kalman_tol, riccati_tol, ...
                                       DynareOptions.rescale_prediction_error_covariance, ...
                                       DynareOptions.presample, ...
@@ -764,11 +848,11 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
         end
     else
         if 0 %DynareOptions.block
-            [err, LIK,lik] = block_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,...
+            [err, LIK,lik,a,Pstar] = block_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,...
                                                  T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
         else
-            [LIK,lik] = missing_observations_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
-                                                           a, Pstar, ...
+            [LIK,lik,a,Pstar,rootPstar] = missing_observations_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
+                                                           a, rootPstar, ...
                                                            kalman_tol, DynareOptions.riccati_tol, ...
                                                            DynareOptions.rescale_prediction_error_covariance, ...
                                                            DynareOptions.presample, ...
@@ -857,7 +941,7 @@ if (kalman_algo==2) || (kalman_algo==4)
     if analytic_derivation
         analytic_deriv_info{5}=DH;
     end
-    [LIK, lik] = univariate_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
+    [LIK, lik,a,Pstar] = univariate_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
                                           a,Pstar, ...
                                           DynareOptions.kalman_tol, ...
                                           DynareOptions.riccati_tol, ...
@@ -920,7 +1004,21 @@ if isinf(LIK)~=0
     return
 end
 
-likelihood = LIK;
+likelihood = likelihood + LIK;
+lik_store = [ lik_store; lik ];
+
+a_full_dr = zeros( size( ys_dr ) );
+a_full_dr( DynareResults.dr.restrict_var_list ) = a;
+a_full_dr = a_full_dr + ys_dr;
+
+end % accurate_nonstationarity loop
+
+lik = lik_store;
+
+if DynareOptions.accurate_nonstationarity
+    DatasetInfo.missing = OriginalDatasetInfoMissing;
+    DynareDataset = OriginalDynareDataset;
+end
 
 % ------------------------------------------------------------------------------
 % 5. Adds prior if necessary
