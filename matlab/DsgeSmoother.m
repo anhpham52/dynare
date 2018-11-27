@@ -210,9 +210,47 @@ elseif options_.lik_init == 5            % Old diffuse Kalman filter only for th
     Pstar(stable, stable) = Pstar_tmp;
     Pinf  = [];
 elseif options_.lik_init == 6
-    Pstar = zeros( size( T ) );
-    Pinf  = [];
+    if kalman_algo ~= 2
+        % Use standard kalman filter except if the univariate filter is explicitely choosen.
+        kalman_algo = 1;
+    end
+    if DynareOptions.extended_kalman_filter
+        Pstar = zeros( size( R, 1 ) );
+        Pinf  = [];
+    else
+        rootQ  = robust_root( Q );
+        rootPstar = R*rootQ;
+        Pstar = rootPstar * rootPstar.';
+        Pinf  = [];
+    end
 end
+
+if DynareOptions.non_bgp
+
+    TrueStateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred ); % will have GrowthSwitch removed
+    TrueStateVariableNames = cellstr( M_.endo_names( oo_.dr.order_var( TrueStateIndices ), : ) );
+
+    GrowthSwitchIndex0 = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
+    
+    if isempty( GrowthSwitchIndex0 )
+        error( 'Dynare was expecting a state variable named GrowthSwitch.' );
+    end
+    
+    GrowthSwitchIndex1 = TrueStateIndices( GrowthSwitchIndex0 );
+
+    GrowthSwitchIndex2 = find( ismember( oo_.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
+    if isempty( GrowthSwitchIndex2 )
+        error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
+    end
+    Pstar( GrowthSwitchIndex2, : ) = 0;
+    Pstar( :, GrowthSwitchIndex2 ) = 0;
+    if ~isempty( Pinf )
+        Pinf( GrowthSwitchIndex2, : ) = 0;
+        Pinf( :, GrowthSwitchIndex2 ) = 0;
+    end
+    
+end
+
 kalman_tol = options_.kalman_tol;
 diffuse_kalman_tol = options_.diffuse_kalman_tol;
 riccati_tol = options_.riccati_tol;
