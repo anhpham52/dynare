@@ -939,7 +939,7 @@ while isempty(stopflag)
   else
       TmpXBest = xmean;
   end
-  StdScale = 0.5;
+  StdScale = 0.95;
   
   while any(isnan(fitness.raw))
       current_kvec = find(isnan(fitness.raw));
