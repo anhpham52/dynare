@@ -308,6 +308,8 @@ InitialParamIndices = zeros( NTrueState, 1 );
 InitialBayesParamIndices = zeros( NTrueState, 1 );
 
 if ( DynareOptions.lik_init == 6 ) || DynareOptions.accurate_nonstationarity
+    
+    ToDelete = false( NTrueState, 1 );
 
     for i = 1 : NTrueState
 
@@ -315,15 +317,17 @@ if ( DynareOptions.lik_init == 6 ) || DynareOptions.accurate_nonstationarity
         ParamName = [ 'Initial_' StateVariableName ];
 
         ParamIndex = find( ismember( ParamNames, ParamName ), 1 );
+        
         if isempty( ParamIndex )
-            error( 'Dynare was expecting a parameter named %s.', ParamName );
+            ToDelete( i ) = true;
         else
             InitialParamIndices( i ) = ParamIndex;
         end
         
         BayesParamIndex = find( ismember( BayesInfo.name, ParamName ), 1 );
+        
         if isempty( BayesParamIndex )
-            if DynareOptions.lik_init == 6
+            if ( DynareOptions.lik_init == 6 ) && ( ~ToDelete( i ) )
                 error( 'Dynare was expecting the parameter named %s to be estimated.', ParamName );
             end
         else
@@ -331,7 +335,11 @@ if ( DynareOptions.lik_init == 6 ) || DynareOptions.accurate_nonstationarity
         end
         
     end
-        
+
+    TrueStateIndices( ToDelete )         = [];
+    InitialParamIndices( ToDelete )      = [];
+    InitialBayesParamIndices( ToDelete ) = [];
+    
 end
 
 if DynareOptions.accurate_nonstationarity

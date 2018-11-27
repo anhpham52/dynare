@@ -63,6 +63,8 @@ if accurate_nonstationarity
 
     NTrueState = length( TrueStateVariableNames );
     InitialParamIndices = zeros( NTrueState, 1 );
+    
+    ToDelete = false( NTrueState, 1 );
 
     for i = 1 : NTrueState
 
@@ -70,13 +72,17 @@ if accurate_nonstationarity
         ParamName = [ 'Initial_' StateVariableName ];
 
         ParamIndex = find( ismember( ParamNames, ParamName ), 1 );
+        
         if isempty( ParamIndex )
-            error( 'Dynare was expecting a parameter named %s.', ParamName );
+            ToDelete( i ) = true;
         else
             InitialParamIndices( i ) = ParamIndex;
         end
         
     end
+    
+    TrueStateIndices( ToDelete )    = [];
+    InitialParamIndices( ToDelete ) = [];
     
     yc_ = simult_( y0, dr, ex_( 1, : ), iorder );
     y_( :, 1 : ( 1 + M_.maximum_lag ) ) = yc_;
