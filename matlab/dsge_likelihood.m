@@ -347,8 +347,28 @@ a_full_dr = [];
 likelihood = 0;
 lik_store  = zeros( 0, 1 );
 
-for AccurateNonstationarityLoopIndex = 1 : AccurateNonstationarityLoopLength  %#ok<*AGROW>
+AccurateNonstationarityProblem = false;
+AccurateNonstationarityLoopIndex = 1;
+StepWidth = Inf;
 
+OldModelParams = Model.params;
+
+while AccurateNonstationarityLoopIndex <= AccurateNonstationarityLoopLength  %#ok<*AGROW>
+
+if AccurateNonstationarityProblem
+    if isfinite( StepWidth )
+        StepWidth = 0.1 * StepWidth;
+        if StepWidth < 0.0001
+            error( 'StepWidth hopelessly small.' );
+        end
+        likelihood = likelihood + 1e12 * ( AccurateNonstationarityLoopLength - AccurateNonstationarityLoopIndex + 1 );
+    else
+        StepWidth = 1;
+    end
+end
+    
+AccurateNonstationarityProblem = true;
+    
 if DynareOptions.accurate_nonstationarity
     
     DynareDataset = OriginalDynareDataset( OriginalDynareDataset.dates( AccurateNonstationarityLoopIndex ) );
@@ -363,9 +383,10 @@ if DynareOptions.accurate_nonstationarity
         DatasetInfo.missing.aindex = num2cell(transpose(repmat(1:DynareDataset.vobs,DynareDataset.nobs,1)),1);
         DatasetInfo.missing.no_more_missing_observations = 1;
     end
-
+    
     if AccurateNonstationarityLoopIndex > 1
-        Model.params( InitialParamIndices ) = max( Model.params( InitialParamIndices ) - 0.002, min( Model.params( InitialParamIndices ) + 0.002, a_full_dr( TrueStateIndices ) ) ); % a_full_dr( TrueStateIndices ); % 
+        Model.params = OldModelParams;
+        Model.params( InitialParamIndices ) = max( Model.params( InitialParamIndices ) - StepWidth, min( Model.params( InitialParamIndices ) + StepWidth, a_full_dr( TrueStateIndices ) ) ); % a_full_dr( TrueStateIndices ); % 
     end
     
 end
@@ -386,6 +407,12 @@ end
 
 % Return, with endogenous penalty when possible, if dynare_resolve issues an error code (defined in resol).
 if info(1)
+    
+    if AccurateNonstationarityLoopIndex > 1   
+        info( 1 ) = 0;
+        continue
+    end
+    
     if info(1) == 3 || info(1) == 4 || info(1) == 5 || info(1)==6 ||info(1) == 19 ||...
                 info(1) == 20 || info(1) == 21 || info(1) == 23 || info(1) == 26 || ...
                 info(1) == 81 || info(1) == 84 ||  info(1) == 85 ||  info(1) == 86
@@ -416,6 +443,10 @@ end
 % check endogenous prior restrictions
 info=endogenous_prior_restrictions(T,R,Model,DynareOptions,DynareResults);
 if info(1)
+    if AccurateNonstationarityLoopIndex > 1   
+        info( 1 ) = 0;
+        continue
+    end
     fval = Inf;
     info(4)=info(2);
     exit_flag = 0;
@@ -1010,6 +1041,11 @@ lik_store = [ lik_store; lik ];
 a_full_dr = zeros( size( ys_dr ) );
 a_full_dr( DynareResults.dr.restrict_var_list ) = a;
 a_full_dr = a_full_dr + ys_dr;
+
+AccurateNonstationarityLoopIndex = AccurateNonstationarityLoopIndex + 1;
+AccurateNonstationarityProblem = false;
+
+OldModelParams = Model.params;
 
 end % accurate_nonstationarity loop
 
