@@ -206,7 +206,7 @@ elseif options_.lik_init == 5            % Old diffuse Kalman filter only for th
     end
     R_tmp = R(stable, :);
     T_tmp = T(stable,stable);
-    Pstar_tmp=lyapunov_solver(T_tmp,R_tmp,Q,DynareOptions);
+    Pstar_tmp=lyapunov_solver(T_tmp,R_tmp,Q,options_);
     Pstar(stable, stable) = Pstar_tmp;
     Pinf  = [];
 elseif options_.lik_init == 6
@@ -214,7 +214,7 @@ elseif options_.lik_init == 6
         % Use standard kalman filter except if the univariate filter is explicitely choosen.
         kalman_algo = 1;
     end
-    if DynareOptions.extended_kalman_filter
+    if options_.extended_kalman_filter
         Pstar = zeros( size( R, 1 ) );
         Pinf  = [];
     else
@@ -225,7 +225,7 @@ elseif options_.lik_init == 6
     end
 end
 
-if DynareOptions.non_bgp
+if options_.non_bgp
 
     TrueStateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred ); % will have GrowthSwitch removed
     TrueStateVariableNames = cellstr( M_.endo_names( oo_.dr.order_var( TrueStateIndices ), : ) );
