@@ -159,7 +159,7 @@ init_a = zeros( size( T, 1 ), 1 );
 TrueStateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred ); % will have GrowthSwitch removed
 TrueStateVariableNames = cellstr( M_.endo_names( oo_.dr.order_var( TrueStateIndices ), : ) );
 
-if DynareOptions.non_bgp
+if options_.non_bgp
 
     GrowthSwitchIndex0 = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
     
