@@ -665,18 +665,26 @@ switch DynareOptions.lik_init
     InitialFull = ys_dr;    
     InitialFull( TrueStateIndices ) = xparam1( InitialBayesParamIndices );
     InitialFull = InitialFull - ys_dr;
-    if DynareOptions.extended_kalman_filter
-        Pstar = zeros( size( R, 1 ) );
-        Pinf  = [];
-        a     = InitialFull( DynareResults.dr.restrict_var_list );
-        Zflag = 0;
-    else
-        rootQ  = robust_root( Q );
-        rootPstar = R*rootQ;
-        Pstar = rootPstar * rootPstar.';
-        Pinf  = [];
-        a     = T * InitialFull( DynareResults.dr.restrict_var_list );
-        Zflag = 0;
+    
+    [ ~, TrueStateIndicesIntoRestrictVarList ] = ismember( TrueStateIndices, DynareResults.dr.restrict_var_list );
+    Ttmp = T;
+    Rtmp = R;
+    Ttmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
+    Rtmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
+    
+    a         = InitialFull( DynareResults.dr.restrict_var_list );
+    Pstar     = lyapunov_solver( Ttmp, Rtmp, Q, DynareOptions );
+    rootPstar = robust_root( Pstar );
+    Pinf      = [];
+    Zflag     = 0;
+    
+    if ~DynareOptions.extended_kalman_filter
+        a         = T * a;
+        rootQ     = robust_root( Q );
+        rootQQ    = R * rootQ;
+        M         = qr0( [ rootPstar.' * T.'; rootQQ.' ] );
+        rootPstar = M.';
+        Pstar     = rootPstar * rootPstar.';
     end
   otherwise
     error('dsge_likelihood:: Unknown initialization approach for the Kalman filter!')
