@@ -154,6 +154,26 @@ for i=1:vobs
     Z(i,mf(i)) = 1;
 end
 
+init_a = zeros( size( T, 1 ), 1 );
+
+TrueStateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred ); % will have GrowthSwitch removed
+TrueStateVariableNames = cellstr( M_.endo_names( oo_.dr.order_var( TrueStateIndices ), : ) );
+
+if DynareOptions.non_bgp
+
+    GrowthSwitchIndex0 = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
+    
+    if isempty( GrowthSwitchIndex0 )
+        error( 'Dynare was expecting a state variable named GrowthSwitch.' );
+    end
+    
+    GrowthSwitchIndex1 = TrueStateIndices( GrowthSwitchIndex0 );
+
+    TrueStateIndices( GrowthSwitchIndex0 ) = [];
+    % TrueStateVariableNames( GrowthSwitchIndex0 ) = [];
+    
+end
+
 expanded_state_vector_for_univariate_filter=0;
 kalman_algo = options_.kalman_algo;
 if options_.lik_init == 1               % Kalman filter
@@ -214,34 +234,29 @@ elseif options_.lik_init == 6
         % Use standard kalman filter except if the univariate filter is explicitely choosen.
         kalman_algo = 1;
     end
+    InitialFull = ys_dr;    
+    InitialFull( TrueStateIndices ) = xparam1( InitialBayesParamIndices );
+    InitialFull = InitialFull - ys_dr;
     if options_.extended_kalman_filter
         Pstar = zeros( size( R, 1 ) );
         Pinf  = [];
+        init_a     = InitialFull( oo_.dr.restrict_var_list );
     else
         rootQ  = robust_root( Q );
         rootPstar = R*rootQ;
         Pstar = rootPstar * rootPstar.';
         Pinf  = [];
+        init_a     = T * InitialFull( oo_.dr.restrict_var_list );
     end
 end
 
 if options_.non_bgp
 
-    TrueStateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred ); % will have GrowthSwitch removed
-    TrueStateVariableNames = cellstr( M_.endo_names( oo_.dr.order_var( TrueStateIndices ), : ) );
-
-    GrowthSwitchIndex0 = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
-    
-    if isempty( GrowthSwitchIndex0 )
-        error( 'Dynare was expecting a state variable named GrowthSwitch.' );
-    end
-    
-    GrowthSwitchIndex1 = TrueStateIndices( GrowthSwitchIndex0 );
-
     GrowthSwitchIndex2 = find( ismember( oo_.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
     if isempty( GrowthSwitchIndex2 )
         error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
     end
+    init_a( GrowthSwitchIndex2 )   = 1;
     Pstar( GrowthSwitchIndex2, : ) = 0;
     Pstar( :, GrowthSwitchIndex2 ) = 0;
     if ~isempty( Pinf )
@@ -270,7 +285,7 @@ R1 = R;
 
 if kalman_algo == 1 || kalman_algo == 3
     [alphahat,epsilonhat,etahat,ahat,P,aK,PK,decomp,state_uncertainty] = missing_DiffuseKalmanSmootherH1_Z(ST, ...
-                                                      Z,R1,Q,H,Pinf,Pstar, ...
+                                                      Z,R1,Q,H,init_a,Pinf,Pstar, ...
                                                       data1,vobs,np,smpl,data_index, ...
                                                       options_.nk,kalman_tol,diffuse_kalman_tol,options_.filter_decomposition,options_.smoothed_state_uncertainty);
     if isinf(alphahat)
@@ -313,7 +328,7 @@ if kalman_algo == 2 || kalman_algo == 4
 
     [alphahat,epsilonhat,etahat,ahat,P,aK,PK,decomp,state_uncertainty] = missing_DiffuseKalmanSmootherH3_Z(ST, ...
                                                       Z,R1,Q,diag(H), ...
-                                                      Pinf,Pstar,data1,vobs,np,smpl,data_index, ...
+                                                      init_a,Pinf,Pstar,data1,vobs,np,smpl,data_index, ...
                                                       options_.nk,kalman_tol,diffuse_kalman_tol, ...
                                                       options_.filter_decomposition,options_.smoothed_state_uncertainty);
 end
