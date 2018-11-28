@@ -301,6 +301,11 @@ if DynareOptions.non_bgp
     TrueStateIndices( GrowthSwitchIndex0 ) = [];
     TrueStateVariableNames( GrowthSwitchIndex0 ) = [];
     
+    GrowthSwitchIndex2 = find( ismember( DynareResults.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
+    if isempty( GrowthSwitchIndex2 )
+        error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
+    end   
+    
 end
 
 NTrueState = length( TrueStateVariableNames );
@@ -512,15 +517,23 @@ ys_dr = SteadyState( DynareResults.dr.order_var );
 
 if isempty( a_full_dr )
 
-rootPstar = [];
+Ttmp = T;
+Rtmp = R;
+
+if DynareOptions.non_bgp
+    Ttmp( GrowthSwitchIndex2, : ) = 0;
+    Rtmp( GrowthSwitchIndex2, : ) = 0;
+end
     
+rootPstar = [];
+
 switch DynareOptions.lik_init
   case 1% Standard initialization with the steady state of the state equation.
     if kalman_algo~=2
         % Use standard kalman filter except if the univariate filter is explicitely choosen.
         kalman_algo = 1;
     end
-    Pstar=lyapunov_solver(T,R,Q,DynareOptions);
+    Pstar=lyapunov_solver(Ttmp,Rtmp,Q,DynareOptions);
     Pinf  = [];
     a     = zeros(mm,1);
     Zflag = 0;
@@ -541,25 +554,36 @@ switch DynareOptions.lik_init
         error(['The model requires Diffuse filter, but you specified a different Kalman filter. You must set options_.kalman_algo ' ...
                'to 0 (default), 3 or 4'])
     end
-    [Pstar,Pinf] = compute_Pinf_Pstar(Z,T,R,Q,DynareOptions.qz_criterium);
+    [Pstar,Pinf] = compute_Pinf_Pstar(Z,Ttmp,Rtmp,Q,DynareOptions.qz_criterium);
     Z =zeros(length(BayesInfo.mf),size(T,1));
     for i = 1:length(BayesInfo.mf)
         Z(i,BayesInfo.mf(i))=1;
     end
     Zflag = 1;
+    a = zeros(mm,1);
+    if DynareOptions.non_bgp
+        a( GrowthSwitchIndex2 ) = 1;
+        Pstar( GrowthSwitchIndex2, : ) = 0;
+        Pstar( :, GrowthSwitchIndex2 ) = 0;
+        rootPstar( GrowthSwitchIndex2, : ) = 0;
+        if ~isempty( Pinf )
+            Pinf( GrowthSwitchIndex2, : ) = 0;
+            Pinf( :, GrowthSwitchIndex2 ) = 0;
+        end
+    end
     % Run diffuse kalman filter on first periods.
     if (kalman_algo==3)
         % Multivariate Diffuse Kalman Filter
         Pstar0 = Pstar; % store Pstar
         if no_missing_data_flag
             [dLIK,dlik,a,Pstar] = kalman_filter_d(Y, 1, size(Y,2), ...
-                                                  zeros(mm,1), Pinf, Pstar, ...
+                                                  a, Pinf, Pstar, ...
                                                   kalman_tol, diffuse_kalman_tol, riccati_tol, DynareOptions.presample, ...
                                                   T,R,Q,H,Z,mm,pp,rr);
         else
             [dLIK,dlik,a,Pstar] = missing_observations_kalman_filter_d(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations, ...
                                                               Y, 1, size(Y,2), ...
-                                                              zeros(mm,1), Pinf, Pstar, ...
+                                                              a, Pinf, Pstar, ...
                                                               kalman_tol, diffuse_kalman_tol, riccati_tol, DynareOptions.presample, ...
                                                               T,R,Q,H,Z,mm,pp,rr);
         end
@@ -602,12 +626,14 @@ switch DynareOptions.lik_init
 
             end
         end
+        
+        a = [ a; zeros( mmm - mm, 1 ) ];
 
         [dLIK,dlik,a,Pstar] = univariate_kalman_filter_d(DatasetInfo.missing.aindex,...
                                                          DatasetInfo.missing.number_of_observations,...
                                                          DatasetInfo.missing.no_more_missing_observations, ...
                                                          Y, 1, size(Y,2), ...
-                                                         zeros(mmm,1), Pinf, Pstar, ...
+                                                         a, Pinf, Pstar, ...
                                                          kalman_tol, diffuse_kalman_tol, riccati_tol, DynareOptions.presample, ...
                                                          T,R,Q,H1,Z,mmm,pp,rr);
         diffuse_periods = size(dlik,1);
@@ -625,20 +651,20 @@ switch DynareOptions.lik_init
         kalman_algo = 1;
     end
     if isequal(H,0)
-        [err,Pstar] = kalman_steady_state(transpose(T),R*Q*transpose(R),transpose(build_selection_matrix(Z,mm,length(Z))));
+        [err,Pstar] = kalman_steady_state(transpose(Ttmp),Rtmp*Q*transpose(Rtmp),transpose(build_selection_matrix(Z,mm,length(Z))));
     else
-        [err,Pstar] = kalman_steady_state(transpose(T),R*Q*transpose(R),transpose(build_selection_matrix(Z,mm,length(Z))),H);
+        [err,Pstar] = kalman_steady_state(transpose(Ttmp),Rtmp*Q*transpose(Rtmp),transpose(build_selection_matrix(Z,mm,length(Z))),H);
     end
     if err
         disp(['dsge_likelihood:: I am not able to solve the Riccati equation, so I switch to lik_init=1!']);
         DynareOptions.lik_init = 1;
-        Pstar=lyapunov_solver(T,R,Q,DynareOptions);
+        Pstar=lyapunov_solver(Ttmp,Rtmp,Q,DynareOptions);
     end
     Pinf  = [];
     a = zeros(mm,1);
     Zflag = 0;
   case 5            % Old diffuse Kalman filter only for the non stationary variables
-    [eigenvect, eigenv] = eig(T);
+    [eigenvect, eigenv] = eig(Ttmp);
     eigenv = diag(eigenv);
     nstable = length(find(abs(abs(eigenv)-1) > 1e-7));
     unstable = find(abs(abs(eigenv)-1) < 1e-7);
@@ -650,8 +676,8 @@ switch DynareOptions.lik_init
     if kalman_algo ~= 2
         kalman_algo = 1;
     end
-    R_tmp = R(stable, :);
-    T_tmp = T(stable,stable);
+    R_tmp = Rtmp(stable, :);
+    T_tmp = Ttmp(stable,stable);
     Pstar_tmp=lyapunov_solver(T_tmp,R_tmp,Q,DynareOptions);
     Pstar(stable, stable) = Pstar_tmp;
     Pinf  = [];
@@ -667,8 +693,6 @@ switch DynareOptions.lik_init
     InitialFull = InitialFull - ys_dr;
     
     [ ~, TrueStateIndicesIntoRestrictVarList ] = ismember( TrueStateIndices, DynareResults.dr.restrict_var_list );
-    Ttmp = T;
-    Rtmp = R;
     Ttmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
     Rtmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
     
@@ -704,10 +728,6 @@ else
 end
 
 if DynareOptions.non_bgp
-    GrowthSwitchIndex2 = find( ismember( DynareResults.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
-    if isempty( GrowthSwitchIndex2 )
-        error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
-    end
     a( GrowthSwitchIndex2 ) = 1;
     Pstar( GrowthSwitchIndex2, : ) = 0;
     Pstar( :, GrowthSwitchIndex2 ) = 0;

@@ -159,6 +159,9 @@ init_a = zeros( size( T, 1 ), 1 );
 TrueStateIndices = ( M_.nstatic + 1 ) : ( M_.nstatic + M_.nspred ); % will have GrowthSwitch removed
 TrueStateVariableNames = cellstr( M_.endo_names( oo_.dr.order_var( TrueStateIndices ), : ) );
 
+Ttmp = T;
+Rtmp = R;
+
 if options_.non_bgp
 
     GrowthSwitchIndex0 = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
@@ -171,6 +174,14 @@ if options_.non_bgp
 
     TrueStateIndices( GrowthSwitchIndex0 ) = [];
     % TrueStateVariableNames( GrowthSwitchIndex0 ) = [];
+
+    GrowthSwitchIndex2 = find( ismember( oo_.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
+    if isempty( GrowthSwitchIndex2 )
+        error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
+    end
+    
+    Ttmp( GrowthSwitchIndex2, : ) = 0;
+    Rtmp( GrowthSwitchIndex2, : ) = 0;    
     
 end
 
@@ -180,7 +191,7 @@ if options_.lik_init == 1               % Kalman filter
     if kalman_algo ~= 2
         kalman_algo = 1;
     end
-    Pstar=lyapunov_solver(T,R,Q,options_);
+    Pstar=lyapunov_solver(Ttmp,Rtmp,Q,options_);
     Pinf        = [];
 elseif options_.lik_init == 2           % Old Diffuse Kalman filter
     if kalman_algo ~= 2
@@ -203,16 +214,16 @@ elseif options_.lik_init == 3           % Diffuse Kalman filter
             Z   = [Z, eye(vobs)];
         end
     end
-    [Pstar,Pinf] = compute_Pinf_Pstar(mf,T,R,Q,options_.qz_criterium);
+    [Pstar,Pinf] = compute_Pinf_Pstar(mf,Ttmp,Rtmp,Q,options_.qz_criterium);
 elseif options_.lik_init == 4           % Start from the solution of the Riccati equation.
-    [err, Pstar] = kalman_steady_state(transpose(T),R*Q*transpose(R),transpose(build_selection_matrix(mf,np,vobs)),H);
+    [err, Pstar] = kalman_steady_state(transpose(Ttmp),Rtmp*Q*transpose(Rtmp),transpose(build_selection_matrix(mf,np,vobs)),H);
     mexErrCheck('kalman_steady_state',err);
     Pinf  = [];
     if kalman_algo~=2
         kalman_algo = 1;
     end
 elseif options_.lik_init == 5            % Old diffuse Kalman filter only for the non stationary variables
-    [eigenvect, eigenv] = eig(T);
+    [eigenvect, eigenv] = eig(Ttmp);
     eigenv = diag(eigenv);
     nstable = length(find(abs(abs(eigenv)-1) > 1e-7));
     unstable = find(abs(abs(eigenv)-1) < 1e-7);
@@ -224,8 +235,8 @@ elseif options_.lik_init == 5            % Old diffuse Kalman filter only for th
     if kalman_algo ~= 2
         kalman_algo = 1;
     end
-    R_tmp = R(stable, :);
-    T_tmp = T(stable,stable);
+    R_tmp = Rtmp(stable, :);
+    T_tmp = Ttmp(stable,stable);
     Pstar_tmp=lyapunov_solver(T_tmp,R_tmp,Q,options_);
     Pstar(stable, stable) = Pstar_tmp;
     Pinf  = [];
@@ -237,25 +248,30 @@ elseif options_.lik_init == 6
     InitialFull = ys_dr;    
     InitialFull( TrueStateIndices ) = xparam1( InitialBayesParamIndices );
     InitialFull = InitialFull - ys_dr;
+    
+    [ ~, TrueStateIndicesIntoRestrictVarList ] = ismember( TrueStateIndices, oo_.dr.restrict_var_list );
+    Ttmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
+    Rtmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
+    
+    init_a    = InitialFull( oo_.dr.restrict_var_list );
+    Pstar     = lyapunov_solver( Ttmp, Rtmp, Q, options_ );
+    Pinf      = [];
+
     if options_.extended_kalman_filter
-        Pstar = zeros( size( R, 1 ) );
-        Pinf  = [];
-        init_a     = InitialFull( oo_.dr.restrict_var_list );
+        warning( 'Smoothing for the EKF is not yet implemented.' );
     else
-        rootQ  = robust_root( Q );
-        rootPstar = R*rootQ;
-        Pstar = rootPstar * rootPstar.';
-        Pinf  = [];
-        init_a     = T * InitialFull( oo_.dr.restrict_var_list );
+        init_a    = T * init_a;
+        rootQ     = robust_root( Q );
+        rootQQ    = R * rootQ;
+        rootPstar = robust_root( Pstar );
+        M         = qr0( [ rootPstar.' * T.'; rootQQ.' ] );
+        rootPstar = M.';
+        Pstar     = rootPstar * rootPstar.';
     end
 end
 
 if options_.non_bgp
 
-    GrowthSwitchIndex2 = find( ismember( oo_.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
-    if isempty( GrowthSwitchIndex2 )
-        error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
-    end
     init_a( GrowthSwitchIndex2 )   = 1;
     Pstar( GrowthSwitchIndex2, : ) = 0;
     Pstar( :, GrowthSwitchIndex2 ) = 0;
