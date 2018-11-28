@@ -122,6 +122,23 @@ end
 [dataset_, dataset_info, xparam1, hh, M_, options_, oo_, estim_params_, bayestopt_, bounds] = ...
     dynare_estimation_init(var_list_, dname, [], M_, options_, oo_, estim_params_, bayestopt_);
 
+if ( options_.lik_init == 6 ) && ( options_.add_empty_presamples == 0 )
+    options_.add_empty_presamples = 1;
+end
+
+if ( options_.add_empty_presamples > 0 ) && options_.extended_kalman_filter
+    options_.add_empty_presamples = options_.add_empty_presamples - 1; % The EKF is predict then update, whereas Dynare's other filters are update then predict.
+end
+
+if options_.add_empty_presamples > 0
+    dataset_ = merge( dataset_, dseries( struct( ...
+        'data', { zeros( options_.add_empty_presamples, 0 ) },...
+        'name', { { } },...
+        'tex', { { } },...
+        'dates', { ( dataset_.dates( 1 ) - options_.add_empty_presamples ) : ( dataset_.dates( 1 ) - 1 ) }...
+    ) ) );
+end
+
 if options_.dsge_var
     check_dsge_var_model(M_, estim_params_, bayestopt_);
     if dataset_info.missing.state

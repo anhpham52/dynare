@@ -174,7 +174,7 @@ P = full_rootP * full_rootP.';
 
 a = full( a );
 
-if F_singular
+if F_singular && smpl > 1
     error('The variance of the forecast error remains singular until the end of the sample')
 end
 

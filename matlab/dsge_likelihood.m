@@ -701,15 +701,6 @@ switch DynareOptions.lik_init
     rootPstar = robust_root( Pstar );
     Pinf      = [];
     Zflag     = 0;
-    
-    if ~DynareOptions.extended_kalman_filter
-        a         = T * a;
-        rootQ     = robust_root( Q );
-        rootQQ    = R * rootQ;
-        M         = qr0( [ rootPstar.' * T.'; rootQQ.' ] );
-        rootPstar = M.';
-        Pstar     = rootPstar * rootPstar.';
-    end
   otherwise
     error('dsge_likelihood:: Unknown initialization approach for the Kalman filter!')
 end

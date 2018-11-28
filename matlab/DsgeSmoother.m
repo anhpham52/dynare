@@ -259,14 +259,6 @@ elseif options_.lik_init == 6
 
     if options_.extended_kalman_filter
         warning( 'Smoothing for the EKF is not yet implemented.' );
-    else
-        init_a    = T * init_a;
-        rootQ     = robust_root( Q );
-        rootQQ    = R * rootQ;
-        rootPstar = robust_root( Pstar );
-        M         = qr0( [ rootPstar.' * T.'; rootQQ.' ] );
-        rootPstar = M.';
-        Pstar     = rootPstar * rootPstar.';
     end
 end
 
