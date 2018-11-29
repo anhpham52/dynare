@@ -399,8 +399,10 @@ else % flgresume is true, do resume former run
   end
   local.opts = opts; % keep stopping and display options
   local.varargin = varargin;
+  local.fitfun = fitfun;
   load(opts.SaveFilename); 
   varargin = local.varargin;
+  fitfun = local.fitfun;
   flgresume = 1;
 
   % Overwrite old stopping and display options
