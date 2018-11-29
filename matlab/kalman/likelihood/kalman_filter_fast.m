@@ -1,4 +1,4 @@
-function [LIK, LIKK, a, P] = kalman_filter_fast(Y,start,last,a,P,kalman_tol,riccati_tol,presample,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,D2H,D2P)
+function [LIK, LIKK, a, P] = kalman_filter_fast(Y,start,last,a,P,kalman_tol,riccati_tol,presample,Constant,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,D2H,D2P)
 % [LIK, LIKK, a, P] =
 % kalman_filter_fast(Y,start,last,a,P,kalman_tol,riccati_tol,presample,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,D2H,D2P)
 % computes the likelihood of a stationnary state space model using Ed
@@ -162,7 +162,7 @@ while notsteady && t<=last
         F_singular = 0;
         dF      = det(F);
         likk(s) = log(dF)+transpose(v)*iF*v;
-        a = T*a+Kg*v;
+        a = Constant+T*a+Kg*v;
         if Zflag
             ZWM = Z*W*M;
             ZWMWp = ZWM*W';
@@ -209,10 +209,10 @@ end
 if t <= last
     if analytic_derivation
         if analytic_derivation==2
-            [tmp, tmp2] = kalman_filter_ss(Y,t,last,a,T,K,iF,dF,Z,pp,Zflag, ...
+            [tmp, tmp2] = kalman_filter_ss(Y,t,last,a,Constant,T,K,iF,dF,Z,pp,Zflag, ...
                                            analytic_derivation,Da,DT,DYss,D2a,D2T,D2Yss);
         else
-            [tmp, tmp2] = kalman_filter_ss(Y,t,last,a,T,K,iF,dF,Z,pp,Zflag, ...
+            [tmp, tmp2] = kalman_filter_ss(Y,t,last,a,Constant,T,K,iF,dF,Z,pp,Zflag, ...
                                            analytic_derivation,Da,DT,DYss,asy_hess);
         end
         likk(s+1:end)=tmp2{1};
@@ -222,7 +222,7 @@ if t <= last
             Hess = Hess + tmp{3};
         end
     else
-        [tmp, likk(s+1:end)] = kalman_filter_ss(Y, t, last, a, T, K, iF, log(dF), Z, pp, Zflag);
+        [tmp, likk(s+1:end)] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, log(dF), Z, pp, Zflag);
     end
 end
 

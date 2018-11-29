@@ -1,4 +1,4 @@
-function  [LIK, lik, a, P, rootP] = missing_observations_kalman_filter(data_index,~,no_more_missing_observations,Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,T,Q,R,H,Z,~,pp,~,Zflag,diffuse_periods)
+function  [LIK, lik, a, P, rootP] = missing_observations_kalman_filter(data_index,~,no_more_missing_observations,Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,Constant,T,Q,R,H,Z,~,pp,~,Zflag,diffuse_periods)
 % Computes the likelihood of a state space model in the case with missing observations.
 %
 % INPUTS
@@ -108,7 +108,7 @@ while notsteady && t<=last
     s  = t-start+1;
     d_index = data_index{t};
     if isempty(d_index)
-        a = T*a;
+        a = Constant + T*a;
         M = qr0( [ rootP.' * T.'; rootQQ.' ] );
         % [ G, M ] = qr( [ rootP.' * T.'; rootQQ.' ] );
         % M.' * M = M .' * G .' * G * M 
@@ -160,7 +160,7 @@ while notsteady && t<=last
         % = T * ( P - P * z.' * iF * z * P ) * T.' + QQ
         rootP = M.';
 
-        a = T*(a+K*v);
+        a = Constant + T*(a+K*v);
         if t>=no_more_missing_observations
             notsteady = max(abs(K(:)-oldK))>riccati_tol;
             oldK = K(:);
@@ -183,7 +183,7 @@ lik(1:s) = .5*lik(1:s);
 
 % Call steady state Kalman filter if needed.
 if t<=last
-    [~, lik(s+1:end)] = kalman_filter_ss(Y, t, last, a, T, K, iF, log_dF, Z, pp, Zflag);
+    [~, lik(s+1:end)] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, log_dF, Z, pp, Zflag);
 end
 
 % Compute minus the log-likelihood.

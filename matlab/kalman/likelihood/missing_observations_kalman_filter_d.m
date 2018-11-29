@@ -2,7 +2,7 @@ function [dLIK,dlik,a,Pstar] = missing_observations_kalman_filter_d(data_index,n
                                                   Y, start, last, ...
                                                   a, Pinf, Pstar, ...
                                                   kalman_tol, diffuse_kalman_tol, riccati_tol, presample, ...
-                                                  T, R, Q, H, Z, mm, pp, rr)
+                                                  Constant, T, R, Q, H, Z, mm, pp, rr)
 % Computes the diffuse likelihood of a state space model when some observations are missing.
 %
 % INPUTS
@@ -88,7 +88,7 @@ while rank(Pinf,diffuse_kalman_tol) && (t<=last)
     if isempty(d_index)
         %no observations, propagate forward without updating based on
         %observations
-        a = T*a;
+        a = Constant + T*a;
         Pstar = T*Pstar*transpose(T)+QQ;
         Pinf  = T*Pinf*transpose(T);
         Pstar = 0.5 * ( Pstar + Pstar.' );
@@ -121,7 +121,7 @@ while rank(Pinf,diffuse_kalman_tol) && (t<=last)
                     Pstar  = T*(Pstar-Pstar*ZZ'*Kstar')*T'+QQ;              % (5.17) DK (2012) with L_0 plugged in
                     Pstar  = 0.5 * ( Pstar + Pstar.' );
                     Pinf   = 0.5 * ( Pinf + Pinf.' );
-                    a      = T*(a+Kstar*v);                                 % (5.13) DK (2012)
+                    a      = Constant + T*(a+Kstar*v);                                 % (5.13) DK (2012)
                 end
             end
         else
@@ -136,7 +136,7 @@ while rank(Pinf,diffuse_kalman_tol) && (t<=last)
             Pinf   = T*(Pinf-Pinf*ZZ'*Kinf')*T';                            %(5.14) DK(2012)
             Pstar  = 0.5 * ( Pstar + Pstar.' );
             Pinf   = 0.5 * ( Pinf + Pinf.' );
-            a      = T*(a+Kinf*v);                                          %(5.13) DK(2012)
+            a      = Constant + T*(a+Kinf*v);                                          %(5.13) DK(2012)
         end
     end
     t  = t+1;

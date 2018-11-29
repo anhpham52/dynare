@@ -153,13 +153,19 @@ else
         k2 = k2(:,1)+(M_.maximum_lag+1-k2(:,2))*endo_nbr;
         order_var = dr.order_var;
     end
+    
+    if isfield( options_, 'non_bgp_growth_iterations' ) && options_.non_bgp_growth_iterations
+        constant = dr.non_bgp_drift;
+    else
+        constant = zeros( size( dr.ys ) );
+    end
 
     switch iorder
       case 1
         if isempty(dr.ghu)% For (linearized) deterministic models.
             for i = 2:iter+M_.maximum_lag
                 yhat = y_(order_var(k2),i-1);
-                y_(order_var,i) = dr.ghx*yhat;
+                y_(order_var,i) = constant + dr.ghx*yhat;
             end
         elseif isempty(dr.ghx)% For (linearized) purely forward variables (no state variables).
             y_(dr.order_var,:) = dr.ghu*transpose(ex_);
@@ -172,7 +178,7 @@ else
         end
         y_ = bsxfun(@plus,y_,dr.ys);
       case 2
-        constant = dr.ys(order_var)+.5*dr.ghs2;
+        constant = constant + dr.ys(order_var)+.5*dr.ghs2;
         if options_.pruning
             y__ = y0;
             for i = 2:iter+M_.maximum_lag

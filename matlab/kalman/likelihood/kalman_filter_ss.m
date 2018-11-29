@@ -1,4 +1,4 @@
-function [LIK, likk, a] = kalman_filter_ss(Y,start,last,a,T,K,iF,log_dF,Z,pp,Zflag,analytic_derivation,Da,DT,DYss,D2a,D2T,D2Yss)
+function [LIK, likk, a] = kalman_filter_ss(Y,start,last,a,Constant,T,K,iF,log_dF,Z,pp,Zflag,analytic_derivation,Da,DT,DYss,D2a,D2T,D2Yss)
 % Computes the likelihood of a stationnary state space model (steady state kalman filter).
 
 %@info:
@@ -124,7 +124,7 @@ while t <= last
         end
         dlikk(t-start+1,:)=DLIKt;
     end
-    a = T*tmp;
+    a = Constant + T*tmp;
     likk(t-start+1) = transpose(v)*iF*v;
     t = t+1;
 end

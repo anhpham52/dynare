@@ -89,6 +89,9 @@ if M_.maximum_endo_lead==0 && M_.exo_det_nbr~=0
 end
 
 if options_.k_order_solver
+    if isfield( options_, 'non_bgp_growth_iterations' ) && options_.non_bgp_growth_iterations
+        error( 'options_.non_bgp_growth_iterations is not supported with k_order_solver.' );
+    end
     if options_.risky_steadystate
         [dr,info] = dyn_risky_steadystate_solver(oo_.steady_state,M_,dr, ...
                                                  options_,oo_);
@@ -109,28 +112,57 @@ iyv = iyv(:);
 iyr0 = find(iyv) ;
 it_ = M_.maximum_lag + 1 ;
 
+order_var = dr.order_var;
+
 if M_.exo_nbr == 0
     oo_.exo_steady_state = [] ;
 end
 
+if isfield( options_, 'non_bgp_growth_iterations' )
+    if options_.non_bgp_growth_iterations
+        GrowthSwitchIndex = find( ismember( cellstr( M_.endo_names ), 'GrowthSwitch' ) );
+        old_ghx = eye( size( dr.ys, 1 ) );
+        dr.non_bgp_drift = zeros( size( dr.ys ) );
+        xRelLagSteady = zeros( size( dr.ys ) );
+        xRelLagSteady( GrowthSwitchIndex ) = 1; %#ok<FNDSB>
+        k2 = dr.kstate( dr.kstate(:,2) <= M_.maximum_lag + 1, [ 1 2 ] );
+        k2 = k2( :, 1 ) + ( M_.maximum_lag + 1 - k2(:,2) ) * M_.endo_nbr;
+        assert( klen == 3 );
+    end
+else
+    options_.non_bgp_growth_iterations = 0;    
+end
+
+for GrowthIteration = 1 : ( 1 + options_.non_bgp_growth_iterations )
+
 it_ = M_.maximum_lag + 1;
-z = repmat(dr.ys,1,klen);
+
+if GrowthIteration > 1
+    xRelCurrentSteady                 = zeros( size( xRelLagSteady ) );
+    xRelCurrentSteady( order_var ) = dr.non_bgp_drift + dr.ghx * xRelLagSteady( order_var( k2 ) );
+    xRelFutureSteady                  = zeros( size( xRelLagSteady ) );
+    xRelFutureSteady( order_var )  = dr.non_bgp_drift + dr.ghx * xRelCurrentSteady( order_var( k2 ) );
+    z = [ xRelLagSteady + dr.ys; xRelCurrentSteady + dr.ys; xRelFutureSteady + dr.ys ];
+else
+    z = repmat(dr.ys,1,klen);
+end
+
 if local_order == 1
     if (options_.bytecode)
-        [chck, junk, loc_dr] = bytecode('dynamic','evaluate', z,exo_simul, ...
+        [chck, residual, loc_dr] = bytecode('dynamic','evaluate', z,exo_simul, ...
                                         M_.params, dr.ys, 1);
         jacobia_ = [loc_dr.g1 loc_dr.g1_x loc_dr.g1_xd];
     else
-        [junk,jacobia_] = feval([M_.fname '_dynamic'],z(iyr0),exo_simul, ...
+        [residual,jacobia_] = feval([M_.fname '_dynamic'],z(iyr0),exo_simul, ...
                                 M_.params, dr.ys, it_);
     end
 elseif local_order == 2
     if (options_.bytecode)
-        [chck, junk, loc_dr] = bytecode('dynamic','evaluate', z,exo_simul, ...
+        [chck, residual, loc_dr] = bytecode('dynamic','evaluate', z,exo_simul, ...
                                         M_.params, dr.ys, 1);
         jacobia_ = [loc_dr.g1 loc_dr.g1_x];
     else
-        [junk,jacobia_,hessian1] = feval([M_.fname '_dynamic'],z(iyr0),...
+        [residual,jacobia_,hessian1] = feval([M_.fname '_dynamic'],z(iyr0),...
                                          exo_simul, ...
                                          M_.params, dr.ys, it_);
     end
@@ -217,7 +249,7 @@ nfwrd = M_.nfwrd;
 nspred = M_.nspred;
 nboth = M_.nboth;
 nsfwrd = M_.nsfwrd;
-order_var = dr.order_var;
+order_var = order_var;
 nd = size(kstate,1);
 nz = nnz(M_.lead_lag_incidence);
 
@@ -231,8 +263,8 @@ b(:,cols_b) = jacobia_(:,cols_j);
 if M_.maximum_endo_lead == 0
     % backward models: simplified code exist only at order == 1
     if local_order == 1
-        [k1,junk,k2] = find(kstate(:,4));
-        dr.ghx(:,k1) = -b\jacobia_(:,k2);
+        [k1,junk,k2_] = find(kstate(:,4));
+        dr.ghx(:,k1) = -b\jacobia_(:,k2_);
         if M_.exo_nbr
             dr.ghu =  -b\jacobia_(:,nz+1:end);
         end
@@ -287,6 +319,54 @@ else
     end
 end
 
+if options_.non_bgp_growth_iterations
+
+    lead_lag_incidence = M_.lead_lag_incidence;
+
+    reorder_jacobian_columns = [nonzeros(lead_lag_incidence(:,order_var)'); nz+(1:M_.exo_nbr)'];
+
+    jacobia = real( jacobia_(:,reorder_jacobian_columns) );
+    
+    % A = zeros( M_.endo_nbr );
+    B = zeros( M_.endo_nbr );
+    C = zeros( M_.endo_nbr );
+    
+    % if maximum_lag > 0
+    %     [ ~, cols_a ] = find(lead_lag_incidence(maximum_lag, order_var));
+    % else
+    %     cols_a = [];
+    % end
+    [ ~, cols_b ] = find(lead_lag_incidence(M_.maximum_lag+1, order_var));
+    if size( lead_lag_incidence, 1 ) >= M_.maximum_lag + 2
+        [ ~, cols_c ] = find(lead_lag_incidence(M_.maximum_lag+2, order_var));
+    else
+        cols_c = [];
+    end
+    
+    % if maximum_lag > 0
+    %     A( :, cols_a ) = jacobia( :, nonzeros(lead_lag_incidence(maximum_lag,:)) );
+    % end
+    B( :, cols_b ) = jacobia( :, nonzeros(lead_lag_incidence(M_.maximum_lag+1,:)) );
+    if size( lead_lag_incidence, 1 ) >= M_.maximum_lag + 2
+        C( :, cols_c ) = jacobia( :, nonzeros(lead_lag_incidence(M_.maximum_lag+2,:)) );
+    end
+    
+    new_ghx = zeros( size( dr.ys, 1 ) );
+    new_ghx( :, k2 ) = dr.ghx;
+    
+    old_non_bgp_drift = dr.non_bgp_drift;
+    
+    dr.non_bgp_drift = ( B + C + C * new_ghx ) \ ( -residual + B * ( old_non_bgp_drift + ( old_ghx - new_ghx ) * xRelLagSteady( order_var ) ) + C * ( old_non_bgp_drift + old_ghx * old_non_bgp_drift + ( old_ghx * old_ghx - new_ghx * new_ghx ) * xRelLagSteady( order_var ) ) );
+    
+    old_ghx = new_ghx;
+    
+    if max( abs( old_non_bgp_drift - dr.non_bgp_drift ) ) < 1e-8
+        break
+    end
+    
+end
+
+end
 
 %exogenous deterministic variables
 if M_.exo_det_nbr > 0
@@ -363,8 +443,8 @@ end
 
 if options_.loglinear
     % this needs to be extended for order=2,3
-    [il,il1,ik,k1] = indices_lagged_leaded_exogenous_variables(dr.order_var,M_);
-    [illag,illag1,iklag,klag1] = indices_lagged_leaded_exogenous_variables(dr.order_var(M_.nstatic+(1:M_.nspred)),M_);
+    [il,il1,ik,k1] = indices_lagged_leaded_exogenous_variables(order_var,M_);
+    [illag,illag1,iklag,klag1] = indices_lagged_leaded_exogenous_variables(order_var(M_.nstatic+(1:M_.nspred)),M_);
     if ~isempty(ik)
         if M_.nspred > 0
             dr.ghx(ik,iklag) = repmat(1./dr.ys(k1),1,length(klag1)).*dr.ghx(ik,iklag).* ...

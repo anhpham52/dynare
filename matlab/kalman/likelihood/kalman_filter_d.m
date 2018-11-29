@@ -1,4 +1,4 @@
-function [dLIK,dlik,a,Pstar] = kalman_filter_d(Y, start, last, a, Pinf, Pstar, kalman_tol, diffuse_kalman_tol, riccati_tol, presample, T, R, Q, H, Z, mm, pp, rr)
+function [dLIK,dlik,a,Pstar] = kalman_filter_d(Y, start, last, a, Pinf, Pstar, kalman_tol, diffuse_kalman_tol, riccati_tol, presample, Constant, T, R, Q, H, Z, mm, pp, rr)
 % Computes the diffuse likelihood of a state space model.
 %
 % INPUTS
@@ -101,7 +101,7 @@ while rank(Z*Pinf*Z',diffuse_kalman_tol) && (t<=last)
                 Pstar  = T*(Pstar-Pstar*Z'*Kstar')*T'+QQ;               % (5.17) DK (2012)
                 Pstar = 0.5 * ( Pstar + Pstar.' );
                 Pinf  = 0.5 * ( Pinf + Pinf.' );
-                a      = T*(a+Kstar*v);                                 % (5.13) DK (2012)
+                a      = Constant + T*(a+Kstar*v);                                 % (5.13) DK (2012)
             end
         end
     else                                                                %F_{\infty,t} positive definite
@@ -124,7 +124,7 @@ while rank(Z*Pinf*Z',diffuse_kalman_tol) && (t<=last)
         Pinf   = T*(Pinf-Pinf*Z'*Kinf')*T';                             %(5.14) DK(2012)
         Pstar  = 0.5 * ( Pstar + Pstar.' );
         Pinf   = 0.5 * ( Pinf + Pinf.' );
-        a      = T*(a+Kinf*v);                                          %(5.13) DK(2012)
+        a      = Constant + T*(a+Kinf*v);                                          %(5.13) DK(2012)
     end
     t = t+1;
 end

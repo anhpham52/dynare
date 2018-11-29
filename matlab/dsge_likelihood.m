@@ -303,7 +303,7 @@ if DynareOptions.non_bgp
     
     GrowthSwitchIndex2 = find( ismember( DynareResults.dr.restrict_var_list, GrowthSwitchIndex1 ), 1 );
     if isempty( GrowthSwitchIndex2 )
-        error( 'GrowthSwitch was not in oo_.dr.restrict_var_list.' );
+        error( 'GrowthSwitch was not in oo_.restrict_var_list.' );
     end   
     
 end
@@ -456,9 +456,17 @@ if info(1)
     end
 end
 
+dr = DynareResults.dr;
+restrict_var_list = dr.restrict_var_list;   
+
+if isfield( DynareOptions, 'non_bgp_growth_iterations' ) && DynareOptions.non_bgp_growth_iterations
+    Constant = dr.non_bgp_drift( restrict_var_list );
+else
+    Constant = zeros( size( restrict_var_list ) );
+end
+
 if DynareOptions.extended_kalman_filter
     
-    dr = DynareResults.dr;
     k2 = dr.kstate( dr.kstate(:,2) <= Model.maximum_lag + 1, [ 1 2 ] );
     k2 = k2( :, 1 ) + ( Model.maximum_lag + 1 - k2(:,2) ) * Model.endo_nbr;
     
@@ -466,8 +474,6 @@ if DynareOptions.extended_kalman_filter
     k2Alt = ( Model.nstatic + 1 ) : ( Model.nstatic + Model.nspred );
     assert( length( k2 ) == length( k2Alt ) );
     assert( all( k2(:) == k2Alt(:) ) );
-    
-    restrict_var_list = dr.restrict_var_list;
     
     [ ~, k2IntoRestrictVarList ] = ismember( k2, restrict_var_list );
     
@@ -513,14 +519,14 @@ if DynareOptions.extended_kalman_filter
     if DynareOptions.pruning
         
         EKFStateSelect = [ k2IntoRestrictVarList(:).', nRestrict + ( 1 : nState ) ];
-        Constant  = spsparse( [ .5 * dr.ghs2( restrict_var_list ); zeros( nState, 1 ) ] );
+        Constant  = spsparse( [ Constant + .5 * dr.ghs2( restrict_var_list ); zeros( nState, 1 ) ] );
         Jacobian0 = spsparse( [ dr.ghx( restrict_var_list, : ), zeros( nRestrict, nState ), dr.ghu( restrict_var_list, : ); zeros( nState, nState ), dr.ghx( k2, : ), dr.ghu( k2, : ) ] );
         Hessian   = [ cellfun( @( d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_, d2_absOut2_d_epsilon2_ ) [ sparse( nState, 2 * nState + nShock ); sparse( nState, nState ), d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_; sparse( nShock, nState ), d2_absOut3_d_yhat_d_epsilon_.', d2_absOut2_d_epsilon2_ ], d2_absOut1_d_yhat2, d2_absOut3_d_yhat_d_epsilon, d2_absOut2_d_epsilon2, 'UniformOutput', false ); repmat( { sparse( 2 * nState + nShock, 2 * nState + nShock ) }, nState, 1 ) ];
 
     else
     
         EKFStateSelect = k2IntoRestrictVarList;
-        Constant  = spsparse( .5 * dr.ghs2( restrict_var_list ) );
+        Constant  = spsparse( Constant + .5 * dr.ghs2( restrict_var_list ) );
         Jacobian0 = spsparse( [ dr.ghx( restrict_var_list, : ), dr.ghu( restrict_var_list, : ) ] );
         Hessian   = cellfun( @( d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_, d2_absOut2_d_epsilon2_ ) [ d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_; d2_absOut3_d_yhat_d_epsilon_.', d2_absOut2_d_epsilon2_ ], d2_absOut1_d_yhat2, d2_absOut3_d_yhat_d_epsilon, d2_absOut2_d_epsilon2, 'UniformOutput', false );
     
@@ -549,7 +555,7 @@ end
 if DynareOptions.extended_kalman_filter
     OldGood = { T,R,SteadyState,info,Model,DynareOptions,DynareResults , EKFStateSelect, Constant, Jacobian0, Hessian };
 else
-    OldGood = { T,R,SteadyState,info,Model,DynareOptions,DynareResults };
+    OldGood = { T,R,SteadyState,info,Model,DynareOptions,DynareResults, Constant };
 end
 
 else
@@ -557,7 +563,7 @@ else
 if DynareOptions.extended_kalman_filter
     [ T,R,SteadyState,info,Model,DynareOptions,DynareResults , EKFStateSelect, Constant, Jacobian0, Hessian ] = deal( OldGood{:} );
 else
-    [ T,R,SteadyState,info,Model,DynareOptions,DynareResults ] = deal( OldGood{:} );
+    [ T,R,SteadyState,info,Model,DynareOptions,DynareResults, Constant ] = deal( OldGood{:} );
 end
 
 end
@@ -610,7 +616,7 @@ diffuse_periods = 0;
 expanded_state_vector_for_univariate_filter=0;
 singular_diffuse_filter = 0;
 
-ys_dr = SteadyState( DynareResults.dr.order_var );
+ys_dr = SteadyState( dr.order_var );
 
 if isempty( a_full_dr )
 
@@ -674,13 +680,13 @@ switch DynareOptions.lik_init
             [dLIK,dlik,a,Pstar] = kalman_filter_d(Y, 1, size(Y,2), ...
                                                   a, Pinf, Pstar, ...
                                                   kalman_tol, diffuse_kalman_tol, riccati_tol, DynareOptions.presample, ...
-                                                  T,R,Q,H,Z,mm,pp,rr);
+                                                  Constant,T,R,Q,H,Z,mm,pp,rr);
         else
             [dLIK,dlik,a,Pstar] = missing_observations_kalman_filter_d(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations, ...
                                                               Y, 1, size(Y,2), ...
                                                               a, Pinf, Pstar, ...
                                                               kalman_tol, diffuse_kalman_tol, riccati_tol, DynareOptions.presample, ...
-                                                              T,R,Q,H,Z,mm,pp,rr);
+                                                              Constant,T,R,Q,H,Z,mm,pp,rr);
         end
         diffuse_periods = length(dlik);
         if isinf(dLIK)
@@ -723,6 +729,8 @@ switch DynareOptions.lik_init
         end
         
         a = [ a; zeros( mmm - mm, 1 ) ];
+        
+        assert( ~any( Constant ) );
 
         [dLIK,dlik,a,Pstar] = univariate_kalman_filter_d(DatasetInfo.missing.aindex,...
                                                          DatasetInfo.missing.number_of_observations,...
@@ -787,11 +795,11 @@ switch DynareOptions.lik_init
     InitialFull( TrueStateIndices ) = xparam1( InitialBayesParamIndices );
     InitialFull = InitialFull - ys_dr;
     
-    [ ~, TrueStateIndicesIntoRestrictVarList ] = ismember( TrueStateIndices, DynareResults.dr.restrict_var_list );
+    [ ~, TrueStateIndicesIntoRestrictVarList ] = ismember( TrueStateIndices, restrict_var_list );
     Ttmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
     Rtmp( TrueStateIndicesIntoRestrictVarList, : ) = 0;
     
-    a         = InitialFull( DynareResults.dr.restrict_var_list );
+    a         = InitialFull( restrict_var_list );
     Pstar     = lyapunov_solver( Ttmp, Rtmp, Q, DynareOptions );
     rootPstar = robust_root( Pstar );
     Pinf      = [];
@@ -813,7 +821,7 @@ end
 else
     
     a_dr = a_full_dr - ys_dr;
-    a = a_dr( DynareResults.dr.restrict_var_list );
+    a = a_dr( restrict_var_list );
     
     if EKFPruning
         a_pruned1 = a_pruned1_full - ys_dr( k2 );
@@ -836,6 +844,7 @@ if DynareOptions.non_bgp
 end
 
 if analytic_derivation
+    assert( ~any( Constant ) );
     offset = EstimatedParameters.nvx;
     offset = offset+EstimatedParameters.nvn;
     offset = offset+EstimatedParameters.ncx;
@@ -852,7 +861,7 @@ if analytic_derivation
     end
     DLIK = [];
     AHess = [];
-    iv = DynareResults.dr.restrict_var_list;
+    iv = restrict_var_list;
     if nargin<10 || isempty(derivatives_info)
         [A,B,nou,nou,Model,DynareOptions,DynareResults] = dynare_resolve(Model,DynareOptions,DynareResults);
         if ~isempty(EstimatedParameters.var_exo)
@@ -999,6 +1008,7 @@ else
 if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
     if no_missing_data_flag
         if DynareOptions.block
+            assert( ~any( Constant ) );
             [err, LIK,a,Pstar] = block_kalman_filter(T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
             mexErrCheck('block_kalman_filter', err);
         elseif DynareOptions.fast_kalman_filter
@@ -1016,7 +1026,7 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
                                            a,Pstar, ...
                                            kalman_tol, riccati_tol, ...
                                            DynareOptions.presample, ...
-                                           T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
+                                           Constant,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
                                            analytic_deriv_info{:});
         else
             [LIK,lik,a,Pstar,rootPstar] = kalman_filter(Y,diffuse_periods+1,size(Y,2), ...
@@ -1024,11 +1034,12 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
                                       kalman_tol, riccati_tol, ...
                                       DynareOptions.rescale_prediction_error_covariance, ...
                                       DynareOptions.presample, ...
-                                      T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
+                                      Constant,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
                                       analytic_deriv_info{:});
         end
     else
         if 0 %DynareOptions.block
+            assert( ~any( Constant ) );
             [err, LIK,lik,a,Pstar] = block_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,...
                                                  T,R,Q,H,Pstar,Y,start,Z,kalman_tol,riccati_tol, Model.nz_state_var, Model.n_diag, Model.nobs_non_statevar);
         else
@@ -1037,7 +1048,7 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
                                                            kalman_tol, DynareOptions.riccati_tol, ...
                                                            DynareOptions.rescale_prediction_error_covariance, ...
                                                            DynareOptions.presample, ...
-                                                           T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods);
+                                                           Constant,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods);
         end
     end
     if analytic_derivation
@@ -1122,6 +1133,7 @@ if (kalman_algo==2) || (kalman_algo==4)
     if analytic_derivation
         analytic_deriv_info{5}=DH;
     end
+    assert( ~any( Constant ) );
     [LIK, lik,a,Pstar] = univariate_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
                                           a,Pstar, ...
                                           DynareOptions.kalman_tol, ...
@@ -1196,7 +1208,7 @@ if EKFPruning
 end
 
 a_full_dr = zeros( size( ys_dr ) );
-a_full_dr( DynareResults.dr.restrict_var_list ) = a;
+a_full_dr( restrict_var_list ) = a;
 a_full_dr = a_full_dr + ys_dr;
 
 if EKFPruning
