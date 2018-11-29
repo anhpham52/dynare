@@ -357,6 +357,14 @@ end
 
 a_full_dr = [];
 
+EKFPruning = DynareOptions.extended_kalman_filter && DynareOptions.pruning;
+
+if EKFPruning
+   
+    a_pruned1_full = [];
+    
+end
+
 likelihood = 0;
 lik_store  = zeros( 0, 1 );
 
@@ -448,10 +456,83 @@ if info(1)
     end
 end
 
+if DynareOptions.extended_kalman_filter
+    
+    dr = DynareResults.dr;
+    k2 = dr.kstate( dr.kstate(:,2) <= Model.maximum_lag + 1, [ 1 2 ] );
+    k2 = k2( :, 1 ) + ( Model.maximum_lag + 1 - k2(:,2) ) * Model.endo_nbr;
+    
+    % Paranoid consistency check.
+    k2Alt = ( Model.nstatic + 1 ) : ( Model.nstatic + Model.nspred );
+    assert( length( k2 ) == length( k2Alt ) );
+    assert( all( k2(:) == k2Alt(:) ) );
+    
+    restrict_var_list = dr.restrict_var_list;
+    
+    [ ~, k2IntoRestrictVarList ] = ismember( k2, restrict_var_list );
+    
+    % yhat = a( k2IntoRestrictVarList );
+    
+    nState = length( k2 );
+    nShock = size( dr.ghu, 2 );
+
+    nRestrict = length( restrict_var_list );
+    
+    d2_absOut1_d_yhat2 = reshape( dr.ghxx( restrict_var_list, : ), nRestrict, nState, nState );
+    d2_absOut1_d_yhat2 = spsparse( 0.5 * ( permute( d2_absOut1_d_yhat2, [ 3, 2, 1 ] ) + permute( d2_absOut1_d_yhat2, [ 2, 3, 1 ] ) ) );
+    
+    % d2_absOut1_d_yhat2 = zeros( nState, nState, nRestrict );
+    % 
+    % for j = 1 : nState
+    %     for i = 1 : nState
+    %         d2_absOut1_d_yhat2( i, j, : ) = .5 * ( dr.ghxx( restrict_var_list, ( i - 1 ) * nState + j ) + dr.ghxx( restrict_var_list, ( j - 1 ) * nState + i ) );
+    %     end
+    % end
+
+    d2_absOut2_d_epsilon2 = reshape( dr.ghuu( restrict_var_list, : ), nRestrict, nShock, nShock );
+    d2_absOut2_d_epsilon2 = spsparse( 0.5 * ( permute( d2_absOut2_d_epsilon2, [ 3, 2, 1 ] ) + permute( d2_absOut2_d_epsilon2, [ 2, 3, 1 ] ) ) );
+    
+    % d2_absOut2_d_epsilon2 = zeros( nShock, nShock, nRestrict );
+    % 
+    % for j = 1 : nShock
+    %     for i = 1 : nShock
+    %         d2_absOut2_d_epsilon2( i, j, : ) = .5 * ( dr.ghuu( restrict_var_list, ( i - 1 ) * nShock + j ) + dr.ghuu( restrict_var_list, ( j - 1 ) * nShock + i ) );
+    %     end
+    % end
+
+    d2_absOut3_d_yhat_d_epsilon = spsparse( permute( reshape( dr.ghxu( restrict_var_list, : ), nRestrict, nShock, nState ), [ 3, 2, 1 ] ) );
+    
+    % d2_absOut3_d_yhat_d_epsilon = zeros( nState, nShock, nRestrict );
+    % 
+    % for j = 1 : nShock
+    %     for i = 1 : nState
+    %         d2_absOut3_d_yhat_d_epsilon( i, j, : ) = dr.ghxu( restrict_var_list, ( i - 1 ) * nShock + j );
+    %     end
+    % end
+
+    if DynareOptions.pruning
+        
+        EKFStateSelect = [ k2IntoRestrictVarList(:).', nRestrict + ( 1 : nState ) ];
+        Constant  = spsparse( [ .5 * dr.ghs2( restrict_var_list ); zeros( nState, 1 ) ] );
+        Jacobian0 = spsparse( [ dr.ghx( restrict_var_list, : ), zeros( nRestrict, nState ), dr.ghu( restrict_var_list, : ); zeros( nState, nState ), dr.ghx( k2, : ), dr.ghu( k2, : ) ] );
+        Hessian   = [ cellfun( @( d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_, d2_absOut2_d_epsilon2_ ) [ sparse( nState, 2 * nState + nShock ); sparse( nState, nState ), d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_; sparse( nShock, nState ), d2_absOut3_d_yhat_d_epsilon_.', d2_absOut2_d_epsilon2_ ], d2_absOut1_d_yhat2, d2_absOut3_d_yhat_d_epsilon, d2_absOut2_d_epsilon2, 'UniformOutput', false ); repmat( { sparse( 2 * nState + nShock, 2 * nState + nShock ) }, nState, 1 ) ];
+
+    else
+    
+        EKFStateSelect = k2IntoRestrictVarList;
+        Constant  = spsparse( .5 * dr.ghs2( restrict_var_list ) );
+        Jacobian0 = spsparse( [ dr.ghx( restrict_var_list, : ), dr.ghu( restrict_var_list, : ) ] );
+        Hessian   = cellfun( @( d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_, d2_absOut2_d_epsilon2_ ) [ d2_absOut1_d_yhat2_, d2_absOut3_d_yhat_d_epsilon_; d2_absOut3_d_yhat_d_epsilon_.', d2_absOut2_d_epsilon2_ ], d2_absOut1_d_yhat2, d2_absOut3_d_yhat_d_epsilon, d2_absOut2_d_epsilon2, 'UniformOutput', false );
+    
+    end
+    
+    DynareOptions.sparse_kalman = 1;
+    
+end
+
 if DynareOptions.gaussian_approximation
     Q = Model.Sigma_e;
 end
-
 
 % check endogenous prior restrictions
 info=endogenous_prior_restrictions(T,R,Model,DynareOptions,DynareResults);
@@ -562,14 +643,12 @@ switch DynareOptions.lik_init
     Zflag = 1;
     a = zeros(mm,1);
     if DynareOptions.non_bgp
-        a( GrowthSwitchIndex2 ) = 1;
-        Pstar( GrowthSwitchIndex2, : ) = 0;
-        Pstar( :, GrowthSwitchIndex2 ) = 0;
+        a( GrowthSwitchIndex2 )            = 1;
+        Pstar( GrowthSwitchIndex2, : )     = 0;
+        Pstar( :, GrowthSwitchIndex2 )     = 0;
         rootPstar( GrowthSwitchIndex2, : ) = 0;
-        if ~isempty( Pinf )
-            Pinf( GrowthSwitchIndex2, : ) = 0;
-            Pinf( :, GrowthSwitchIndex2 ) = 0;
-        end
+        Pinf( GrowthSwitchIndex2, : )      = 0;
+        Pinf( :, GrowthSwitchIndex2 )      = 0;
     end
     % Run diffuse kalman filter on first periods.
     if (kalman_algo==3)
@@ -709,23 +788,34 @@ if isempty( rootPstar )
     rootPstar = robust_root( Pstar );
 end
 
-rootPstar = [ rootPstar eye( size( rootPstar, 1 ) ) ];
+if EKFPruning
+    a_pruned1 = a( k2IntoRestrictVarList );
+    rootPstar = blkdiag( rootPstar, rootPstar( k2IntoRestrictVarList, : ) );
+    Pstar     = rootPstar * rootPstar.';
+end
 
 else
     
     a_dr = a_full_dr - ys_dr;
     a = a_dr( DynareResults.dr.restrict_var_list );
+    
+    if EKFPruning
+        a_pruned1 = a_pruned1_full - ys_dr( k2 );
+    end
 
 end
 
 if DynareOptions.non_bgp
-    a( GrowthSwitchIndex2 ) = 1;
-    Pstar( GrowthSwitchIndex2, : ) = 0;
-    Pstar( :, GrowthSwitchIndex2 ) = 0;
-    rootPstar( GrowthSwitchIndex2, : ) = 0;
+    a( GrowthSwitchIndex2 )             = 1;
+    if EKFPruning
+        a_pruned1( GrowthSwitchIndex0 ) = 1;
+    end
+    Pstar( GrowthSwitchIndex2, : )      = 0;
+    Pstar( :, GrowthSwitchIndex2 )      = 0;
+    rootPstar( GrowthSwitchIndex2, : )  = 0;
     if ~isempty( Pinf )
-        Pinf( GrowthSwitchIndex2, : ) = 0;
-        Pinf( :, GrowthSwitchIndex2 ) = 0;
+        Pinf( GrowthSwitchIndex2, : )   = 0;
+        Pinf( :, GrowthSwitchIndex2 )   = 0;
     end
 end
 
@@ -863,15 +953,32 @@ end
 %------------------------------------------------------------------------------
 
 if DynareOptions.sparse_kalman
-    a     = spsparse( a );
-    Pstar = spsparse( Pstar );
-    T     = spsparse( T );
-    Q     = spsparse( Q );
-    R     = spsparse( R );
-    H     = spsparse( H );
+    a         = spsparse( a );
+    rootPstar = spsparse( rootPstar );
+    Pstar     = rootPstar * rootPstar.';
+    T         = spsparse( T );
+    Q         = spsparse( Q );
+    R         = spsparse( R );
+    H         = spsparse( H );
 end
 
 singularity_has_been_detected = false;
+
+if DynareOptions.extended_kalman_filter
+    
+    if DynareOptions.pruning
+        a = [ a; a_pruned1 ];
+    end
+
+    [LIK,lik,a,Pstar,rootPstar] = extended_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
+                                                   a, rootPstar, ...
+                                                   kalman_tol, DynareOptions.riccati_tol, ...
+                                                   DynareOptions.rescale_prediction_error_covariance, ...
+                                                   DynareOptions.presample, ...
+                                                   EKFStateSelect,Constant,Jacobian0,Hessian,Q,H,Z,mm,pp,rr,Zflag,diffuse_periods);
+
+else
+
 % First test multivariate filter if specified; potentially abort and use univariate filter instead
 if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
     if no_missing_data_flag
@@ -1019,6 +1126,8 @@ if (kalman_algo==2) || (kalman_algo==4)
     end
 end
 
+end
+
 if analytic_derivation
     if no_DLIK==0
         DLIK = LIK1{2};
@@ -1065,9 +1174,18 @@ end
 likelihood = likelihood + LIK;
 lik_store = [ lik_store; lik ];
 
+if EKFPruning
+    a_pruned1 = a( ( end - nState + 1 ) : end );
+    a = a( 1 : ( end - nState ) );
+end
+
 a_full_dr = zeros( size( ys_dr ) );
 a_full_dr( DynareResults.dr.restrict_var_list ) = a;
 a_full_dr = a_full_dr + ys_dr;
+
+if EKFPruning
+    a_pruned1_full = a_pruned1 + ys_dr( k2 );
+end
 
 AccurateNonstationarityLoopIndex = AccurateNonstationarityLoopIndex + 1;
 AccurateNonstationarityProblem = false;

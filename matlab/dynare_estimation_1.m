@@ -95,7 +95,7 @@ if options_.order > 1 && ( options_.non_central_approximation == 0 ) && ( option
 end
 
 if ~options_.dsge_var
-    if options_.particle.status && ~( options_.non_central_approximation || options_.gaussian_approximation )
+    if options_.particle.status && ~( options_.non_central_approximation || options_.gaussian_approximation || options_.extended_kalman_filter )
         objective_function = str2func('non_linear_dsge_likelihood');
         if strcmpi(options_.particle.filter_algorithm, 'sis')
             options_.particle.algorithm = 'sequential_importance_particle_filter';
