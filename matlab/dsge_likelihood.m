@@ -373,15 +373,13 @@ AccurateNonstationarityLoopIndex = 1;
 StepWidth = Inf;
 
 OldModelParams = Model.params;
+OldGood = {};
 
 while AccurateNonstationarityLoopIndex <= AccurateNonstationarityLoopLength  %#ok<*AGROW>
 
 if AccurateNonstationarityProblem
     if isfinite( StepWidth )
         StepWidth = 0.1 * StepWidth;
-        if StepWidth < 0.0001
-            error( 'StepWidth hopelessly small.' );
-        end
         likelihood = likelihood + 1e12 * ( AccurateNonstationarityLoopLength - AccurateNonstationarityLoopIndex + 1 );
     else
         StepWidth = 1;
@@ -405,7 +403,7 @@ if DynareOptions.accurate_nonstationarity
         DatasetInfo.missing.no_more_missing_observations = 1;
     end
     
-    if AccurateNonstationarityLoopIndex > 1
+    if ( AccurateNonstationarityLoopIndex > 1 ) && ( StepWidth > 0.005 )
         Model.params = OldModelParams;
         Model.params( InitialParamIndices ) = max( Model.params( InitialParamIndices ) - StepWidth, min( Model.params( InitialParamIndices ) + StepWidth, a_full_dr( TrueStateIndices ) ) ); % a_full_dr( TrueStateIndices ); % 
     end
@@ -416,6 +414,8 @@ end
 % 2. call model setup & reduction program
 %------------------------------------------------------------------------------
    
+if StepWidth > 0.005
+
 % Linearize the model around the deterministic steady state and extract the matrices of the state equation (T and R).
 try
 
@@ -530,10 +530,6 @@ if DynareOptions.extended_kalman_filter
     
 end
 
-if DynareOptions.gaussian_approximation
-    Q = Model.Sigma_e;
-end
-
 % check endogenous prior restrictions
 info=endogenous_prior_restrictions(T,R,Model,DynareOptions,DynareResults);
 if info(1)
@@ -548,6 +544,26 @@ if info(1)
         DLIK=ones(length(xparam1),1);
     end
     return
+end
+
+if DynareOptions.extended_kalman_filter
+    OldGood = { T,R,SteadyState,info,Model,DynareOptions,DynareResults , EKFStateSelect, Constant, Jacobian0, Hessian };
+else
+    OldGood = { T,R,SteadyState,info,Model,DynareOptions,DynareResults };
+end
+
+else
+    
+if DynareOptions.extended_kalman_filter
+    [ T,R,SteadyState,info,Model,DynareOptions,DynareResults , EKFStateSelect, Constant, Jacobian0, Hessian ] = deal( OldGood{:} );
+else
+    [ T,R,SteadyState,info,Model,DynareOptions,DynareResults ] = deal( OldGood{:} );
+end
+
+end
+
+if DynareOptions.gaussian_approximation
+    Q = Model.Sigma_e;
 end
 
 % Define a vector of indices for the observed variables. Is this really usefull?...
