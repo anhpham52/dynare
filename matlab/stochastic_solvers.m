@@ -120,27 +120,14 @@ end
 
 if isfield( options_, 'non_bgp_growth_iterations' )
     if options_.non_bgp_growth_iterations
-        
         GrowthSwitchIndex = find( ismember( cellstr( M_.endo_names ), 'GrowthSwitch' ) );
         old_ghx = eye( size( dr.ys, 1 ) );
         dr.non_bgp_drift = zeros( size( dr.ys ) );
         xRelLagSteady = zeros( size( dr.ys ) );
-        xRelLagSteady( GrowthSwitchIndex ) = 1;
+        xRelLagSteady( GrowthSwitchIndex ) = 1; %#ok<FNDSB>
         k2 = dr.kstate( dr.kstate(:,2) <= M_.maximum_lag + 1, [ 1 2 ] );
         k2 = k2( :, 1 ) + ( M_.maximum_lag + 1 - k2(:,2) ) * M_.endo_nbr;
         assert( klen == 3 );
-        
-        xRelLagSteadyNewIndices = true( M_.endo_nbr, 1 );
-        xRelLagSteadyNewIndices( GrowthSwitchIndex ) = false;
-        
-        if isfield( options_, 'accurate_nonstationarity' ) && options_.accurate_nonstationarity
-            xRelLagSteadyNewIndices( ismember( cellstr( M_.endo_names ), regexp( cellstr( M_.param_names ), '(?<=^Initial_)\w+(?=\s*$)', 'match', 'once' ) ) ) = false;
-        end
-        
-        xRelLagSteadyNewIndices = find( xRelLagSteadyNewIndices );
-        
-        assert( ~options_.bytecode );
-        
     end
 else
     options_.non_bgp_growth_iterations = 0;    
@@ -151,9 +138,6 @@ for GrowthIteration = 1 : ( 1 + options_.non_bgp_growth_iterations )
 it_ = M_.maximum_lag + 1;
 
 if GrowthIteration > 1
-    xRelLagSteadyNew = lsqnonlin( @( xRelLagSteadyNew_ ) DynamicResidualWithGrowth( xRelLagSteadyNew_, xRelLagSteady, xRelLagSteadyNewIndices, M_.fname, dr, k2, iyr0, exo_simul, M_.params, it_ ), xRelLagSteady( xRelLagSteadyNewIndices ), [], [], optimoptions( @lsqnonlin, 'Display', 'iter', 'SpecifyObjectiveGradient', true, 'FunctionTolerance', 1e-8, 'OptimalityTolerance', 1e-8, 'MaxFunctionEvaluations', Inf, 'MaxIterations', 10 ) );
-    xRelLagSteady( xRelLagSteadyNewIndices ) = xRelLagSteadyNew;
-    
     xRelCurrentSteady              = zeros( size( xRelLagSteady ) );
     xRelCurrentSteady( order_var ) = dr.non_bgp_drift + dr.ghx * xRelLagSteady( order_var( k2 ) );
     xRelFutureSteady               = zeros( size( xRelLagSteady ) );
