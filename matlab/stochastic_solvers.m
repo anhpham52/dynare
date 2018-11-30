@@ -138,9 +138,9 @@ for GrowthIteration = 1 : ( 1 + options_.non_bgp_growth_iterations )
 it_ = M_.maximum_lag + 1;
 
 if GrowthIteration > 1
-    xRelCurrentSteady                 = zeros( size( xRelLagSteady ) );
+    xRelCurrentSteady              = zeros( size( xRelLagSteady ) );
     xRelCurrentSteady( order_var ) = dr.non_bgp_drift + dr.ghx * xRelLagSteady( order_var( k2 ) );
-    xRelFutureSteady                  = zeros( size( xRelLagSteady ) );
+    xRelFutureSteady               = zeros( size( xRelLagSteady ) );
     xRelFutureSteady( order_var )  = dr.non_bgp_drift + dr.ghx * xRelCurrentSteady( order_var( k2 ) );
     z = [ xRelLagSteady + dr.ys; xRelCurrentSteady + dr.ys; xRelFutureSteady + dr.ys ];
 else
