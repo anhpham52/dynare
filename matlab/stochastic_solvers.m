@@ -368,6 +368,9 @@ end
 
 end
 
+% disp( max( abs( residual ) ) );
+% disp( GrowthIteration );
+
 %exogenous deterministic variables
 if M_.exo_det_nbr > 0
     gx = dr.gx;
