@@ -331,8 +331,8 @@ if options_.non_bgp_growth_iterations
     B = zeros( M_.endo_nbr );
     C = zeros( M_.endo_nbr );
     
-    % if maximum_lag > 0
-    %     [ ~, cols_a ] = find(lead_lag_incidence(maximum_lag, order_var));
+    % if M_.maximum_lag > 0
+    %     [ ~, cols_a ] = find(lead_lag_incidence(M_.maximum_lag, order_var));
     % else
     %     cols_a = [];
     % end
@@ -343,8 +343,8 @@ if options_.non_bgp_growth_iterations
         cols_c = [];
     end
     
-    % if maximum_lag > 0
-    %     A( :, cols_a ) = jacobia( :, nonzeros(lead_lag_incidence(maximum_lag,:)) );
+    % if M_.maximum_lag > 0
+    %     A( :, cols_a ) = jacobia( :, nonzeros(lead_lag_incidence(M_.maximum_lag,:)) );
     % end
     B( :, cols_b ) = jacobia( :, nonzeros(lead_lag_incidence(M_.maximum_lag+1,:)) );
     if size( lead_lag_incidence, 1 ) >= M_.maximum_lag + 2
