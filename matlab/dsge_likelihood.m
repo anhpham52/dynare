@@ -371,7 +371,7 @@ lik_store  = zeros( 0, 1 );
 AccurateNonstationarityProblem = false;
 AccurateNonstationarityLoopIndex = 1;
 
-if isfield( DynareOptions, accurate_nonstationarity_step_width )
+if isfield( DynareOptions, 'accurate_nonstationarity_step_width' )
     StepWidth = DynareOptions.accurate_nonstationarity_step_width;
 else
     StepWidth = Inf;
