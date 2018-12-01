@@ -250,7 +250,7 @@ else
         temp = sort(abs(dr.eigval));
         if Try < Tries
             DynareOptions.qz_criterium = exp( mean( log( temp( ( nd - nsfwrd ) : ( nd - nsfwrd + 1 ) ) ) ) );
-            fprintf( '\nRe-solving using qz_criterium: %.32g.\n', DynareOptions.qz_criterium );
+            % fprintf( '\nRe-solving using qz_criterium: %.32g.\n', DynareOptions.qz_criterium );
         else
             
         if nba > nsfwrd
