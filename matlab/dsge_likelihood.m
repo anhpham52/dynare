@@ -370,7 +370,12 @@ lik_store  = zeros( 0, 1 );
 
 AccurateNonstationarityProblem = false;
 AccurateNonstationarityLoopIndex = 1;
-StepWidth = Inf;
+
+if isfield( DynareOptions, accurate_nonstationarity_step_width )
+    StepWidth = DynareOptions.accurate_nonstationarity_step_width;
+else
+    StepWidth = Inf;
+end
 
 OldModelParams = Model.params;
 OldGood = {};
@@ -378,7 +383,7 @@ OldGood = {};
 while AccurateNonstationarityLoopIndex <= AccurateNonstationarityLoopLength  %#ok<*AGROW>
 
 if AccurateNonstationarityProblem
-    if isfinite( StepWidth )
+    if StepWidth <= 10
         StepWidth = 0.1 * StepWidth;
         likelihood = likelihood + 1e12 * ( AccurateNonstationarityLoopLength - AccurateNonstationarityLoopIndex + 1 );
     else
