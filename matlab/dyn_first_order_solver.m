@@ -246,6 +246,7 @@ else
         temp = sort(abs(dr.eigval));
         if isfield( DynareOptions, 'endogenous_qz_criterium' ) && DynareOptions.endogenous_qz_criterium
             DynareOptions.qz_criterium = exp( mean( log( temp( ( nd - nsfwrd ) : ( nd - nsfwrd + 1 ) ) ) ) );
+            fprintf( '\nRe-solving using qz_criterium: %.32g.\n', DynareOptions.qz_criterium );
         else
             
         if nba > nsfwrd
