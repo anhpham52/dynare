@@ -212,6 +212,10 @@ else
     D(row_indx_de_2,index_d2) = eye(nboth);
     E(row_indx_de_1,index_e1) = -aa(row_indx,index_e);
     E(row_indx_de_2,index_e2) = eye(nboth);
+    
+    ReDo = true;
+    
+    while ReDo
 
     [err, ss, tt, w, sdim, dr.eigval, info1] = mjdgges(E, D, DynareOptions.qz_criterium, DynareOptions.qz_zero_threshold);
     mexErrCheck('mjdgges', err);
@@ -240,6 +244,10 @@ else
 
     if nba ~= nsfwrd
         temp = sort(abs(dr.eigval));
+        if isfield( DynareOptions, 'endogenous_qz_criterium' ) && DynareOptions.endogenous_qz_criterium
+            DynareOptions.qz_criterium = exp( mean( log( temp( ( nd - nsfwrd ) : ( nd - nsfwrd + 1 ) ) ) ) );
+        else
+            
         if nba > nsfwrd
             temp = temp(nd-nba+1:nd-nsfwrd)-1-DynareOptions.qz_criterium;
             info(1) = 3;
@@ -249,6 +257,12 @@ else
         end
         info(2) = temp'*temp;
         return
+        
+        end
+    else
+        ReDo = false;
+    end
+    
     end
 
     if task==1, return, end
