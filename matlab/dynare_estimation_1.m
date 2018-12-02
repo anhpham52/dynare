@@ -122,6 +122,10 @@ end
 [dataset_, dataset_info, xparam1, hh, M_, options_, oo_, estim_params_, bayestopt_, bounds] = ...
     dynare_estimation_init(var_list_, dname, [], M_, options_, oo_, estim_params_, bayestopt_);
 
+if ~isfield( options_, 'add_empty_presamples' )
+    options_.add_empty_presamples = 0;
+end
+
 if ( options_.lik_init == 6 ) && ( options_.add_empty_presamples == 0 )
     options_.add_empty_presamples = 1;
 end
