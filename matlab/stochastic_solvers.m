@@ -181,7 +181,13 @@ elseif local_order == 2
     end
     if ~isempty(infrow)
         info(1)=11;
-        return
+        if GrowthIteration == 1
+            return
+        else
+            info = 0;
+            dr = old_dr;
+            break
+        end
     end
     [nanrow,nancol]=find(isnan(hessian1));
     if options_.debug
@@ -193,7 +199,13 @@ elseif local_order == 2
     end
     if ~isempty(nanrow)
         info(1)=12;
-        return
+        if GrowthIteration == 1
+            return
+        else
+            info = 0;
+            dr = old_dr;
+            break
+        end
     end
 end
 
@@ -209,7 +221,13 @@ end
 
 if ~isempty(infrow)
     info(1)=10;
-    return
+    if GrowthIteration == 1
+        return
+    else
+        info = 0;
+        dr = old_dr;
+        break
+    end
 end
 
 if ~isreal(jacobia_)
@@ -223,7 +241,13 @@ if ~isreal(jacobia_)
         end
         info(1) = 6;
         info(2) = sum(sum(imag(jacobia_).^2));
-        return
+        if GrowthIteration == 1
+            return
+        else
+            info = 0;
+            dr = old_dr;
+            break
+        end
     end
 end
 
@@ -240,7 +264,13 @@ if ~isempty(nanrow)
     info(1) = 8;
     NaN_params=find(isnan(M_.params));
     info(2:length(NaN_params)+1) =  NaN_params;
-    return
+    if GrowthIteration == 1
+        return
+    else
+        info = 0;
+        dr = old_dr;
+        break
+    end
 end
 
 kstate = dr.kstate;
@@ -259,6 +289,8 @@ sdyn = M_.endo_nbr - nstatic;
                                                   order_var));
 b = zeros(M_.endo_nbr,M_.endo_nbr);
 b(:,cols_b) = jacobia_(:,cols_j);
+
+old_dr = dr;
 
 if M_.maximum_endo_lead == 0
     % backward models: simplified code exist only at order == 1
@@ -296,7 +328,6 @@ else
         [dr,info] = AIM_first_order_solver(jacobia_,M_,dr,options_.qz_criterium);
 
     else  % use original Dynare solver
-        old_dr = dr;
         [dr,info] = dyn_first_order_solver(jacobia_,M_,dr,options_,task);
         if info(1) || task
             if GrowthIteration == 1
