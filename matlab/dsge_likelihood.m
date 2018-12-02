@@ -377,6 +377,7 @@ else
     StepWidth = Inf;
 end
 
+InitialModelParams = Model.params;
 OldModelParams = Model.params;
 OldGood = {};
 
@@ -1298,19 +1299,20 @@ if analytic_derivation==0 && nargout>3
     DLIK=[-lnprior; lik(:)];
 end
 
-global best_fval best_M_params best_xparam1 WorkerNumber
+global best_fval best_M_params best_terminal_M_params best_xparam1 WorkerNumber
 if isempty( best_fval )
     try
-        load( [ 'CurrentBest' num2str( WorkerNumber ) '.mat' ], 'best_fval', 'best_M_params', 'best_xparam1' );
+        load( [ 'CurrentBest' num2str( WorkerNumber ) '.mat' ], 'best_fval' );
     catch
         best_fval = Inf;
     end
 end
 if fval < best_fval
     best_fval = fval;
-    best_M_params = Model.params;
+    best_M_params = InitialModelParams;
+    best_terminal_M_params = Model.params;
     best_xparam1 = xparam1;
-    save( [ 'CurrentBest' num2str( WorkerNumber ) '.mat' ], 'best_fval', 'best_M_params', 'best_xparam1' );
+    save( [ 'CurrentBest' num2str( WorkerNumber ) '.mat' ], 'best_fval', 'best_M_params', 'best_terminal_M_params', 'best_xparam1' );
     disp( 'New best ever fval:' );
     disp( fval );
 end
