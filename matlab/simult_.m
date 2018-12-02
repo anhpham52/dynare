@@ -93,7 +93,7 @@ if accurate_nonstationarity
     for t = 2 : iter
         M.params( InitialParamIndices ) = yc_( dr.order_var( TrueStateIndices ) );
         [ dr, info ] = resol( 0, M, options_, oo_ );
-        if info
+        if ( ~isfinite( info( 1 ) ) ) || info( 1 )
             error( 'Error re-solving in the accurate_nonstationarity iteration.' );
         end
         yc_ = simult_( yc_, dr, ex_( t, : ), iorder );
