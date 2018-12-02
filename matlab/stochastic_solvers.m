@@ -296,9 +296,15 @@ else
         [dr,info] = AIM_first_order_solver(jacobia_,M_,dr,options_.qz_criterium);
 
     else  % use original Dynare solver
+        old_dr = dr;
         [dr,info] = dyn_first_order_solver(jacobia_,M_,dr,options_,task);
         if info(1) || task
-            return
+            if GrowthIteration == 1
+                return
+            else
+                dr = old_dr;
+                break
+            end
         end
     end
 
