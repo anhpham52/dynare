@@ -302,6 +302,7 @@ else
             if GrowthIteration == 1
                 return
             else
+                info = 0;
                 dr = old_dr;
                 break
             end
