@@ -104,7 +104,7 @@ if ~isfield( options_, 'sequential_optimization_block_size' )
     if options_.sequential_optimization_repeats > 1
         options_.sequential_optimization_block_size = nw;
     else
-        options_.sequential_optimization_block_size = length( start_par_value );
+        options_.sequential_optimization_block_size = n_params;
     end
 end
 if ~isfield( options_, 'sequential_optimization_adjacent_block' )
@@ -119,9 +119,13 @@ original_prior_information_p2 = prior_information.p2;
 for seq_opt_rep = 1 : options_.sequential_optimization_repeats
 
 if options_.sequential_optimization_adjacent_block
-    FirstIndex = randi( n_params, 1, 1 );
-    Indices = FirstIndex + ( 0 : ( options_.sequential_optimization_block_size - 1 ) );
-    Indices( Indices > n_params ) = Indices( Indices > n_params ) - n_params;
+    if options_.sequential_optimization_block_size == n_params
+        Indices = 1 : n_params;
+	else
+        FirstIndex = randi( n_params, 1, 1 );
+        Indices = FirstIndex + ( 0 : ( options_.sequential_optimization_block_size - 1 ) );
+        Indices( Indices > n_params ) = Indices( Indices > n_params ) - n_params;
+    end
 else
     Indices = randi( n_params, options_.sequential_optimization_block_size, 1 );
 end
