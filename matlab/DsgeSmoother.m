@@ -162,6 +162,10 @@ TrueStateVariableNames = cellstr( M_.endo_names( oo_.dr.order_var( TrueStateIndi
 Ttmp = T;
 Rtmp = R;
 
+if ~isfield( options_, 'non_bgp' )
+    options_.non_bgp = 0;
+end
+
 if options_.non_bgp
 
     GrowthSwitchIndex0 = find( ismember( TrueStateVariableNames, 'GrowthSwitch' ), 1 );
