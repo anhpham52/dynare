@@ -1268,6 +1268,10 @@ else
     fval    = (likelihood-lnprior);
 end
 
+if isfield( DynareOptions, 'A_cond_penalty' )
+    fval = fval + DynareOptions.A_cond_penalty * log( dr.A_cond );
+end
+
 if DynareOptions.prior_restrictions.status
     tmp = feval(DynareOptions.prior_restrictions.routine, Model, DynareResults, DynareOptions, DynareDataset, DatasetInfo);
     fval = fval - tmp;
