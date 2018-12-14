@@ -324,6 +324,8 @@ end
 
 A_ = real([B_static C*gx+B_pred B_fyd]); % The state_variable of the block are located at [B_pred B_both]
 
+dr.A_cond = cond( A_ );
+
 if exo_nbr
     if nstatic > 0
         fu = Q' * jacobia(:,innovations_idx);
@@ -331,7 +333,9 @@ if exo_nbr
         fu = jacobia(:,innovations_idx);
     end
 
+    WarningState = warning( 'off', 'all' );
     ghu = - A_ \ fu;
+    warning( WarningState );
 else
     ghu = [];
 end
