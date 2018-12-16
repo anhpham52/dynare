@@ -1274,9 +1274,9 @@ end
 
 global custom_penalty
 
-if isfield( DynareOptions, 'use_custom_penalty' )
+if isfield( DynareOptions, 'custom_penalty_scale' )
     assert( numel( custom_penalty ) == 1 );
-    fval = fval + custom_penalty;
+    fval = fval + DynareOptions.custom_penalty_scale * custom_penalty;
 end
 
 if DynareOptions.prior_restrictions.status
