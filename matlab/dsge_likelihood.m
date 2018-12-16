@@ -1272,6 +1272,13 @@ if isfield( DynareOptions, 'A_cond_penalty' )
     fval = fval + DynareOptions.A_cond_penalty * log( dr.A_cond ) ^ 4;
 end
 
+global custom_penalty
+
+if isfield( DynareOptions, 'use_custom_penalty' )
+    assert( numel( custom_penalty ) == 1 );
+    fval = fval + custom_penalty;
+end
+
 if DynareOptions.prior_restrictions.status
     tmp = feval(DynareOptions.prior_restrictions.routine, Model, DynareResults, DynareOptions, DynareDataset, DatasetInfo);
     fval = fval - tmp;
