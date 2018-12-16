@@ -1269,7 +1269,7 @@ else
 end
 
 if isfield( DynareOptions, 'A_cond_penalty' )
-    fval = fval + DynareOptions.A_cond_penalty * log( dr.A_cond ) ^ 2;
+    fval = fval + DynareOptions.A_cond_penalty * log( dr.A_cond ) ^ 4;
 end
 
 if DynareOptions.prior_restrictions.status
