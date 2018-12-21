@@ -99,7 +99,8 @@ if options.solve_algo == 0
     options4fsolve.MaxFunEvals = Inf;
     options4fsolve.MaxIter = maxit;
     options4fsolve.TolFun = max( eps, tolf * tolf );
-    options4fsolve.TolX = eps;
+    options4fsolve.TolX = sqrt( eps );
+    options4fsolve.Algorithm = 'levenberg-marquardt';
     if options.debug==1
         options4fsolve.Display = 'iter';
     else
