@@ -1,4 +1,4 @@
-function [LIK, LIKK, a, P, rootP] = kalman_filter(Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,Constant,T,Q,R,H,Z,mm,pp,~,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,~,D2P)
+function [LIK, LIKK, a, P, rootP] = kalman_filter(Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,Constant,T,Q,R,H,Z,mm,pp,~,rootF_cond_penalty,Zflag,diffuse_periods,analytic_derivation,DT,DYss,DOm,DH,DP,D2T,D2Yss,D2Om,~,D2P)
 % Computes the likelihood of a stationary state space model.
 
 %@info:
@@ -95,12 +95,15 @@ else
 end
 
 % Set defaults.
-if nargin<21
+if nargin<22
     analytic_derivation = 0;
-    if nargin<20
+    if nargin<21
         diffuse_periods = 0;
-        if nargin<19
+        if nargin<20
             Zflag = 0;
+            if nargin<19
+                rootF_cond_penalty = 0;
+            end
         end
     end
 end
@@ -205,6 +208,10 @@ while notsteady && t<=last
     log_dF = sum( log( eig( full_rootF * full_rootF.' ) ) );
     irootFv = rootF \ v;
     likk(s) = log_dF + irootFv.' * irootFv;
+    
+    if rootF_cond_penalty > 0
+        likk(s) = likk(s) + rootF_cond_penalty * log( cond( full_rootF ) ) ^ 4;
+    end
     
     M = qr0( [ rootPme.' * T.'; rootQQ.' ] );
     % [ G, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );

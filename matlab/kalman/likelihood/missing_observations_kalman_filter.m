@@ -1,4 +1,4 @@
-function  [LIK, lik, a, P, rootP] = missing_observations_kalman_filter(data_index,~,no_more_missing_observations,Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,Constant,T,Q,R,H,Z,~,pp,~,Zflag,diffuse_periods)
+function  [LIK, lik, a, P, rootP] = missing_observations_kalman_filter(data_index,~,no_more_missing_observations,Y,start,last,a,P,~,riccati_tol,rescale_prediction_error_covariance,presample,Constant,T,Q,R,H,Z,~,pp,~,rootF_cond_penalty,Zflag,diffuse_periods)
 % Computes the likelihood of a state space model in the case with missing observations.
 %
 % INPUTS
@@ -56,10 +56,13 @@ else
 end
 
 % Set defaults
-if nargin<23
+if nargin<24
     diffuse_periods = 0;
-    if nargin<22
+    if nargin<23
         Zflag = 0;
+        if nargin<22
+            rootF_cond_penalty = 0;
+        end
     end
 end
 
@@ -147,6 +150,10 @@ while notsteady && t<=last
         log_dF = sum( log( eig( full_rootF * full_rootF.' ) ) );
         irootFv = rootF \ v;
         lik(s) = log_dF + irootFv.' * irootFv + length(d_index)*log(2*pi);
+
+        if rootF_cond_penalty > 0
+            lik(s) = lik(s) + rootF_cond_penalty * log( cond( full_rootF ) ) ^ 4;
+        end
 
         M = qr0( [ rootPme.' * T.'; rootQQ.' ] );
         % [ G, M ] = qr( [ rootPme.' * T.'; rootQQ.' ] );

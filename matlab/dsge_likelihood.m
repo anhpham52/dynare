@@ -1010,6 +1010,16 @@ if DynareOptions.extended_kalman_filter
 
 else
 
+if isfield( DynareOptions, 'rootF_cond_penalty' )
+    rootF_cond_penalty = DynareOptions.rootF_cond_penalty;
+else
+    rootF_cond_penalty = 0;
+end
+
+if ( rootF_cond_penalty > 0 ) && ( ( kalman_algo ~= 1 ) || DynareOptions.fast_kalman_filter || DynareOptions.block )
+    error( 'rootF_cond_penalty is only implemented for standard Kalman filters.' );
+end  
+    
 % First test multivariate filter if specified; potentially abort and use univariate filter instead
 if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
     if no_missing_data_flag
@@ -1040,7 +1050,7 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
                                       kalman_tol, riccati_tol, ...
                                       DynareOptions.rescale_prediction_error_covariance, ...
                                       DynareOptions.presample, ...
-                                      Constant,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods, ...
+                                      Constant,T,Q,R,H,Z,mm,pp,rr,rootF_cond_penalty,Zflag,diffuse_periods, ...
                                       analytic_deriv_info{:});
         end
     else
@@ -1054,7 +1064,7 @@ if ((kalman_algo==1) || (kalman_algo==3))% Multivariate Kalman Filter
                                                            kalman_tol, DynareOptions.riccati_tol, ...
                                                            DynareOptions.rescale_prediction_error_covariance, ...
                                                            DynareOptions.presample, ...
-                                                           Constant,T,Q,R,H,Z,mm,pp,rr,Zflag,diffuse_periods);
+                                                           Constant,T,Q,R,H,Z,mm,pp,rr,rootF_cond_penalty,Zflag,diffuse_periods);
         end
     end
     if analytic_derivation
