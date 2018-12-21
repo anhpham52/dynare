@@ -56,13 +56,11 @@ else
 end
 
 % Set defaults
-if nargin<20
-    Zflag = 0;
+if nargin<23
     diffuse_periods = 0;
-end
-
-if nargin<21
-    diffuse_periods = 0;
+    if nargin<22
+        Zflag = 0;
+    end
 end
 
 if isempty(Zflag)

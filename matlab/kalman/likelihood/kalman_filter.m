@@ -95,16 +95,14 @@ else
 end
 
 % Set defaults.
-if nargin<17
-    Zflag = 0;
-end
-
-if nargin<18
-    diffuse_periods = 0;
-end
-
-if nargin<19
+if nargin<21
     analytic_derivation = 0;
+    if nargin<20
+        diffuse_periods = 0;
+        if nargin<19
+            Zflag = 0;
+        end
+    end
 end
 
 if isempty(Zflag)
