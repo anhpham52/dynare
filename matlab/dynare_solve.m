@@ -96,9 +96,10 @@ if options.solve_algo == 0
         end
     end
     options4fsolve=optimset('fsolve');
-    options4fsolve.MaxFunEvals = 50000;
+    options4fsolve.MaxFunEvals = Inf;
     options4fsolve.MaxIter = maxit;
-    options4fsolve.TolFun = tolf;
+    options4fsolve.TolFun = max( eps, tolf * tolf );
+    options4fsolve.TolX = eps;
     if options.debug==1
         options4fsolve.Display = 'iter';
     else
