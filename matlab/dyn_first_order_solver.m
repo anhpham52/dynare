@@ -333,9 +333,7 @@ if exo_nbr
         fu = jacobia(:,innovations_idx);
     end
 
-    WarningState = warning( 'off', 'all' );
     ghu = - A_ \ fu;
-    warning( WarningState );
 else
     ghu = [];
 end
