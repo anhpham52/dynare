@@ -131,7 +131,7 @@ if options.solve_algo == 0
 
     if exitval == 1
         info = 0;
-    elseif exitval > 1
+    else
         if ischar(func)
             func2 = str2func(func);
         else
@@ -144,8 +144,6 @@ if options.solve_algo == 0
         else
             info = 0;
         end
-    else
-        info = 1;
     end
 elseif options.solve_algo == 1
     [x,info]=solve1(func,x,1:nn,1:nn,jacobian_flag,options.gstep, ...
