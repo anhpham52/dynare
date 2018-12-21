@@ -89,16 +89,18 @@ if accurate_nonstationarity
     yc_ = yc_( :, end );
     
     M = M_;
+    options = options_;
+    oo = oo_;
     
     for t = 2 : iter
         M.params( InitialParamIndices ) = yc_( dr.order_var( TrueStateIndices ) );
-        [ dr, info ] = resol( 0, M, options_, oo_ );
+        [ dr, info, M, options, oo ] = resol( 0, M, options, oo );
         if ( ~isfinite( info( 1 ) ) ) || info( 1 )
             error( 'Error re-solving in the accurate_nonstationarity iteration.' );
         end
         yc_ = simult_( yc_, dr, ex_( t, : ), iorder );
         yc_ = yc_( :, end );
-        y_( :, t + M_.maximum_lag ) = yc_;
+        y_( :, t + M.maximum_lag ) = yc_;
     end
     return
 
