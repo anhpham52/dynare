@@ -188,6 +188,7 @@ lik(1:s) = .5*lik(1:s);
 
 % Call steady state Kalman filter if needed.
 if t<=last
+    iF = inv( full_rootF * full_rootF.' );
     [~, lik(s+1:end)] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, log_dF, Z, pp, Zflag);
 end
 

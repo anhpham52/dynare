@@ -227,6 +227,7 @@ while notsteady && t<=last
     Ptmp = full_rootP * full_rootP.';
     tmp = (a+K*v);
     if analytic_derivation
+        iF = inv( full_rootF * full_rootF.' );
         if analytic_derivation==2
             [Da,DP,DLIKt,D2a,D2P, Hesst] = computeDLIK(k,tmp,Z,Zflag,v,T,K,P,iF,Da,DYss,DT,DOm,DP,DH,notsteady,D2a,D2Yss,D2T,D2Om,D2P);
         else
@@ -268,6 +269,7 @@ end
 
 % Call steady state Kalman filter if needed.
 if t <= last
+    iF = inv( full_rootF * full_rootF.' );
     if analytic_derivation
         if analytic_derivation==2
             [tmp, tmp2] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, dF, Z, pp, Zflag, analytic_derivation, Da, DT, DYss, D2a, D2T, D2Yss);
