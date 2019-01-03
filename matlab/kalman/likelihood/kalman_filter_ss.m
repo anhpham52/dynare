@@ -82,7 +82,7 @@ likk = zeros(smpl,1);      % Initialization of the vector gathering the densitie
 LIK  = Inf;                % Default value of the log likelihood.
 notsteady = 0;
 asy_hess=0;
-if nargin<12
+if nargin<13
     analytic_derivation = 0;
 end
 
