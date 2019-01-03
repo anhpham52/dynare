@@ -120,7 +120,6 @@ end
 smpl = last-start+1;
 
 % Initialize some variables.
-dF   = 1;
 rootQ  = robust_root( Q );
 rootQQ = R * rootQ;   % Variance of R times the vector of structural innovations.
 t    = start;              % Initialization of the time index.
@@ -272,9 +271,9 @@ if t <= last
     iF = inv( full_rootF * full_rootF.' );
     if analytic_derivation
         if analytic_derivation==2
-            [tmp, tmp2] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, dF, Z, pp, Zflag, analytic_derivation, Da, DT, DYss, D2a, D2T, D2Yss);
+            [tmp, tmp2] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, log_dF, Z, pp, Zflag, analytic_derivation, Da, DT, DYss, D2a, D2T, D2Yss);
         else
-            [tmp, tmp2] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, dF, Z, pp, Zflag, analytic_derivation, Da, DT, DYss, asy_hess);
+            [tmp, tmp2] = kalman_filter_ss(Y, t, last, a, Constant, T, K, iF, log_dF, Z, pp, Zflag, analytic_derivation, Da, DT, DYss, asy_hess);
         end
         likk(s+1:end) = tmp2{1};
         dlikk(s+1:end,:) = tmp2{2};
