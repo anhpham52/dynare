@@ -392,6 +392,7 @@ switch minimizer_algorithm
         H0(H0==max(H0))=0.9*H0(H0==max(H0));
     end
     cmaesOptions = options_.cmaes;
+    cmaesOptions.EvalParallel = false;
     cmaesOptions.LBounds = bounds(:,1);
     cmaesOptions.UBounds = bounds(:,2);
     
