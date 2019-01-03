@@ -221,7 +221,7 @@ else
     
     for Try = 1 : Tries
 
-    [err, ss, tt, w, ~, dr.eigval, info1] = mjdgges(E, D, DynareOptions.qz_criterium, DynareOptions.qz_zero_threshold);
+    [err, ss, tt, w, ~, dr.eigval, info1] = mjdgges(E, D, DynareOptions.qz_criterium .^ 2, DynareOptions.qz_zero_threshold);
     mexErrCheck('mjdgges', err);
 
     if info1 && ( info1 ~= size(E,2) + 2 )
