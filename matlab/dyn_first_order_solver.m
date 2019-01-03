@@ -221,10 +221,10 @@ else
     
     for Try = 1 : Tries
 
-    [err, ss, tt, w, sdim, dr.eigval, info1] = mjdgges(E, D, DynareOptions.qz_criterium, DynareOptions.qz_zero_threshold);
+    [err, ss, tt, w, ~, dr.eigval, info1] = mjdgges(E, D, DynareOptions.qz_criterium, DynareOptions.qz_zero_threshold);
     mexErrCheck('mjdgges', err);
 
-    if info1
+    if info1 && ( info1 ~= size(E,2) + 2 )
         if info1 == -30
             % one eigenvalue is close to 0/0
             info(1) = 7;
@@ -236,6 +236,8 @@ else
         return
     end
 
+    temp = sort(abs(dr.eigval));
+    sdim = sum( temp < DynareOptions.qz_criterium );
     nba = nd-sdim;
 
     if task==1
@@ -247,7 +249,7 @@ else
     end
 
     if nba ~= nsfwrd
-        temp = sort(abs(dr.eigval));
+        % temp = sort(abs(dr.eigval));
         if Try < Tries
             DynareOptions.qz_criterium = exp( mean( log( temp( ( nd - nsfwrd ) : ( nd - nsfwrd + 1 ) ) ) ) );
             % fprintf( '\nRe-solving using qz_criterium: %.32g.\n', DynareOptions.qz_criterium );
