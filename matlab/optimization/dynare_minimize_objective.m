@@ -68,31 +68,37 @@ if ~isempty(options_.optim_opt)
     options_list = read_key_value_string(options_.optim_opt);
     UseParallelOptionIndex = find( strcmpi( options_list(:,1), 'UseParallel' ), 1 );
     ParallelFlag = ~isempty( UseParallelOptionIndex ) && ( all( options_list{UseParallelOptionIndex,2}==1 ) || strcmpi( options_list{UseParallelOptionIndex,2}, 'always' ) );
-    if ParallelFlag
-        disp( 'Performing parallel initialization.' );
-        for i = 1 : numel( varargin )
-            if isa( varargin{i}, 'dates' )
-                varargin{i} = struct( varargin{i} );
-            end
-            if isa( varargin{i}, 'dseries' )
-                varargin{i} = struct( varargin{i} );
-                if isfield( varargin{i}, 'dates' )
-                    varargin{i}.dates = struct( varargin{i}.dates );
-                end
-            end
-        end
+end
 
-        ParallelInitializationInternal( );
-    end
+if minimizer_algorithm == 1313
+    ParallelFlag = true;
 end
 
 if ParallelFlag
+
+    disp( 'Performing parallel initialization.' );
+    
     try
         pool = gcp;
         nw = pool.NumWorkers;
     catch
         nw = 1;
     end
+    
+    for i = 1 : numel( varargin )
+        if isa( varargin{i}, 'dates' )
+            varargin{i} = struct( varargin{i} );
+        end
+        if isa( varargin{i}, 'dseries' )
+            varargin{i} = struct( varargin{i} );
+            if isfield( varargin{i}, 'dates' )
+                varargin{i}.dates = struct( varargin{i}.dates );
+            end
+        end
+    end
+
+    ParallelInitializationInternal( );
+    
 else
     nw = 1;
 end
@@ -622,6 +628,8 @@ switch minimizer_algorithm
     end
     func = @(x)objective_function(x,varargin{:});
     [opt_par_values,fval,exitflag,output] = simulannealbnd(func,start_par_value,bounds(:,1),bounds(:,2),optim_options);
+  case 1313
+      [ opt_par_values, fval ] = CompassSearch( @( x_ ) objective_function( x_, varargin{:} ), start_par_value, bounds(:,1), bounds(:,2) );
   otherwise
     if ischar(minimizer_algorithm)
         if exist(minimizer_algorithm)
