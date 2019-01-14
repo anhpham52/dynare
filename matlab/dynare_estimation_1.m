@@ -94,6 +94,10 @@ if options_.order > 1 && ( options_.non_central_approximation == 0 ) && ( option
     end
 end
 
+if ~isfield( options_, 'extended_kalman_filter' )
+    options_.extended_kalman_filter = 0;
+end
+
 if ~options_.dsge_var
     if options_.particle.status && ~( options_.non_central_approximation || options_.gaussian_approximation || options_.extended_kalman_filter )
         objective_function = str2func('non_linear_dsge_likelihood');

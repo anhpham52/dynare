@@ -189,6 +189,10 @@ if options_.non_bgp
     
 end
 
+if ~isfield( options_, 'extended_kalman_filter' )
+    options_.extended_kalman_filter = 0;
+end
+
 expanded_state_vector_for_univariate_filter=0;
 kalman_algo = options_.kalman_algo;
 if options_.lik_init == 1               % Kalman filter
