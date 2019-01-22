@@ -1282,6 +1282,12 @@ if isfield( DynareOptions, 'A_cond_penalty' )
     fval = fval + DynareOptions.A_cond_penalty * log( dr.A_cond ) ^ 4;
 end
 
+global qz_unit_violation
+
+if isfield( DynareOptions, 'qz_unit_violation_penalty' )
+    fval = fval + DynareOptions.qz_unit_violation_penalty * ( qz_unit_violation ./ ( DynareOptions.qz_criterium - 1 ) ) .^ 4;
+end
+
 global custom_penalty
 
 if isfield( DynareOptions, 'custom_penalty_scale' )

@@ -174,6 +174,8 @@ A = aa(:,index_m);  % Jacobain matrix for lagged endogeneous variables
 B(:,cols_b) = aa(:,index_c);  % Jacobian matrix for contemporaneous endogeneous variables
 C = aa(:,index_p);  % Jacobain matrix for led endogeneous variables
 
+global qz_unit_violation
+
 info = 0;
 if task ~= 1 && (DynareOptions.dr_cycle_reduction || DynareOptions.dr_logarithmic_reduction)
     if n_current < DynareModel.endo_nbr
@@ -248,10 +250,12 @@ else
         end
     end
 
+    ltemp = log( temp( nd - nsfwrd )  );
+    rtemp = log( temp( nd - nsfwrd + 1 ) );
+    
     if nba ~= nsfwrd
-        % temp = sort(abs(dr.eigval));
         if Try < Tries
-            DynareOptions.qz_criterium = exp( mean( log( temp( ( nd - nsfwrd ) : ( nd - nsfwrd + 1 ) ) ) ) );
+            DynareOptions.qz_criterium = exp( 0.5 * ( ltemp + rtemp ) );
             % fprintf( '\nRe-solving using qz_criterium: %.32g.\n', DynareOptions.qz_criterium );
         else
             
@@ -271,7 +275,11 @@ else
     end
     
     end
-
+    
+    qz_unit_violation = max( 0, ltemp ) - min( 0, rtemp );
+    
+    % disp( qz_unit_violation );
+    
     if task==1, return, end
 
     %First order approximation
