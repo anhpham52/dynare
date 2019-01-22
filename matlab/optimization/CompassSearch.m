@@ -7,7 +7,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     TolF = 1e-8;
     RhoScores   = 0.95;
     RhoSteps    = 0.95;
-    % RhoGradient = 0.95;
+    RhoLogStepSizes = 0.995;
     
     N = length( x );
     D = 2 * N + 2;
@@ -31,9 +31,6 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
 
     MeanGoodSteps  = randn( N, 1 );
     MeanStepsTaken = randn( N, 1 );
-    % MeanGradient   = randn( N, 1 );
-    % MeanGradientXX = eye( N, N );
-    % MeanGradientXY = zeros( N, 1 );
 
     FMaxChange = 0;
 
@@ -64,7 +61,6 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
         
         Directions( :, 1 ) = MeanGoodSteps ./ norm( MeanGoodSteps );
         Directions( :, 2 ) = MeanStepsTaken ./ norm( MeanStepsTaken );
-        % Directions( :, 3 ) = -MeanGradient ./ norm( MeanGradient );
 
         for Block = 1 : NumBlocks
 
@@ -112,6 +108,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
             StepSizes( GoodIndices ) = 1.1 * StepSizes( GoodIndices );
             StepSizes( BadIndices )  = 0.5 * StepSizes( BadIndices );
             
+            StepSizes = exp( RhoLogStepSizes * log( StepSizes ) + ( 1 - RhoLogStepSizes ) * log( max( StepSizes ) ) );
+            
             fprintf( '\nMax step size: %.4g\tMean step size: %.4g', max( StepSizes ), mean( StepSizes ) );
             
             NumNewGoodStepsObservations = sum( fNew < fx );
@@ -119,13 +117,6 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
                 MeanGoodSteps = RhoSteps ^ NumNewGoodStepsObservations * MeanGoodSteps + ( 1 - RhoSteps ^ NumNewGoodStepsObservations ) * ( sum( xNew( :, fNew < fx ) - x, 2 ) - NumNewGoodStepsObservations * MeanGoodSteps );
             end
             
-            % DMxNew = xNew - mean( xNew, 2 );
-            % DMfNew = fNew - mean( fNew );
-            
-            % MeanGradientXX = RhoGradient ^ BlockLength * MeanGradientXX + ( 1 - RhoGradient ^ BlockLength ) * ( DMxNew * DMxNew.' - BlockLength * MeanGradientXX );
-            % MeanGradientXY = RhoGradient ^ BlockLength * MeanGradientXY + ( 1 - RhoGradient ^ BlockLength ) * ( DMxNew * DMfNew   - BlockLength * MeanGradientXY );
-            % MeanGradient   = MeanGradientXX \ MeanGradientXY;
-
             if ~isempty( GoodIndices )
                 [ nfx, BestIndex ] = min( fNew );
                 SufficientImprovement = nfx < fx - TolF;
