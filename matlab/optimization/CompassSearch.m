@@ -5,8 +5,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     PriorStrength = 1;
     TolX = 1e-6;
     TolF = 1e-8;
-    RhoScores  = 0.95;
-    RhoSteps   = 0.95;
+    RhoScores   = 0.95;
+    RhoSteps    = 0.95;
     RhoLogStepSizes = 0.999;
     MaxFMaxChange = 1;
     
@@ -47,7 +47,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     while true
         
         if First && exist( 'CompassSearchState.mat', 'file' )
-            load CompassSearchState StepSizes NumWorkers NumBlocks MeanScores MeanScores2 ScoresSumWeights ScoresSumWeights2 ScoresObservations MeanGoodSteps CGd FMaxChange fx x Iteration;
+            load CompassSearchState StepSizes MeanScores MeanScores2 ScoresSumWeights ScoresSumWeights2 ScoresObservations MeanGoodSteps CGd FMaxChange fx x Iteration;
         end
         
         First = false;
@@ -61,8 +61,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
         ScoreDraw = MeanScores + BigFNumber .* ( StepSizes < TolX ) + randn( D, 1 ) ./ max( TolF, sqrt( tau .* ScoresObservations ) );
         [ ~, Indices ] = sort( ScoreDraw );
         
-        Directions( :, 1 ) = MeanGoodSteps ./ norm( MeanGoodSteps );
-        Directions( :, 2 ) = CGd ./ norm( CGd );
+        Directions( :, 1 ) = MeanGoodSteps ./ max( TolX, norm( MeanGoodSteps ) );
+        Directions( :, 2 ) = CGd ./ max( TolX, norm( CGd ) );
 
         for Block = 1 : NumBlocks
 
