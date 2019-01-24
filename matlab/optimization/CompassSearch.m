@@ -5,7 +5,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     PriorStrength = 1;
     TolX = 1e-6;
     TolF = 1e-8;
-    RhoScores   = 0.95;
+    RhoScores  = 0.95;
+    RhoSteps   = 0.95;
     RhoLogStepSizes = 0.999;
     MaxFMaxChange = 1;
     
