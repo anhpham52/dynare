@@ -34,7 +34,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     
     CGd = zeros( N, 1 );
 
-    FMaxChange = 0;
+    FMaxChange = TolF;
 
     fx = f( x );
 
