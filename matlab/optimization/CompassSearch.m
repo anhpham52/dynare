@@ -1,22 +1,22 @@
 function [ x, fx ] = CompassSearch( f, x, lb, ub )
 
-    MaxStep = 0.01;
+    InitialMaxStep = 1;
     PriorStandardDeviation = 0.1;
     PriorStrength = 1;
     TolX = 1e-6;
     TolF = 1e-8;
     RhoScores   = 0.95;
-    RhoSteps    = 0.95;
-    RhoLogStepSizes = 0.995;
+    RhoLogStepSizes = 0.999;
+    MaxFMaxChange = 1;
     
     N = length( x );
     D = 2 * N + 2;
 
     BigFNumber = 1 / TolF;
 
-    InitialStepSizes = min( MaxStep, sqrt( 1 / 12 ) * ( ub - lb ) );
+    InitialStepSizes = min( InitialMaxStep, sqrt( 1 / 12 ) * ( ub - lb ) );
     Directions = [ zeros( N, 2 ), eye( N ), -eye( N ) ];
-    StepSizes = [ MaxStep; MaxStep; InitialStepSizes; InitialStepSizes ];
+    StepSizes = [ InitialMaxStep; InitialMaxStep; InitialStepSizes; InitialStepSizes ];
     
     Pool = gcp;
     NumWorkers = Pool.NumWorkers;
@@ -30,7 +30,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     ScoresObservations = PriorStrength * ones( D, 1 );
 
     MeanGoodSteps  = randn( N, 1 );
-    MeanStepsTaken = randn( N, 1 );
+    
+    CGd = zeros( N, 1 );
 
     FMaxChange = 0;
 
@@ -45,7 +46,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     while true
         
         if First && exist( 'CompassSearchState.mat', 'file' )
-            load CompassSearchState StepSizes NumWorkers NumBlocks MeanScores MeanScores2 ScoresSumWeights ScoresSumWeights2 ScoresObservations MeanGoodSteps MeanStepsTaken FMaxChange fx x Iteration;
+            load CompassSearchState StepSizes NumWorkers NumBlocks MeanScores MeanScores2 ScoresSumWeights ScoresSumWeights2 ScoresObservations MeanGoodSteps CGd FMaxChange fx x Iteration;
         end
         
         First = false;
@@ -60,7 +61,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
         [ ~, Indices ] = sort( ScoreDraw );
         
         Directions( :, 1 ) = MeanGoodSteps ./ norm( MeanGoodSteps );
-        Directions( :, 2 ) = MeanStepsTaken ./ norm( MeanStepsTaken );
+        Directions( :, 2 ) = CGd ./ norm( CGd );
 
         for Block = 1 : NumBlocks
 
@@ -92,10 +93,10 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
             ScoresSumWeights2( BlockIndices )  = RhoScores * RhoScores * ScoresSumWeights2( BlockIndices )  + ( 1 - RhoScores ) * ( 1 - RhoScores );
             ScoresObservations( BlockIndices ) = ScoresSumWeights( BlockIndices ) .* ScoresSumWeights( BlockIndices ) ./ ScoresSumWeights2( BlockIndices );
             
-            FMaxChange = max( FMaxChange, max( fx - fNew ) );
+            FMaxChange = min( MaxFMaxChange, max( FMaxChange, max( fx - fNew ) ) );
             
             MeanScores  = max( -FMaxChange, min( FMaxChange, MeanScores ) );
-            MeanScores2 = max( -FMaxChange, min( FMaxChange, MeanScores2 ) );
+            MeanScores2 = max( -FMaxChange ^ 2, min( FMaxChange ^ 2, MeanScores2 ) );
             
             TruncatedFChange = max( -FMaxChange, min( FMaxChange, fNew - fx ) );
             
@@ -114,16 +115,26 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
             
             NumNewGoodStepsObservations = sum( fNew < fx );
             if NumNewGoodStepsObservations > 0
+                % CG is following http://people.cs.vt.edu/~asandu/Public/Qual2011/Optim/Hager_2006_CG-survey.pdf
+                OldCGg = -MeanGoodSteps;
                 MeanGoodSteps = RhoSteps ^ NumNewGoodStepsObservations * MeanGoodSteps + ( 1 - RhoSteps ^ NumNewGoodStepsObservations ) * ( sum( xNew( :, fNew < fx ) - x, 2 ) - NumNewGoodStepsObservations * MeanGoodSteps );
+                CGg = -MeanGoodSteps;
+                CGy = CGg - OldCGg;
+                Denom = CGd' * CGy;
+                if abs( Denom ) > sqrt( eps )
+                    IDenom = 1 / Denom;
+                else
+                    IDenom = 0;
+                end
+                CGd = -CGg + CGd * max( 0, min( ( CGg' * CGy ) * IDenom, ( CGg' * CGg ) * IDenom ) ); % Hybrid HS DY scheme
+                % CGd = -CGg + CGd * ( ( CGy - 2 * CGd * ( CGy' * CGy ) * IDenom )' * CGg ) * IDenom;   % N (HZ) scheme
             end
             
             if ~isempty( GoodIndices )
                 [ nfx, BestIndex ] = min( fNew );
                 SufficientImprovement = nfx < fx - TolF;
                 fx = nfx;
-                nx = xNew( :, BestIndex );
-                MeanStepsTaken = RhoSteps * MeanStepsTaken + ( 1 - RhoSteps ) * ( nx - x - MeanStepsTaken );
-                x = nx;
+                x = xNew( :, BestIndex );
                 fprintf( '\tfx: %.30g', fx );
                 if SufficientImprovement
                     break
