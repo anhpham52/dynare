@@ -1,10 +1,10 @@
 function Jacobian = GetJacobian( f, x, nf, h )
-    if nargin < 4
-        h = 1;
-    end
     nx = length( x );
     Jacobian = NaN( nf, nx );
     sreps = sqrt( eps );
+    if nargin < 4
+        h = sreps;
+    end
     h = ones( nx, 1 ) .* h;
     parfor i = 1 : nx
         WarningState = warning( 'off', 'all' );
