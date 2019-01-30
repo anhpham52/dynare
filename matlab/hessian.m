@@ -51,6 +51,8 @@ if true
     f = @(z) func( z, varargin{:} );
 
     HessianMatTmp = GetJacobian( @(zz) GetJacobian( f, zz, 1 ), x, numel( x ) );
+    
+    HessianMatTmp = 0.5 * ( HessianMatTmp + HessianMatTmp' );
 
     if all( isfinite( HessianMatTmp(:) ) )
         eigHessianMatTmp = eig( HessianMatTmp );
