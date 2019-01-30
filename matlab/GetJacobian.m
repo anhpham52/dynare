@@ -1,9 +1,6 @@
 function Jacobian = GetJacobian( f, x, nf )
     nx = length( x );
     Jacobian = NaN( nf, nx );
-    if ~all( isfinite( f( x ) ) )
-        return;
-    end
     sreps = sqrt( eps );
     srsreps = sqrt( sreps );
     parfor i = 1 : nx
