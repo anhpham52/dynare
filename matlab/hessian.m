@@ -49,8 +49,10 @@ end
 
 if true
     f = @(z) func( z, varargin{:} );
+    
+    h = FindStepSize( f, x );
 
-    HessianMatTmp = GetJacobian( @(zz) GetJacobian( f, zz, 1 ), x, numel( x ) );
+    HessianMatTmp = GetJacobian( @(zz) GetJacobian( f, zz, 1, h ), x, numel( x ), h );
     
     HessianMatTmp = 0.5 * ( HessianMatTmp + HessianMatTmp' );
 
