@@ -3,7 +3,7 @@ function Jacobian = GetJacobian( f, x, nf, h )
     Jacobian = NaN( nf, nx );
     sreps = sqrt( eps );
     if nargin < 4
-        h = sreps;
+        h = eps^(1/3);
     end
     h = ones( nx, 1 ) .* h;
     parfor i = 1 : nx

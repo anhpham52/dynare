@@ -2,7 +2,7 @@ function h = FindStepSize( f, x, h )
     nx = length( x );
     sreps = sqrt( eps );
     if nargin < 3
-        h = sreps;
+        h = eps^(1/3);
     end
     h = ones( nx, 1 ) .* h;
     fx = f( x );
