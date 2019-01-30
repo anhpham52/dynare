@@ -1,24 +1,33 @@
-function Jacobian = GetJacobian( f, x, nf )
+function Jacobian = GetJacobian( f, x, nf, h )
+    if nargin < 4
+        h = 1;
+    end
     nx = length( x );
     Jacobian = NaN( nf, nx );
     sreps = sqrt( eps );
-    srsreps = sqrt( sreps );
+    h = ones( nx, 1 ) .* h;
     parfor i = 1 : nx
         WarningState = warning( 'off', 'all' );
         xi = x( i );
-        h = max( [ sreps, abs( srsreps * xi ) ] );
+        hi = max( [ h( i ), sreps, abs( sreps * xi ) ] );
         while true
-            if h < eps
-                h = eps;
+            BreakFlag = false;
+            if hi < eps
+                hi = eps;
+                BreakFlag = true;
+            end
+            if hi < eps( xi )
+                xi = eps( xi );
+                BreakFlag = true;
             end
             try
-                Jacobian( :, i ) = ( f( SetElement( x, i, xi + h ) ) - f( SetElement( x, i, xi - h ) ) ) / ( 2 * h ); %#ok<PFBNS>
+                Jacobian( :, i ) = ( f( SetElement( x, i, xi + hi ) ) - f( SetElement( x, i, xi - hi ) ) ) / ( 2 * hi ); %#ok<PFBNS>
             catch
             end
-            if all( isfinite( Jacobian( :, i ) ) ) || h == eps
-                break;
+            if all( isfinite( Jacobian( :, i ) ) ) || BreakFlag
+                break
             else
-                h = 0.5 * h;
+                hi = 0.5 * hi;
             end
         end
         warning( WarningState );
