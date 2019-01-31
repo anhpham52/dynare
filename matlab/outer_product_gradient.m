@@ -22,9 +22,10 @@ function lik_components = get_lik_components( x, prior_weights, func, dataset, v
     [ ~, ~, ~, lik_components ] = func( x, dataset, varargin{:} );
     
     assert( ~isempty( lik_components ) );
+    lik_components = lik_components(:);
     prior = lik_components( 1 );
     lik_components( 1 ) = [];
     assert( length( lik_components ) == length( prior_weights ) );
-    lik_components = lik_components(:) + prior_weights .* prior;
+    lik_components = lik_components + prior_weights .* prior;
 
 end
