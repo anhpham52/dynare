@@ -13,6 +13,18 @@ function hessian_mat = outer_product_gradient( func, x, dataset, varargin )
     
     hessian_mat = dscores' * dscores;
 
+    hessian_mat = 0.5 * ( hessian_mat + hessian_mat' );
+
+    if all( isfinite( hessian_mat(:) ) )
+        eigHessianMatTmp = eig( hessian_mat );
+        disp( 'Negative elements of the eigenvalues of the Hessian:' );
+        disp( eigHessianMatTmp( eigHessianMatTmp < 0 ) );
+        hessian_mat = NearestSPD( hessian_mat );
+        eigHessianMatTmp = eig( hessian_mat );
+        disp( 'Negative elements of the eigenvalues of the modified Hessian:' );
+        disp( eigHessianMatTmp( eigHessianMatTmp < 0 ) );
+    end
+
     hessian_mat = hessian_mat(:)';
 
 end
