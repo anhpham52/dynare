@@ -1323,7 +1323,7 @@ end
 
 if analytic_derivation==0 && nargout>3
     lik=lik(start:end,:);
-    DLIK=[-lnprior; lik(:)];
+    DLIK=[fval-likelihood; lik(:)];
 end
 
 global best_fval best_M_params best_terminal_M_params best_xparam1 WorkerNumber
