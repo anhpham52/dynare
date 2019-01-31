@@ -52,21 +52,21 @@ if true
     
     h = FindStepSize( f, x );
 
-    HessianMatTmp = GetJacobian( @(zz) GetJacobian( f, zz, 1, h ), x, numel( x ), h );
+    hessian_mat = GetJacobian( @(zz) GetJacobian( f, zz, 1, h ), x, numel( x ), h );
     
-    HessianMatTmp = 0.5 * ( HessianMatTmp + HessianMatTmp' );
+    hessian_mat = 0.5 * ( hessian_mat + hessian_mat' );
 
-    if all( isfinite( HessianMatTmp(:) ) )
-        eigHessianMatTmp = eig( HessianMatTmp );
+    if all( isfinite( hessian_mat(:) ) )
+        eigHessianMatTmp = eig( hessian_mat );
         disp( 'Negative elements of the eigenvalues of the Hessian:' );
         disp( eigHessianMatTmp( eigHessianMatTmp < 0 ) );
-        HessianMatTmp = NearestSPD( HessianMatTmp );
-        eigHessianMatTmp = eig( HessianMatTmp );
+        hessian_mat = NearestSPD( hessian_mat );
+        eigHessianMatTmp = eig( hessian_mat );
         disp( 'Negative elements of the eigenvalues of the modified Hessian:' );
         disp( eigHessianMatTmp( eigHessianMatTmp < 0 ) );
     end
 
-    hessian_mat = HessianMatTmp(:)';
+    hessian_mat = hessian_mat(:)';
 else
     n   = size(x,1);
     h1  = max(abs(x), sqrt(gstep(1))*ones(n, 1))*eps^(1/6)*gstep(2);
