@@ -57,13 +57,13 @@ if true
     hessian_mat = 0.5 * ( hessian_mat + hessian_mat' );
 
     if all( isfinite( hessian_mat(:) ) )
-        eigHessianMatTmp = eig( hessian_mat );
+        eig_hessian_mat = eig( hessian_mat );
         disp( 'Negative elements of the eigenvalues of the Hessian:' );
-        disp( eigHessianMatTmp( eigHessianMatTmp < 0 ) );
+        disp( eig_hessian_mat( eig_hessian_mat < 0 ) );
         hessian_mat = NearestSPD( hessian_mat );
-        eigHessianMatTmp = eig( hessian_mat );
+        eig_hessian_mat = eig( hessian_mat );
         disp( 'Negative elements of the eigenvalues of the modified Hessian:' );
-        disp( eigHessianMatTmp( eigHessianMatTmp < 0 ) );
+        disp( eig_hessian_mat( eig_hessian_mat < 0 ) );
     end
 
     hessian_mat = hessian_mat(:)';
