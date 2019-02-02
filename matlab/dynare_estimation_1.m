@@ -378,9 +378,11 @@ if ~options_.mh_posterior_mode_estimation
     if options_.cova_compute
         hsd = sqrt(diag(hh));
         invhess = inv(hh./(hsd*hsd'))./(hsd*hsd');
-        ScaleInverseHessian = sqrt( min( 1, bayestopt_.p2 ./ diag( invhess ) ) );
-        ScaleInverseHessian( ~isfinite( ScaleInverseHessian ) ) = 1;
-        invhess = diag( ScaleInverseHessian ) * invhess * diag( ScaleInverseHessian );
+        if isfield( options_, 'truncate_posterior_sd' ) && options_.truncate_posterior_sd
+            ScaleInverseHessian = sqrt( min( 1, bayestopt_.p2 ./ diag( invhess ) ) );
+            ScaleInverseHessian( ~isfinite( ScaleInverseHessian ) ) = 1;
+            invhess = diag( ScaleInverseHessian ) * invhess * diag( ScaleInverseHessian );
+        end
         stdh = sqrt(diag(invhess));
         oo_.posterior.optimization.Variance = invhess;
     end
