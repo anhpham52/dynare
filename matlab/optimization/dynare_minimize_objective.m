@@ -64,7 +64,11 @@ new_rat_hess_info=[];
 
 ParallelFlag = false;
 
-if ~isempty(options_.optim_opt)
+if isfield( options_, 'skip_optimisation' ) && options_.skip_optimisation
+    minimizer_algorithm = 0;
+end
+
+if minimizer_algorithm && ~isempty(options_.optim_opt)
     options_list = read_key_value_string(options_.optim_opt);
     UseParallelOptionIndex = find( strcmpi( options_list(:,1), 'UseParallel' ), 1 );
     ParallelFlag = ~isempty( UseParallelOptionIndex ) && ( all( options_list{UseParallelOptionIndex,2}==1 ) || strcmpi( options_list{UseParallelOptionIndex,2}, 'always' ) );
