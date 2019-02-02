@@ -78,6 +78,10 @@ if minimizer_algorithm == 1313
     ParallelFlag = true;
 end
 
+if options_.cova_compute
+    ParallelFlag = true;
+end
+
 if ParallelFlag
 
     disp( 'Performing parallel initialization.' );
