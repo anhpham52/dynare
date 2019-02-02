@@ -146,6 +146,9 @@ old_fval = fval;
 try
 
 switch minimizer_algorithm
+  case 0
+    opt_par_values = start_par_value;
+    fval = objective_function( opt_par_values, varargin{:} );
   case 1
     if isoctave
         error('Optimization algorithm 1 is not available under Octave')
