@@ -6,6 +6,8 @@ function Jacobian = GetJacobian( f, x, nf, h )
         h = eps^(1/3);
     end
     h = ones( nx, 1 ) .* h;
+    fx = f( x );
+    assert( all( isfinite( fx ) ) );
     parfor i = 1 : nx
         WarningState = warning( 'off', 'all' );
         xi = x( i );
@@ -21,14 +23,35 @@ function Jacobian = GetJacobian( f, x, nf, h )
                 BreakFlag = true;
             end
             try
-                Jacobian( :, i ) = ( f( SetElement( x, i, xi + hi ) ) - f( SetElement( x, i, xi - hi ) ) ) / ( 2 * hi ); %#ok<PFBNS>
+                fp = f( SetElement( x, i, xi + hi ) ); %#ok<PFBNS>
             catch Error
                 DisplayError( Error );
+                fp = NaN( size( fx ) );
             end
-            if all( isfinite( Jacobian( :, i ) ) ) || BreakFlag
-                break
+            try
+                fn = f( SetElement( x, i, xi - hi ) );
+            catch Error
+                DisplayError( Error );
+                fn = NaN( size( fx ) );
+            end
+            if all( isfinite( fp ) )
+                if all( isfinite( fn ) )
+                    Jacobian( :, i ) = ( fp - fn ) / ( 2 * hi );
+                    break
+                else
+                    Jacobian( :, i ) = ( fp - fx ) / hi;
+                    break
+                end
             else
-                hi = 0.5 * hi;
+                if all( isfinite( fn ) )
+                    Jacobian( :, i ) = ( fx - fn ) / hi;
+                    break
+                else
+                    hi = 0.5 * hi;
+                end
+            end
+            if BreakFlag
+                break
             end
         end
         warning( WarningState );
