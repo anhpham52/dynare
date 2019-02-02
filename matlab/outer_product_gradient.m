@@ -9,7 +9,7 @@ function hessian_mat = outer_product_gradient( func, x, dataset, varargin )
     prior_weights = sum( ~isnan( data ), 2 );
     prior_weights = prior_weights ./ sum( prior_weights );
 
-    dscores = GetJacobian( @( x ) get_lik_components( x, prior_weights, func, dataset, varargin ), x, length( prior_weights ) );
+    dscores = GetJacobian( @( x ) get_lik_components( x, prior_weights, func, dataset, varargin{:} ), x, length( prior_weights ) );
     
     hessian_mat = dscores' * dscores;
 
