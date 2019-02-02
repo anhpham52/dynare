@@ -22,7 +22,8 @@ function Jacobian = GetJacobian( f, x, nf, h )
             end
             try
                 Jacobian( :, i ) = ( f( SetElement( x, i, xi + hi ) ) - f( SetElement( x, i, xi - hi ) ) ) / ( 2 * hi ); %#ok<PFBNS>
-            catch
+            catch Error
+                DisplayError( Error );
             end
             if all( isfinite( Jacobian( :, i ) ) ) || BreakFlag
                 break
