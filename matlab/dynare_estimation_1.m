@@ -209,7 +209,7 @@ catch % if check fails, provide info on using calibration if present
     rethrow(e);
 end
 
-if isequal(options_.mode_compute,0) && isempty(options_.mode_file) && options_.mh_posterior_mode_estimation==0
+if isempty(options_.mode_file) && options_.mh_posterior_mode_estimation==0
     if options_.smoother == 1
         [atT,innov,measurement_error,updated_variables,ys,trend_coeff,aK,T,R,P,PK,decomp,Trend,state_uncertainty,M_,oo_,options_,bayestopt_] = DsgeSmoother(xparam1,gend,transpose(data),data_index,missing_value,M_,oo_,options_,bayestopt_,estim_params_);
         [oo_]=store_smoother_results(M_,oo_,options_,bayestopt_,dataset_,dataset_info,atT,innov,measurement_error,updated_variables,ys,trend_coeff,aK,P,PK,decomp,Trend,state_uncertainty);
@@ -221,7 +221,7 @@ end
 
 %% Estimation of the posterior mode or likelihood mode
 
-if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
+if ~options_.mh_posterior_mode_estimation
     %prepare settings for newrat
     if options_.mode_compute==5
         %get whether outer product Hessian is requested
