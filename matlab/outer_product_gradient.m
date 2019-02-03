@@ -11,8 +11,12 @@ function hessian_mat = outer_product_gradient( func, x, dataset, varargin )
     
     seps = sqrt( eps );
     sseps = sqrt( seps );
+    
+    h = max( sseps, sseps * abs( x ) );
+    
+    HessianDiagonal = GetHessianDiagonal( @( x_ ) func( x, dataset, varargin{:} ), x, 1, 1, h );
 
-    dscores = GetJacobian( @( x ) get_lik_components( x, prior_weights, func, dataset, varargin{:} ), x, length( prior_weights ), max( sseps, sseps * abs( x ) ) );
+    dscores = GetJacobian( @( x_ ) get_lik_components( x_, prior_weights, func, dataset, varargin{:} ), x, length( prior_weights ), h );
     
     bad_params = find( ~( all( isfinite( dscores ) ) ) );
     
@@ -26,7 +30,13 @@ function hessian_mat = outer_product_gradient( func, x, dataset, varargin )
 
     hessian_mat = 0.5 * ( hessian_mat + hessian_mat' );
     
-    hessian_mat = hessian_mat + seps * eye( size( hessian_mat ) );
+    hessian_mat = hessian_mat + max( seps, seps - min( diag( hessian_mat ) ) ) * eye( size( hessian_mat ) );
+    
+    Scale = sqrt( max( seps, HessianDiagonal(:) ) ./ max( seps, diag( hessian_mat ) ) );
+    
+    hessian_mat = diag( Scale ) * hessian_mat * diag( Scale );
+
+    hessian_mat = 0.5 * ( hessian_mat + hessian_mat' );
 
     if all( isfinite( hessian_mat(:) ) )
         eig_hessian_mat = eig( hessian_mat );
