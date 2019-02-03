@@ -10,13 +10,13 @@ function hessian_mat = outer_product_gradient( func, x, dataset, varargin )
     prior_weights = prior_weights ./ sum( prior_weights );
     
     seps = sqrt( eps );
-    sseps = sqrt( seps );
+    h0 = eps ^ ( 1 / 6 );
     
-    h = max( sseps, sseps * abs( x ) );
+    h = max( h0, h0 * abs( x ) );
     
     HessianDiagonal = GetHessianDiagonal( @( x_ ) func( x, dataset, varargin{:} ), x, 1, 1, h );
 
-    dscores = GetJacobian( @( x_ ) get_lik_components( x_, prior_weights, func, dataset, varargin{:} ), x, length( prior_weights ), h );
+    dscores = GetJacobian( @( x_ ) get_lik_components( x_, prior_weights, func, dataset, varargin{:} ), x, length( prior_weights ), h .* h );
     
     bad_params = find( ~( all( isfinite( dscores ) ) ) );
     

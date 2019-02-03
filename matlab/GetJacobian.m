@@ -19,7 +19,7 @@ function Jacobian = GetJacobian( f, x, nf, h )
                 BreakFlag = true;
             end
             if hi < eps( xi )
-                xi = eps( xi );
+                hi = eps( xi );
                 BreakFlag = true;
             end
             try
