@@ -24,10 +24,14 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
                 hi = sqrt( eps( xi ) );
                 Expanded = true;
             end
-            if hi > max( abs( xi ), 1 )
+            if hi >= max( abs( xi ), 1 )
                 hi = max( abs( xi ), 1 );
                 Shrank = true;
             end
+            fp2 = NaN( size( fx ) );
+            fp  = NaN( size( fx ) );
+            fn  = NaN( size( fx ) );
+            fn2 = NaN( size( fx ) );
             try
                 fp = f( SetElement( x, i, xi + hi ) ); %#ok<PFBNS>
                 if all( fp == fx )
@@ -43,15 +47,10 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
                         fp2 = f( SetElement( x, i, xi + 2 * hi ) );
                     catch Error
                         DisplayError( Error );
-                        fp2 = NaN( size( fx ) );
                     end
-                else
-                    fp2 = NaN( size( fx ) );
                 end
             catch Error
                 DisplayError( Error );
-                fp = NaN( size( fx ) );
-                fp2 = NaN( size( fx ) );
             end
             try
                 fn = f( SetElement( x, i, xi - hi ) );
@@ -68,15 +67,10 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
                         fn2 = f( SetElement( x, i, xi - 2 * hi ) );
                     catch Error
                         DisplayError( Error );
-                        fn2 = NaN( size( fx ) );
                     end
-                else
-                    fn2 = NaN( size( fx ) );
                 end
             catch Error
                 DisplayError( Error );
-                fn = NaN( size( fx ) );
-                fn2 = NaN( size( fx ) );
             end
             d = zeros( nf, 5 );
             d( :, 1 ) = ( -fn2 / 12 + 4 / 3 * fn - 5 / 2 * fx + 4 / 3 * fp - fp2 / 12 ) / ( hi * hi );
