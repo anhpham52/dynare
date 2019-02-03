@@ -34,7 +34,7 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
                     if Shrank
                         break
                     end
-                    hi = 2 * hi;
+                    hi = 4 * hi;
                     Expanded = true;
                     fprintf( '\nExpanding coordinate %d.\n', i );
                     continue
@@ -59,7 +59,7 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
                     if Shrank
                         break
                     end
-                    hi = 2 * hi;
+                    hi = 4 * hi;
                     Expanded = true;
                     fprintf( '\nExpanding coordinate %d.\n', i );
                     continue
@@ -78,14 +78,15 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
                 fn = NaN( size( fx ) );
                 fn2 = NaN( size( fx ) );
             end
-            d = zeros( nf, 4 );
+            d = zeros( nf, 5 );
             d( :, 1 ) = ( -fn2 / 12 + 4 / 3 * fn - 5 / 2 * fx + 4 / 3 * fp - fp2 / 12 ) / ( hi * hi );
             d( :, 2 ) = ( fn  - 2 * fx + fp  ) / ( hi * hi );
-            d( :, 3 ) = ( fx  - 2 * fp + fp2 ) / ( hi * hi );
-            d( :, 4 ) = ( fn2 - 2 * fn + fx  ) / ( hi * hi );
+            d( :, 3 ) = ( fn2 - 2 * fx + fp2 ) / ( 4 * hi * hi );
+            d( :, 4 ) = ( fx  - 2 * fp + fp2 ) / ( hi * hi );
+            d( :, 5 ) = ( fn2 - 2 * fn + fx  ) / ( hi * hi );
             Possible = all( isfinite( d ) );
             if EnsureSign == 0
-                Preferable = true( 1, 4 );
+                Preferable = true( 1, 5 );
             else
                 Preferable = all( sign( d ) == EnsureSign );
             end
@@ -100,14 +101,14 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
                 if Shrank
                     break
                 end
-                hi = 2 * hi;
+                hi = 4 * hi;
                 Expanded = true;
                 fprintf( '\nExpanding coordinate %d.\n', i );
             else
                 if Expanded
                     break
                 end
-                hi = 0.5 * hi;
+                hi = 0.25 * hi;
                 Shrank = true;
                 fprintf( '\nShrinking coordinate %d.\n', i );
             end
