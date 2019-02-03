@@ -34,15 +34,7 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
             fn2 = NaN( size( fx ) );
             try
                 fp = f( SetElement( x, i, xi + hi ) ); %#ok<PFBNS>
-                if all( fp == fx )
-                    if Shrank
-                        break
-                    end
-                    hi = 4 * hi;
-                    Expanded = true;
-                    fprintf( '\nExpanding coordinate %d.\n', i );
-                    continue
-                elseif all( isfinite( fp ) )
+                if all( isfinite( fp ) )
                     try
                         fp2 = f( SetElement( x, i, xi + 2 * hi ) );
                     catch Error
@@ -54,15 +46,7 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
             end
             try
                 fn = f( SetElement( x, i, xi - hi ) );
-                if all( fn == fx )
-                    if Shrank
-                        break
-                    end
-                    hi = 4 * hi;
-                    Expanded = true;
-                    fprintf( '\nExpanding coordinate %d.\n', i );
-                    continue
-                elseif all( isfinite( fn ) )
+                if all( isfinite( fn ) )
                     try
                         fn2 = f( SetElement( x, i, xi - 2 * hi ) );
                     catch Error
@@ -78,11 +62,11 @@ function HessianDiagonal = GetHessianDiagonal( f, x, nf, EnsureSign, h )
             d( :, 3 ) = ( fn2 - 2 * fx + fp2 ) / ( 4 * hi * hi );
             d( :, 4 ) = ( fx  - 2 * fp + fp2 ) / ( hi * hi );
             d( :, 5 ) = ( fn2 - 2 * fn + fx  ) / ( hi * hi );
-            Possible = all( isfinite( d ) );
+            Possible = all( isfinite( d ), 1 );
             if EnsureSign == 0
                 Preferable = true( 1, 5 );
             else
-                Preferable = all( sign( d ) == EnsureSign );
+                Preferable = all( sign( d ) == EnsureSign, 1 );
             end
             Good = find( Possible & Preferable, 1 );
             OK   = find( Possible, 1 );
