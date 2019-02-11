@@ -810,6 +810,43 @@ switch DynareOptions.lik_init
     rootPstar = robust_root( Pstar );
     Pinf      = [];
     Zflag     = 0;
+  case 7
+    if kalman_algo~=2
+        % Use standard kalman filter except if the univariate filter is explicitely choosen.
+        kalman_algo = 1;
+    end
+    
+    BayesISLECIndex = find( ismember( BayesInfo.name, 'InitialStateLogitEigCap' ), 1 );
+    BayesISACIndex  = find( ismember( BayesInfo.name, 'InitialStateAllowCorrelation' ), 1 );
+    BayesISLPIndex  = find( ismember( BayesInfo.name, 'InitialStateLogPower' ), 1 );
+    BayesISLSIndex  = find( ismember( BayesInfo.name, 'InitialStateLogScale' ), 1 );
+
+    assert( ~isempty( BayesISLECIndex ) );
+    assert( ~isempty( BayesISACIndex ) );
+    assert( ~isempty( BayesISLPIndex ) );
+    assert( ~isempty( BayesISLSIndex ) );
+    
+    InitialStateEigCap           = 1 / ( 1 + exp( -xparam1( BayesISLECIndex ) ) );
+    InitialStateAllowCorrelation = xparam1( BayesISACIndex );
+    InitialStatePower            = exp( xparam1( BayesISLPIndex ) );
+    InitialStateScale            = exp( xparam1( BayesISLSIndex ) );
+    
+    [ VTtmp, DTtmp ] = eig( Ttmp );
+    
+    TruncTtmp = real( VTtmp * diag( ( DTtmp ./ abs( DTtmp ) ) .* min( InitialStateEigCap, abs( DTtmp ) ) ) / VTtmp );
+
+    Pstar = lyapunov_solver(TruncTtmp,Rtmp,Q,DynareOptions);
+    
+    dPstarPower = diag( Pstar ) ^ ( 0.5 - 0.5 * InitialStateAllowCorrelation );
+    Pstar = dPstarPower * Pstar ^ InitialStateAllowCorrelation * dPstarPower;
+    Pstar = 0.5 * ( Pstar + Pstar.' );
+    Pstar = Pstar ^ InitialStatePower;
+    Pstar = InitialStateScale * Pstar;
+    Pstar = 0.5 * ( Pstar + Pstar.' );
+    
+    Pinf  = [];
+    a     = zeros(mm,1);
+    Zflag = 0;
   otherwise
     error('dsge_likelihood:: Unknown initialization approach for the Kalman filter!')
 end
