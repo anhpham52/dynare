@@ -832,6 +832,7 @@ switch DynareOptions.lik_init
     InitialStateScale            = exp( xparam1( BayesISLSIndex ) );
     
     [ VTtmp, DTtmp ] = eig( Ttmp );
+    DTtmp = diag( DTtmp );
     
     TruncTtmp = real( VTtmp * diag( ( DTtmp ./ abs( DTtmp ) ) .* min( InitialStateEigCap, abs( DTtmp ) ) ) / VTtmp );
 
