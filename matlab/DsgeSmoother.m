@@ -293,7 +293,7 @@ elseif options_.lik_init == 7
     
     ScaleTtmp = min( 1, InitialStateEigCap / MaxAbsEigTtmp );
     
-    Pstar = lyapunov_solver( ScaleTtmp * Ttmp, Rtmp, Q, DynareOptions );
+    Pstar = lyapunov_solver( ScaleTtmp * Ttmp, Rtmp, Q, options_ );
     
     diagPstarPower = diag( diag( Pstar ) .^ ( 0.5 - 0.5 * InitialStateAllowCorrelation ) );
     Pstar = real( diagPstarPower * Pstar ^ InitialStateAllowCorrelation * diagPstarPower );
