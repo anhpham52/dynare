@@ -837,8 +837,8 @@ switch DynareOptions.lik_init
     
     Pstar = lyapunov_solver( ScaleTtmp * Ttmp, Rtmp, Q, DynareOptions );
     
-    dPstarPower = diag( Pstar ) ^ ( 0.5 - 0.5 * InitialStateAllowCorrelation );
-    Pstar = dPstarPower * Pstar ^ InitialStateAllowCorrelation * dPstarPower;
+    diagPstarPower = diag( diag( Pstar ) .^ ( 0.5 - 0.5 * InitialStateAllowCorrelation ) );
+    Pstar = diagPstarPower * Pstar ^ InitialStateAllowCorrelation * diagPstarPower;
     Pstar = 0.5 * ( Pstar + Pstar.' );
     Pstar = Pstar ^ InitialStatePower;
     Pstar = InitialStateScale * Pstar;
