@@ -831,24 +831,11 @@ switch DynareOptions.lik_init
     InitialStatePower            = exp( xparam1( BayesISLPIndex ) );
     InitialStateScale            = exp( xparam1( BayesISLSIndex ) );
     
-    [ UTtmp, TTtmp ] = schur( Ttmp, 'real' );
+    MaxAbsEigTtmp = max( abs( eig( Ttmp ) ) );
     
-    OffDiagTTtmp = diag( TTtmp, -1 ) ~= 0;
-    for i = find( OffDiagTTtmp )
-        Block = TTtmp( i : ( i + 1 ), i : ( i + 1 ) );
-        [ PBlock, DBlock ] = eig( Block );
-        DBlock = diag( DBlock );
-        TTtmp( i : ( i + 1 ), i : ( i + 1 ) ) = real( PBlock * diag( ( DBlock ./ abs( DBlock ) ) .* min( InitialStateEigCap, abs( DBlock ) ) ) / PBlock );
-    end
-    ComplexEigenvalues = [ OffDiagTTtmp; false ] | [ false; OffDiagTTtmp ];
-    RealEigenvalues = ~ComplexEigenvalues;
-    for i = find( RealEigenvalues )
-        TTtmp( i, i ) = ( TTtmp( i, i ) ./ abs( TTtmp( i, i ) ) ) .* min( InitialStateEigCap, abs( TTtmp( i, i ) ) );
-    end
+    ScaleTtmp = min( 1, InitialStateEigCap / MaxAbsEigTtmp );
     
-    TruncTtmp = UTtmp * TTtmp * UTtmp.';
-
-    Pstar = lyapunov_solver(TruncTtmp,Rtmp,Q,DynareOptions);
+    Pstar = lyapunov_solver( ScaleTtmp * Ttmp, Rtmp, Q, DynareOptions );
     
     dPstarPower = diag( Pstar ) ^ ( 0.5 - 0.5 * InitialStateAllowCorrelation );
     Pstar = dPstarPower * Pstar ^ InitialStateAllowCorrelation * dPstarPower;
