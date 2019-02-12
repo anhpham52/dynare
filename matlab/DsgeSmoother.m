@@ -268,6 +268,41 @@ elseif options_.lik_init == 6
     if options_.extended_kalman_filter
         warning( 'Smoothing for the EKF is not yet implemented.' );
     end
+elseif options_.lik_init == 7
+    if kalman_algo~=2
+        % Use standard kalman filter except if the univariate filter is explicitely choosen.
+        kalman_algo = 1;
+    end
+    
+    BayesISLECIndex = find( ismember( bayestopt_.name, 'InitialStateLogitEigCap' ), 1 );
+    BayesISACIndex  = find( ismember( bayestopt_.name, 'InitialStateAllowCorrelation' ), 1 );
+    BayesISLPIndex  = find( ismember( bayestopt_.name, 'InitialStateLogPower' ), 1 );
+    BayesISLSIndex  = find( ismember( bayestopt_.name, 'InitialStateLogScale' ), 1 );
+
+    assert( ~isempty( BayesISLECIndex ) );
+    assert( ~isempty( BayesISACIndex ) );
+    assert( ~isempty( BayesISLPIndex ) );
+    assert( ~isempty( BayesISLSIndex ) );
+    
+    InitialStateEigCap           = 1 / ( 1 + exp( -xparam1( BayesISLECIndex ) ) );
+    InitialStateAllowCorrelation = xparam1( BayesISACIndex );
+    InitialStatePower            = exp( xparam1( BayesISLPIndex ) );
+    InitialStateScale            = exp( xparam1( BayesISLSIndex ) );
+    
+    MaxAbsEigTtmp = max( abs( eig( Ttmp ) ) );
+    
+    ScaleTtmp = min( 1, InitialStateEigCap / MaxAbsEigTtmp );
+    
+    Pstar = lyapunov_solver( ScaleTtmp * Ttmp, Rtmp, Q, DynareOptions );
+    
+    diagPstarPower = diag( diag( Pstar ) .^ ( 0.5 - 0.5 * InitialStateAllowCorrelation ) );
+    Pstar = real( diagPstarPower * Pstar ^ InitialStateAllowCorrelation * diagPstarPower );
+    Pstar = 0.5 * ( Pstar + Pstar.' );
+    Pstar = real( Pstar ^ InitialStatePower );
+    Pstar = InitialStateScale * Pstar;
+    Pstar = 0.5 * ( Pstar + Pstar.' );
+    
+    Pinf  = [];
 end
 
 if options_.non_bgp
