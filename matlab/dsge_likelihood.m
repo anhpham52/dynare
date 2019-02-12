@@ -831,10 +831,22 @@ switch DynareOptions.lik_init
     InitialStatePower            = exp( xparam1( BayesISLPIndex ) );
     InitialStateScale            = exp( xparam1( BayesISLSIndex ) );
     
-    [ VTtmp, DTtmp ] = eig( Ttmp );
-    DTtmp = diag( DTtmp );
+    [ UTtmp, TTtmp ] = schur( Ttmp, 'real' );
     
-    TruncTtmp = real( VTtmp * diag( ( DTtmp ./ abs( DTtmp ) ) .* min( InitialStateEigCap, abs( DTtmp ) ) ) / VTtmp );
+    OffDiagTTtmp = diag( TTtmp, -1 ) ~= 0;
+    for i = find( OffDiagTTtmp )
+        Block = TTtmp( i : ( i + 1 ), i : ( i + 1 ) );
+        [ PBlock, DBlock ] = eig( Block );
+        DBlock = diag( DBlock );
+        TTtmp( i : ( i + 1 ), i : ( i + 1 ) ) = real( PBlock * diag( ( DBlock ./ abs( DBlock ) ) .* min( InitialStateEigCap, abs( DBlock ) ) ) / PBlock );
+    end
+    ComplexEigenvalues = [ OffDiagTTtmp; false ] | [ false; OffDiagTTtmp ];
+    RealEigenvalues = ~ComplexEigenvalues;
+    for i = find( RealEigenvalues )
+        TTtmp( i, i ) = ( TTtmp( i, i ) ./ abs( TTtmp( i, i ) ) ) .* min( InitialStateEigCap, abs( TTtmp( i, i ) ) );
+    end
+    
+    TruncTtmp = UTtmp * TTtmp * UTtmp.';
 
     Pstar = lyapunov_solver(TruncTtmp,Rtmp,Q,DynareOptions);
     
