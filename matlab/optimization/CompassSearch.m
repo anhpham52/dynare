@@ -47,7 +47,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     while true
         
         if First && exist( 'CompassSearchState.mat', 'file' )
-            load CompassSearchState StepSizes MeanScores MeanScores2 ScoresSumWeights ScoresSumWeights2 ScoresObservations MeanGoodSteps CGd FMaxChange fx x Iteration;
+            load CompassSearchState StepSizes MeanScores MeanScores2 ScoresSumWeights ScoresSumWeights2 ScoresObservations MeanGoodSteps CGd FMaxChange x Iteration;
+            fx = f( x );
         end
         
         First = false;
