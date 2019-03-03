@@ -9,6 +9,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     RhoSteps    = 0.95;
     RhoLogStepSizes = 0.999;
     MaxFMaxChange = 1;
+    SquashMode = false;
     
     N = length( x );
     D = 2 * N + 2;
@@ -57,10 +58,18 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
 
         fprintf( '\n\nIteration: %d\n', Iteration );
 
-        VarScores = MeanScores2 - MeanScores .* MeanScores;
-        tau = gamrnd( 0.5 * ScoresObservations, 2 ./ max( TolF, ScoresObservations .* VarScores ) );
-        ScoreDraw = MeanScores + BigFNumber .* ( StepSizes < TolX ) + randn( D, 1 ) ./ max( TolF, sqrt( tau .* ScoresObservations ) );
-        [ ~, Indices ] = sort( ScoreDraw );
+        if SquashMode %#ok<*UNRCH>
+
+            [ ~, Indices ] = sort( StepSizes, 'descend' );
+            
+        else
+        
+            VarScores = MeanScores2 - MeanScores .* MeanScores;
+            tau = gamrnd( 0.5 * ScoresObservations, 2 ./ max( TolF, ScoresObservations .* VarScores ) );
+            ScoreDraw = MeanScores + BigFNumber .* ( StepSizes < TolX ) + randn( D, 1 ) ./ max( TolF, sqrt( tau .* ScoresObservations ) );
+            [ ~, Indices ] = sort( ScoreDraw );
+                
+        end
         
         Directions( :, 1 ) = MeanGoodSteps ./ max( TolX, norm( MeanGoodSteps ) );
         Directions( :, 2 ) = CGd ./ max( TolX, norm( CGd ) );
@@ -113,7 +122,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
             
             StepSizes = exp( RhoLogStepSizes * log( StepSizes ) + ( 1 - RhoLogStepSizes ) * log( max( StepSizes ) ) );
             
-            fprintf( '\nMax step size: %.4g\tMean step size: %.4g', max( StepSizes ), mean( StepSizes ) );
+            fprintf( '\nMax step size: %.4g\tMean step size: %.4g\n', max( StepSizes ), mean( StepSizes ) );
             
             NumNewGoodStepsObservations = sum( fNew < fx );
             if NumNewGoodStepsObservations > 0
@@ -137,7 +146,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
                 SufficientImprovement = nfx < fx - TolF;
                 fx = nfx;
                 x = xNew( :, BestIndex );
-                fprintf( '\tfx: %.30g', fx );
+                fprintf( '\tfx: %.30g\n', fx );
                 if SufficientImprovement
                     break
                 end
