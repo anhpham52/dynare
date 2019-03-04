@@ -3,7 +3,7 @@ function varargout = prior(varargin)
 % Computes various prior statistics and display them in the command window.
 %
 % INPUTS
-%   'table', 'moments', 'optimize', 'simulate', 'plot'
+%   'table', 'moments', 'optimize', 'simulate', 'plot', 'moments(distribution)'
 %
 % OUTPUTS
 %   none
@@ -11,7 +11,7 @@ function varargout = prior(varargin)
 % SPECIAL REQUIREMENTS
 %   none
 
-% Copyright (C) 2015-2017 Dynare Team
+% Copyright (C) 2015-2018 Dynare Team
 %
 % This file is part of Dynare.
 %
@@ -161,6 +161,7 @@ if ismember('moments(distribution)', varargin) % Prior simulations (BK).
                 dr = tmp.pdraws{j,3};
                 oo__ = oo_;
                 oo__.dr = dr;
+                Model=set_parameters_locally(Model,tmp.pdraws{j,1});% Needed to update the covariance matrix of the state innovations.
                 oo__ = disp_th_moments(oo__.dr, [], Model, options_, oo__);
                 FirstOrderMoments(:,iter) = oo__.mean;
                 SecondOrderMoments(:,:,iter) = oo__.var;
