@@ -324,6 +324,12 @@ if ~isequal(options_.mode_compute,0) && ~options_.mh_posterior_mode_estimation
     end
 end
 
+if isfield( options_.hessian, 'only_keep_diag' ) && options_.hessian.only_keep_diag
+    
+    hh = diag( diag( hh ) );
+    
+end
+
 if ~options_.mh_posterior_mode_estimation && options_.cova_compute
     try
         chol(hh);
