@@ -22,17 +22,17 @@ function Jacobian = GetJacobian( f, x, nf, h )
                 hi = eps( xi );
                 BreakFlag = true;
             end
+            fp = NaN( size( fx ) );
             try
                 fp = f( SetElement( x, i, xi + hi ) ); %#ok<PFBNS>
             catch Error
                 DisplayError( Error );
-                fp = NaN( size( fx ) );
             end
+            fn = NaN( size( fx ) );
             try
                 fn = f( SetElement( x, i, xi - hi ) );
             catch Error
                 DisplayError( Error );
-                fn = NaN( size( fx ) );
             end
             if all( isfinite( fp ) )
                 if all( isfinite( fn ) )
