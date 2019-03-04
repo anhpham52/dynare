@@ -1,5 +1,5 @@
 #!/bin/bash
-releaseFolder='4.5.6';
+releaseFolder='4.5.7';
 gitFolder=${PWD##*/};
 
 cd ..
