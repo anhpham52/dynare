@@ -330,6 +330,18 @@ if isfield( options_.hessian, 'only_keep_diag' ) && options_.hessian.only_keep_d
     
 end
 
+hh( ~isfinite( hh ) ) = 0;
+
+hh = 0.5 * ( hh + hh' );
+
+eig_hh = eig( hh );
+disp( 'Negative elements of the eigenvalues of the Hessian:' );
+disp( eig_hh( eig_hh < 0 ) );
+hh = NearestSPD( hh );
+eig_hh = eig( hh );
+disp( 'Negative elements of the eigenvalues of the modified Hessian:' );
+disp( eig_hh( eig_hh < 0 ) );
+
 if ~options_.mh_posterior_mode_estimation && options_.cova_compute
     try
         chol(hh);

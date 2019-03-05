@@ -28,20 +28,6 @@ function hessian_mat = outer_product_gradient( func, x, dataset, varargin )
 
     hessian_mat = 0.5 * ( hessian_mat + hessian_mat' );
     
-    hessian_mat = hessian_mat + max( seps, seps - min( diag( hessian_mat ) ) ) * eye( size( hessian_mat ) );
-    
-    hessian_mat = 0.5 * ( hessian_mat + hessian_mat' );
-
-    if all( isfinite( hessian_mat(:) ) )
-        eig_hessian_mat = eig( hessian_mat );
-        disp( 'Negative elements of the eigenvalues of the Hessian:' );
-        disp( eig_hessian_mat( eig_hessian_mat < 0 ) );
-        hessian_mat = NearestSPD( hessian_mat );
-        eig_hessian_mat = eig( hessian_mat );
-        disp( 'Negative elements of the eigenvalues of the modified Hessian:' );
-        disp( eig_hessian_mat( eig_hessian_mat < 0 ) );
-    end
-
     hessian_mat = hessian_mat(:)';
 
 end
