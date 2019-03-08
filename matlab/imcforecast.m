@@ -61,6 +61,10 @@ if ~isfield(options_cond_fcst,'replic') || isempty(options_cond_fcst.replic)
     options_cond_fcst.replic = 5000;
 end
 
+if isfield( options_, 'deterministic_conditional_forecast' ) && options_.deterministic_conditional_forecast
+    options_cond_fcst.replic = 2;
+end
+
 if ~isfield(options_cond_fcst,'periods') || isempty(options_cond_fcst.periods)
     options_cond_fcst.periods = 40;
 end
@@ -126,7 +130,7 @@ if estimated_model
     qz_criterium_old=options_.qz_criterium;
     options_=select_qz_criterium_value(options_);
     options_smoothed_state_uncertainty_old = options_.smoothed_state_uncertainty;
-    [atT,innov,measurement_error,filtered_state_vector,ys,trend_coeff,aK,T,R,P,PK,decomp,trend_addition,state_uncertainty,M_,oo_,options_,bayestopt_] = DsgeSmoother(xparam,gend,data,data_index,missing_value,M_,oo_,options_,bayestopt_,estim_params_);
+    [atT,~,~,~,ys,~,~,~,~,~,~,~,~,~,M_,oo_,options_,bayestopt_] = DsgeSmoother(xparam,gend,data,data_index,missing_value,M_,oo_,options_,bayestopt_,estim_params_);
     options_.smoothed_state_uncertainty = options_smoothed_state_uncertainty_old;
     %get constant part
     if options_.noconstant
@@ -247,21 +251,43 @@ constrained_paths = bsxfun(@minus,constrained_paths,trend(idx,2:1+cL));
 
 FORCS1_shocks = zeros(n1,cL,options_cond_fcst.replic);
 
-%randn('state',0);
+if isfield( options_, 'deterministic_conditional_forecast' ) && options_.deterministic_conditional_forecast
 
-for b=1:options_cond_fcst.replic %conditional forecast using cL set to constrained values
-    shocks = sQ*randn(ExoSize,options_cond_fcst.periods);
-    shocks(jdx,:) = zeros(length(jdx),options_cond_fcst.periods);
-    [FORCS1(:,:,b), FORCS1_shocks(:,:,b)] = mcforecast3(cL,options_cond_fcst.periods,constrained_paths,shocks,FORCS1(:,:,b),T,R,mv, mu);
-    FORCS1(:,:,b)=FORCS1(:,:,b)+trend; %add trend
+    for b=1:options_cond_fcst.replic %conditional forecast using cL set to constrained values
+        shocks = sQ*zeros(ExoSize,options_cond_fcst.periods);
+        shocks(jdx,:) = zeros(length(jdx),options_cond_fcst.periods);
+        [FORCS1(:,:,b), FORCS1_shocks(:,:,b)] = mcforecast3(cL,options_cond_fcst.periods,constrained_paths,shocks,FORCS1(:,:,b),T,R,mv, mu);
+        FORCS1(:,:,b)=FORCS1(:,:,b)+trend; %add trend
+    end
+    
+else
+
+    %randn('state',0);
+    spmd
+        rng( labindex );
+    end
+
+    targetWorkCount = options_cond_fcst.replic;
+    barWidth= 40;
+    p =  TimedProgressBar( targetWorkCount, barWidth, 'Computing, wait for ', ', completed ', 'Concluded in ' );
+
+    parfor b=1:options_cond_fcst.replic %conditional forecast using cL set to constrained values
+        shocks = sQ*randn(ExoSize,options_cond_fcst.periods); %#ok<*PFBNS>
+        shocks(jdx,:) = zeros(length(jdx),options_cond_fcst.periods);
+        [FORCS1(:,:,b), FORCS1_shocks(:,:,b)] = mcforecast3(cL,options_cond_fcst.periods,constrained_paths,shocks,FORCS1(:,:,b),T,R,mv, mu);
+        FORCS1(:,:,b)=FORCS1(:,:,b)+trend; %add trend
+        p.progress;
+    end
+    p.stop;
+
 end
 
 mFORCS1 = mean(FORCS1,3);
 mFORCS1_shocks = mean(FORCS1_shocks,3);
 
 tt = (1-options_cond_fcst.conditional_forecast.conf_sig)/2;
-t1 = round(options_cond_fcst.replic*tt);
-t2 = round(options_cond_fcst.replic*(1-tt));
+t1 = max( 1, round(options_cond_fcst.replic*tt) );
+t2 = min( options_cond_fcst.replic, round(options_cond_fcst.replic*(1-tt)) );
 
 forecasts.controlled_variables = constrained_vars;
 forecasts.instruments = options_cond_fcst.controlled_varexo;
@@ -283,12 +309,31 @@ clear FORCS1 mFORCS1_shocks;
 FORCS2 = zeros(NumberOfStates,options_cond_fcst.periods+1,options_cond_fcst.replic);
 FORCS2(:,1,:) = repmat(InitState,1,options_cond_fcst.replic); %set initial steady state to deviations from steady state in first period
 
-%randn('state',0);
+if isfield( options_, 'deterministic_conditional_forecast' ) && options_.deterministic_conditional_forecast
 
-for b=1:options_cond_fcst.replic %conditional forecast using cL set to 0
-    shocks = sQ*randn(ExoSize,options_cond_fcst.periods);
-    shocks(jdx,:) = zeros(length(jdx),options_cond_fcst.periods);
-    FORCS2(:,:,b) = mcforecast3(0,options_cond_fcst.periods,constrained_paths,shocks,FORCS2(:,:,b),T,R,mv, mu)+trend;
+    for b=1:options_cond_fcst.replic %conditional forecast using cL set to 0
+        shocks = sQ*zeros(ExoSize,options_cond_fcst.periods);
+        shocks(jdx,:) = zeros(length(jdx),options_cond_fcst.periods);
+        FORCS2(:,:,b) = mcforecast3(0,options_cond_fcst.periods,constrained_paths,shocks,FORCS2(:,:,b),T,R,mv, mu)+trend;
+    end
+    
+else
+    
+    %randn('state',0);
+    spmd
+        rng( labindex );
+    end
+
+    p =  TimedProgressBar( targetWorkCount, barWidth, 'Computing, wait for ', ', completed ', 'Concluded in ' );
+
+    parfor b=1:options_cond_fcst.replic %conditional forecast using cL set to 0
+        shocks = sQ*randn(ExoSize,options_cond_fcst.periods);
+        shocks(jdx,:) = zeros(length(jdx),options_cond_fcst.periods);
+        FORCS2(:,:,b) = mcforecast3(0,options_cond_fcst.periods,constrained_paths,shocks,FORCS2(:,:,b),T,R,mv, mu)+trend;
+        p.progress;
+    end
+    p.stop;
+
 end
 
 mFORCS2 = mean(FORCS2,3);
