@@ -31,24 +31,24 @@ if number == 1
     nc    = 1;
 elseif number == 2
     nbplt = 1;
-    nr    = 2;
-    nc    = 1;
+    nr    = 1;
+    nc    = 2;
 elseif number == 3
     nbplt = 1;
-    nr    = 3;
-    nc    = 1;
+    nr    = 1;
+    nc    = 3;
 elseif number == 4
     nbplt = 1;
     nr    = 2;
     nc    = 2;
 elseif number == 5
     nbplt = 1;
-    nr    = 3;
-    nc    = 2;
+    nr    = 2;
+    nc    = 3;
 elseif number == 6
     nbplt = 1;
-    nr    = 3;
-    nc    = 2;
+    nr    = 2;
+    nc    = 3;
 elseif number == 7
     nbplt = 1;
     nr    = 3;
