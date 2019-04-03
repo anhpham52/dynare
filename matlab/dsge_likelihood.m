@@ -1037,13 +1037,28 @@ if DynareOptions.extended_kalman_filter
     if DynareOptions.pruning
         a = [ a; a_pruned1 ];
     end
+    
+    try
 
-    [LIK,lik,a,Pstar,rootPstar] = extended_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
-                                                   a, rootPstar, ...
-                                                   kalman_tol, DynareOptions.riccati_tol, ...
-                                                   DynareOptions.rescale_prediction_error_covariance, ...
-                                                   DynareOptions.presample, ...
-                                                   EKFStateSelect,Constant,Jacobian0,Hessian,Q,H,Z,mm,pp,rr,Zflag,diffuse_periods);
+        [LIK,lik,a,Pstar,rootPstar] = extended_kalman_filter(DatasetInfo.missing.aindex,DatasetInfo.missing.number_of_observations,DatasetInfo.missing.no_more_missing_observations,Y,diffuse_periods+1,size(Y,2), ...
+                                                       a, rootPstar, ...
+                                                       kalman_tol, DynareOptions.riccati_tol, ...
+                                                       DynareOptions.rescale_prediction_error_covariance, ...
+                                                       DynareOptions.presample, ...
+                                                       EKFStateSelect,Constant,Jacobian0,Hessian,Q,H,Z,mm,pp,rr,Zflag,diffuse_periods);
+                                               
+    catch Error
+        
+        disp( 'Error in Extended Kalman Filter:' );
+        disp( Error.message );
+        
+        fval = Inf;
+        info(1) = 5116;
+        info(4) = 0.1;
+        exit_flag = 0;
+        return
+        
+    end
 
 else
 
