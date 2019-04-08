@@ -1334,7 +1334,7 @@ if isfield( DynareOptions, 'endogenous_mean_prior' )
     StudentTN   = sum( ~isnan( Y ), 2 );
     StudentTNu  = StudentTN - 1;
     StudentTVec = ( mean( Y, 2, 'omitnan' ) - constant ) ./ ( std( Y, 0, 2, 'omitnan' ) ./ sqrt( StudentTN ) );
-    StudentTLogDensity = gammaln( 0.5 * StudentTN ) - 0.5 * log( StudentTNu * pi ) - gammaln( 0.5 * StudentTNu ) - 0.5 * StudentTN * log( 1 + StudentTVec .* StudentTVec ./ StudentTNu );
+    StudentTLogDensity = gammaln( 0.5 * StudentTN ) - 0.5 * log( StudentTNu * pi ) - gammaln( 0.5 * StudentTNu ) - 0.5 * StudentTN .* log( 1 + StudentTVec .* StudentTVec ./ StudentTNu );
     fval = fval - DynareOptions.endogenous_mean_prior * sum( StudentTLogDensity );
 end
 
