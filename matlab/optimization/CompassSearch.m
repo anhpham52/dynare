@@ -111,8 +111,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
             
             TruncatedFChange = max( -FMaxChange, min( FMaxChange, fNew - fx ) );
             
-            MeanScores( BlockIndices )  = RhoScores * MeanScores( BlockIndices )  + ( 1 - RhoScores ) * ( TruncatedFChange      - MeanScores( BlockIndices )  );
-            MeanScores2( BlockIndices ) = RhoScores * MeanScores2( BlockIndices ) + ( 1 - RhoScores ) * ( TruncatedFChange .^ 2 - MeanScores2( BlockIndices ) );
+            MeanScores( BlockIndices )  = RhoScores * MeanScores( BlockIndices )  + ( 1 - RhoScores ) * TruncatedFChange;
+            MeanScores2( BlockIndices ) = RhoScores * MeanScores2( BlockIndices ) + ( 1 - RhoScores ) * TruncatedFChange .^ 2;
 
             GoodIndices = BlockIndices( fNew < fx );
             BadIndices = BlockIndices( ( fNew >= fx ) | Truncated );
@@ -128,7 +128,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
             if NumNewGoodStepsObservations > 0
                 % CG is following http://people.cs.vt.edu/~asandu/Public/Qual2011/Optim/Hager_2006_CG-survey.pdf
                 OldCGg = -MeanGoodSteps;
-                MeanGoodSteps = RhoSteps ^ NumNewGoodStepsObservations * MeanGoodSteps + ( 1 - RhoSteps ^ NumNewGoodStepsObservations ) * ( sum( xNew( :, fNew < fx ) - x, 2 ) - NumNewGoodStepsObservations * MeanGoodSteps );
+                MeanGoodSteps = RhoSteps ^ NumNewGoodStepsObservations * MeanGoodSteps + ( 1 - RhoSteps ^ NumNewGoodStepsObservations ) * mean( xNew( :, fNew < fx ) - x, 2 );
                 CGg = -MeanGoodSteps;
                 CGy = CGg - OldCGg;
                 Denom = CGd' * CGy;
