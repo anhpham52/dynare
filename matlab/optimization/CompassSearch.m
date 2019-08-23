@@ -28,8 +28,8 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
     MeanScores = zeros( D, 1 );
     MeanScores2 = PriorStandardDeviation * PriorStandardDeviation * ones( D, 1 );
     ScoresSumWeights   = PriorStrength * ones( D, 1 );
-    ScoresSumWeights2  = PriorStrength * ones( D, 1 );
-    ScoresObservations = PriorStrength * ones( D, 1 );
+    ScoresSumWeights2  = PriorStrength * PriorStrength * ones( D, 1 );
+    ScoresObservations = ones( D, 1 );
 
     MeanGoodSteps  = randn( N, 1 );
     
