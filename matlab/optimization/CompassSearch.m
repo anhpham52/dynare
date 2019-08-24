@@ -114,7 +114,7 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
             MeanScores( BlockIndices )  = RhoScores * MeanScores( BlockIndices )  + ( 1 - RhoScores ) * TruncatedFChange;
             MeanScores2( BlockIndices ) = RhoScores * MeanScores2( BlockIndices ) + ( 1 - RhoScores ) * TruncatedFChange .^ 2;
 
-            GoodIndices = BlockIndices( fNew < fx );
+            GoodIndices = BlockIndices( fNew <= fx );
             BadIndices  = BlockIndices( ( fNew > fx ) | Truncated );
 
             StepSizes( GoodIndices ) = 1.1 * StepSizes( GoodIndices );
