@@ -93,9 +93,9 @@ function [ x, fx ] = CompassSearch( f, x, lb, ub )
                 xNew( :, j ) = x + Directions( :, i ) * StepSizes( i ); %#ok<PFBNS>
                 if any( xNew( :, j ) < lb ) || any( xNew( :, j ) > ub ) 
                     xNew( :, j ) = max( lb, min( ub, xNew( :, j ) ) );
-                    Truncated( j ) = true;
-                else
-                    Truncated( j ) = false;
+                    if j > 2
+                        Truncated( j ) = true;
+                    end
                 end
                 fNew( j ) = f( xNew( :, j ) ); %#ok<PFBNS>
             end
